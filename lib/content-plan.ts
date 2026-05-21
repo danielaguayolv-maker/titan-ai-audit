@@ -116,7 +116,14 @@ const nicheProfiles: NicheProfile[] = [
       "crowd momentum",
       "waitlist energy"
     ],
-    ctaLanguage: ["Reserve tonight", "Order the special", "Tag who you are bringing", "Save this for dinner"]
+    ctaLanguage: [
+      "Reserve tonight",
+      "Order online",
+      "Call to book",
+      "Visit us this weekend",
+      "Save this for dinner",
+      "Tag who you're bringing"
+    ]
   },
   {
     id: "local-businesses",
@@ -573,6 +580,23 @@ function getPlatformNativeFormat(platform: AuditPlatform, fallback: string) {
   return fallback;
 }
 
+function isTitanBrand(auditResult: AiAuditResult) {
+  return /titan/i.test(auditResult.businessName);
+}
+
+function getBrandCtas(profile: NicheProfile, auditResult: AiAuditResult) {
+  if (isTitanBrand(auditResult)) {
+    return [
+      "Book a Titan Visibility Strategy Call",
+      "Download the visibility report",
+      "Generate the 30-day visibility plan",
+      "Message Titan for implementation support"
+    ];
+  }
+
+  return profile.ctaLanguage;
+}
+
 function pick(values: string[], index: number) {
   return values[index % values.length] ?? "";
 }
@@ -708,6 +732,8 @@ export function createVisibilityContentPlan(
   const emotionB = pick(niche.emotionalTriggers, 1);
   const emotionC = pick(niche.emotionalTriggers, 3);
   const taxonomy = hookTaxonomy(niche, platform);
+  const brandCtas = getBrandCtas(niche, auditResult);
+  const cta = (index: number) => pick(brandCtas, index) || "Message us for the next step";
 
   return {
     niche: {
@@ -724,7 +750,7 @@ export function createVisibilityContentPlan(
       `Make the first three seconds feel built for ${audienceA}: ${hookSignal.insight}`,
       `Build a repeatable rhythm around ${phraseList(niche.angleVariants, 0, 3)} instead of posting one-off ideas.`,
       `Use proof people can see, such as ${phraseList(niche.proofVariants, 0, 3)}, before asking for action.`,
-      `Match CTAs to intent: use "${niche.ctaLanguage[0]}" for hot attention and "${niche.ctaLanguage[2]}" for warmer, conversational moments.`
+      `Match CTAs to intent: use "${cta(0)}" for hot attention and "${cta(2)}" for warmer, conversational moments.`
     ],
     postingFrequency: platformFrequency[platform],
     recommendedMix: [
@@ -746,7 +772,7 @@ export function createVisibilityContentPlan(
       {
         label: "Offer and CTA",
         share: "15%",
-        purpose: `Move attention into plain next steps like "${niche.ctaLanguage[0]}" or "${niche.ctaLanguage[2]}."`
+        purpose: `Move attention into plain next steps like "${cta(0)}" or "${cta(2)}."`
       },
       {
         label: "Engagement loops",
@@ -791,7 +817,7 @@ export function createVisibilityContentPlan(
           {
             day: "Friday",
             format: "Direct CTA post",
-            topic: `Invite viewers to ${niche.ctaLanguage[0].toLowerCase()}`,
+            topic: `Invite viewers to ${cta(0).toLowerCase()}`,
             goal: "Convert profile attention into a measurable next step.",
             visibilitySignal: ctaSignal.label
           }
@@ -802,7 +828,7 @@ export function createVisibilityContentPlan(
           taxonomy[6].hooks[0]
         ],
         videoScriptConcepts: [
-          `Open with the audit gap, show a ${angleA} example, explain the fix, close with "${niche.ctaLanguage[0]}."`,
+          `Open with the audit gap, show a post built around ${angleA}, explain the fix, close with "${cta(0)}."`,
           "Use a before/after promise: unclear positioning first, sharper outcome second, then explain what changed."
         ],
         captionIdeas: [
@@ -810,9 +836,9 @@ export function createVisibilityContentPlan(
           `A stronger first impression can move people from passive interest to action.`
         ],
         ctaSuggestions: [
-          niche.ctaLanguage[0],
-          "Book a Titan Visibility Strategy Call.",
-          niche.ctaLanguage[2]
+          cta(0),
+          cta(1),
+          cta(2)
         ],
         engagementTasks: [
           "Reply to every comment with a follow-up question that reveals intent, not just appreciation.",
@@ -820,9 +846,9 @@ export function createVisibilityContentPlan(
           `Pin or save the strongest ${emotionA} question for next week's content.`
         ],
         visibilityPriorities: [
-          hookSignal.insight,
-          ctaSignal.insight,
-          "Create one repeatable hook format that can be reused for the next three weeks."
+          "Make the first line specific enough that the right viewer recognizes themselves.",
+          "Place the next step in the caption and spoken/video copy instead of only in the bio.",
+          "Create one repeatable hook format that can be reused without sounding copied."
         ]
       },
       {
@@ -840,7 +866,7 @@ export function createVisibilityContentPlan(
           {
             day: "Tuesday",
             format: "Myth-busting video",
-            topic: `Correct a belief that keeps the audience stuck in ${niche.emotionalTriggers[4] ?? emotionA}`,
+            topic: `Correct a belief that keeps the audience from taking the next step`,
             goal: "Make the audience rethink the problem without sounding like a lecture.",
             visibilitySignal: authoritySignal.label
           },
@@ -861,7 +887,7 @@ export function createVisibilityContentPlan(
           {
             day: "Friday",
             format: "Soft CTA post",
-            topic: `Invite followers to ${niche.ctaLanguage[2].toLowerCase()}`,
+            topic: `Invite followers to ${cta(2).toLowerCase()}`,
             goal: `Create low-friction conversations around ${emotionB}.`,
             visibilitySignal: engagementSignal.label
           }
@@ -872,17 +898,17 @@ export function createVisibilityContentPlan(
           "Here is the content gap I would fix before posting more."
         ],
         videoScriptConcepts: [
-          `Teach one buyer-intent question like "${niche.searchPhrases[0]}", give a quick example, then point to "${niche.ctaLanguage[0]}."`,
-          `Show a common mistake through ${angleB}, explain why it happens, and give the corrected version.`
+          `Teach one buyer-intent question like "${niche.searchPhrases[0]}", give a quick example, then point to "${cta(0)}."`,
+          `Use ${angleB} to show a common mistake, explain why it happens, and give the corrected version.`
         ],
         captionIdeas: [
           `Consistency is not posting every thought. It is repeating ${proofA}, ${angleB}, and clear CTAs until the audience knows why to trust you.`,
           "This week's content should make the decision easier, not just fill the calendar."
         ],
         ctaSuggestions: [
-          niche.ctaLanguage[1],
-          "Message us the word FIX and we will point you to the first visible improvement.",
-          "Save this before you update your profile."
+          cta(1),
+          cta(2),
+          cta(4)
         ],
         engagementTasks: [
           "Ask one question in Stories or comments that reveals buyer objections.",
@@ -890,9 +916,9 @@ export function createVisibilityContentPlan(
           "Track which post earns the most saves, replies, or profile visits."
         ],
         visibilityPriorities: [
-          consistencySignal.insight,
-          gapSignal.insight,
-          "Define four content pillars: education, proof, local relevance, and offer."
+          "Repeat the strongest pillar twice this week so the audience starts recognizing the theme.",
+          "Use one search-intent phrase naturally in the first sentence of two posts.",
+          "Balance the week across education, proof, local relevance, and offer."
         ]
       },
       {
@@ -942,7 +968,7 @@ export function createVisibilityContentPlan(
           "If you are comparing options, this detail matters."
         ],
         videoScriptConcepts: [
-          `Start with an objection, validate it, show ${proofA}, explain the process, close with "${niche.ctaLanguage[0]}."`,
+          `Start with an objection, validate it, show ${proofA}, explain the process, close with "${cta(0)}."`,
           "Break down a result into three decisions that made the outcome feel achievable."
         ],
         captionIdeas: [
@@ -950,9 +976,9 @@ export function createVisibilityContentPlan(
           `${audienceB} trust what they can understand. Make the path visible.`
         ],
         ctaSuggestions: [
-          "Want us to map this for your brand? Book a strategy call.",
-          "DM PROOF and we will show you the first trust signal to fix.",
-          `Ask what this would look like for your ${platformLabel} profile.`
+          cta(0),
+          cta(3),
+          cta(4)
         ],
         engagementTasks: [
           "Reply to high-intent comments with a specific next step.",
@@ -960,9 +986,9 @@ export function createVisibilityContentPlan(
           "Identify three audience questions that deserve dedicated posts."
         ],
         visibilityPriorities: [
-          authoritySignal.insight,
-          engagementSignal.insight,
-          "Shift from generic proof to specific proof tied to buyer hesitation."
+          "Use proof that removes hesitation, not proof that only looks impressive.",
+          "Turn one strong audience question into a full post instead of only replying in comments.",
+          "Show the process behind the result so trust has something concrete to attach to."
         ]
       },
       {
@@ -994,14 +1020,14 @@ export function createVisibilityContentPlan(
           {
             day: "Thursday",
             format: "Lead magnet or audit invitation",
-            topic: `Offer a simple next step: ${niche.ctaLanguage[0]}`,
+            topic: `Offer a simple next step: ${cta(0)}`,
             goal: "Capture warm demand.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Friday",
             format: "Strategy CTA post",
-            topic: `Invite ${audienceC} to book a Titan Visibility Strategy Call`,
+            topic: `Invite ${audienceC} to ${cta(0).toLowerCase()}`,
             goal: "Turn the month into pipeline.",
             visibilitySignal: ctaSignal.label
           }
@@ -1013,16 +1039,16 @@ export function createVisibilityContentPlan(
         ],
         videoScriptConcepts: [
           `Recap the month: ${gapSignal.label.toLowerCase()}, fix, ${proofA}, next step. Keep it simple and conversion-focused.`,
-          "Show the cost of unclear visibility, then make the strategy call the obvious next move."
+          "Show the cost of unclear visibility, then make the next step feel obvious."
         ],
         captionIdeas: [
           `A visibility plan should end with action. The goal is not more ${platformLabel} content. The goal is clearer demand.`,
           `Use ${emotionA}, ${proofA}, and CTA signals to decide what to repeat, cut, and scale.`
         ],
         ctaSuggestions: [
-          "Book a Titan Visibility Strategy Call.",
-          "Download the report and choose your first implementation priority.",
-          niche.ctaLanguage[3] ?? "Message STRATEGY and we will map the next 30 days."
+          cta(0),
+          cta(1),
+          cta(3)
         ],
         engagementTasks: [
           "Review the top three posts by saves, replies, profile visits, or clicks.",
@@ -1030,9 +1056,9 @@ export function createVisibilityContentPlan(
           "Turn the strongest audience response into the next month's first campaign."
         ],
         visibilityPriorities: [
-          ctaSignal.insight,
-          "Compare engagement quality against the posts with the clearest hooks.",
-          "Choose the next cycle based on evidence, not content volume."
+          "Make the final CTA feel like the natural next step from the month's best-performing content.",
+          "Compare engagement quality against posts with the clearest first three seconds.",
+          "Choose the next cycle based on real audience response, not content volume."
         ]
       }
     ]
