@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type CtaButtonProps = {
@@ -8,7 +9,7 @@ type CtaButtonProps = {
 
 export function CtaButton({
   children,
-  href = "#lead-capture",
+  href = "/dashboard",
   variant = "primary"
 }: CtaButtonProps) {
   const base =
@@ -21,8 +22,8 @@ export function CtaButton({
   };
 
   return (
-    <a className={`${base} ${variants[variant]}`} href={href}>
+    <Link className={`${base} ${variants[variant]}`} href={href}>
       {children}
-    </a>
+    </Link>
   );
 }
