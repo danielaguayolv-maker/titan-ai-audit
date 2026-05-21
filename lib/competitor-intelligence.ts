@@ -16,6 +16,10 @@ export type CompetitorComparisonDimension = {
   label: string;
   yourSignal: string;
   competitorSignal: string;
+  yourPattern: string;
+  competitorPattern: string;
+  difference: string;
+  adaptation: string;
   strategicRead: string;
   whyItMatters: string;
   retentionRead: string;
@@ -23,6 +27,8 @@ export type CompetitorComparisonDimension = {
   emotionalTrigger: string;
   contentDirection: string;
   scoreDelta: number;
+  confidenceLanguage: "appears to" | "likely" | "shows";
+  relativeContext: string;
 };
 
 export type CompetitorIntelligenceReport = {
@@ -276,6 +282,91 @@ function dimensionSignal(result: AiAuditResult, keys: string[], fallback: string
     : fallback;
 }
 
+function scanConfidenceLanguage(snapshot: CompetitorSnapshot) {
+  const completeness = snapshot.profileData?.scanCompleteness ?? 0;
+  const dataPointCount = snapshot.profileData?.dataPointsFound.length ?? 0;
+
+  if (completeness >= 70 && dataPointCount >= 5) {
+    return "shows" as const;
+  }
+
+  if (completeness >= 40 || dataPointCount >= 3) {
+    return "likely" as const;
+  }
+
+  return "appears to" as const;
+}
+
+function lowerConfidence(
+  first: ReturnType<typeof scanConfidenceLanguage>,
+  second: ReturnType<typeof scanConfidenceLanguage>
+) {
+  if (first === "appears to" || second === "appears to") {
+    return "appears to" as const;
+  }
+
+  if (first === "likely" || second === "likely") {
+    return "likely" as const;
+  }
+
+  return "shows" as const;
+}
+
+function strengthContext(score: number, label: "your" | "competitor") {
+  const owner = label === "your" ? "You" : "The competitor";
+
+  if (score >= 82) {
+    return `${owner} are strong here and should protect the edge.`;
+  }
+
+  if (score >= 68) {
+    return `${owner} have a relative advantage, but this is still not fully optimized.`;
+  }
+
+  if (score >= 52) {
+    return `${owner} are ahead comparatively, but still leaving performance on the table.`;
+  }
+
+  return `${owner} may be ahead only because the other account is weaker here; this still needs serious tightening.`;
+}
+
+function currentPattern(
+  owner: "Your" | "Competitor",
+  dimension: string,
+  signal: string,
+  confidence: "appears to" | "likely" | "shows"
+) {
+  return `${owner} current pattern ${confidence} centered on ${dimension.toLowerCase()}: ${signal}`;
+}
+
+function differenceRead(
+  dimension: string,
+  scoreDelta: number,
+  confidence: "appears to" | "likely" | "shows"
+) {
+  if (scoreDelta > 4) {
+    return `Difference: the competitor ${confidence} ahead on ${dimension.toLowerCase()}, so study the behavior creating the edge before changing the creative.`;
+  }
+
+  if (scoreDelta < -4) {
+    return `Difference: your account ${confidence} ahead on ${dimension.toLowerCase()}, but the edge should be sharpened rather than treated as finished.`;
+  }
+
+  return `Difference: both accounts are close on ${dimension.toLowerCase()}, so execution details like pacing, first frame, and CTA placement will decide the advantage.`;
+}
+
+function adaptationRead(blueprint: ComparisonBlueprint, scoreDelta: number) {
+  if (scoreDelta > 4) {
+    return `What to adapt without copying: borrow the competitor's underlying timing behavior, then express it through your own niche visuals. ${blueprint.sequenceFix}`;
+  }
+
+  if (scoreDelta < -4) {
+    return `What to adapt without copying: keep your relative edge, but pressure-test it against stronger execution. ${blueprint.retentionRead}`;
+  }
+
+  return `What to adapt without copying: run a controlled creative test around the sequence. ${blueprint.sequenceFix}`;
+}
+
 function buildPlan(snapshot: CompetitorSnapshot) {
   const context: VisibilityPlanContext = {
     formData: {
@@ -307,24 +398,51 @@ function createDimensionComparison(
   const yourScore = dimensionScore(yours.result, blueprint.keys);
   const competitorScore = dimensionScore(competitor.result, blueprint.keys);
   const scoreDelta = competitorScore - yourScore;
+  const yourSignal = dimensionSignal(yours.result, blueprint.keys, "Signal is developing.");
+  const competitorSignal = dimensionSignal(
+    competitor.result,
+    blueprint.keys,
+    "Signal is developing."
+  );
+  const confidenceLanguage = lowerConfidence(
+    scanConfidenceLanguage(yours),
+    scanConfidenceLanguage(competitor)
+  );
   const strategicRead =
     scoreDelta > 4
-      ? blueprint.strongerCompetitor
+      ? `${blueprint.strongerCompetitor} ${strengthContext(competitorScore, "competitor")}`
       : scoreDelta < -4
-        ? blueprint.strongerYou
+        ? `${blueprint.strongerYou} ${strengthContext(yourScore, "your")}`
         : blueprint.closeRead;
+  const relativeContext =
+    scoreDelta > 4
+      ? strengthContext(competitorScore, "competitor")
+      : scoreDelta < -4
+        ? strengthContext(yourScore, "your")
+        : "No clear edge yet. Treat this as a close signal and focus on execution quality.";
 
   return {
     label: blueprint.label,
-    yourSignal: dimensionSignal(yours.result, blueprint.keys, "Signal is developing."),
-    competitorSignal: dimensionSignal(competitor.result, blueprint.keys, "Signal is developing."),
+    yourSignal,
+    competitorSignal,
+    yourPattern: currentPattern("Your", blueprint.label, yourSignal, scanConfidenceLanguage(yours)),
+    competitorPattern: currentPattern(
+      "Competitor",
+      blueprint.label,
+      competitorSignal,
+      scanConfidenceLanguage(competitor)
+    ),
+    difference: differenceRead(blueprint.label, scoreDelta, confidenceLanguage),
+    adaptation: adaptationRead(blueprint, scoreDelta),
     strategicRead,
     whyItMatters: blueprint.whyItMatters,
     retentionRead: blueprint.retentionRead,
     sequenceFix: blueprint.sequenceFix,
     emotionalTrigger: blueprint.emotionalTrigger,
     contentDirection: blueprint.direction,
-    scoreDelta
+    scoreDelta,
+    confidenceLanguage,
+    relativeContext
   };
 }
 
@@ -341,11 +459,11 @@ function strongestYourEdges(dimensions: CompetitorComparisonDimension[]) {
 }
 
 function toActionSentence(dimension: CompetitorComparisonDimension) {
-  return `${dimension.label}: ${dimension.strategicRead} ${dimension.retentionRead}`;
+  return `${dimension.label}: ${dimension.strategicRead}`;
 }
 
 function diagnosticOpportunity(dimension: CompetitorComparisonDimension) {
-  return `${dimension.label}: ${dimension.whyItMatters} ${dimension.sequenceFix}`;
+  return `${dimension.label}: ${dimension.relativeContext} ${dimension.adaptation}`;
 }
 
 export function createCompetitorIntelligenceReport(
@@ -389,14 +507,16 @@ export function createCompetitorIntelligenceReport(
       `Turn the biggest competitor edge into a weekly creative test: one opening style, one delayed reveal, one CTA placement, then compare saves, replies, and profile actions.`
     ],
     hookStyleDifferences: [
-      `Competitor read: ${competitorVisualCue}`,
-      `Your read: ${yourVisualCue}`,
-      "The account that shows motion, tension, or payoff first will usually feel more native than the account that starts with context. Context should explain the hook, not replace it."
+      `Your current pattern: ${yourVisualCue}`,
+      `Competitor current pattern: ${competitorVisualCue}`,
+      `Difference: ${dimensions.find((dimension) => dimension.label === "Hook strength")?.difference ?? "Compare which account creates intrigue before context."}`,
+      `What to adapt without copying: ${dimensions.find((dimension) => dimension.label === "Hook strength")?.adaptation ?? "Borrow the timing behavior, not the competitor's exact creative format."}`
     ],
     ctaDifferences: [
-      dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing."),
-      dimensionSignal(competitor.result, ["cta", "conversion", "offer"], "Competitor CTA signal is developing."),
-      "Best next move: place the CTA over the strongest proof shot, say it in the spoken or on-screen copy, then reinforce it in the caption. If it only lives in the bio, too much intent leaks out."
+      `Your current pattern: ${dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing.")}`,
+      `Competitor current pattern: ${dimensionSignal(competitor.result, ["cta", "conversion", "offer"], "Competitor CTA signal is developing.")}`,
+      `Difference: ${dimensions.find((dimension) => dimension.label === "CTA strength")?.difference ?? "Compare which CTA appears while attention is still warm."}`,
+      `What to adapt without copying: ${dimensions.find((dimension) => dimension.label === "CTA strength")?.adaptation ?? "Place the CTA over the strongest proof shot, reinforce it in caption and on-screen copy, and match it to viewer intent."}`
     ],
     visualExecutionDifferences: [
       "Watch whether the competitor opens with movement faster, delays the reveal until curiosity peaks, or uses more emotional reaction shots before explaining.",

@@ -543,14 +543,14 @@ function DimensionCard({
       <p className="text-anywhere mt-5 text-sm leading-7 text-titan-ivory/68">
         {dimension.strategicRead}
       </p>
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <DiagnosticBlock title="Why it hurts" text={dimension.whyItMatters} />
-        <DiagnosticBlock title="Retention read" text={dimension.retentionRead} />
-        <DiagnosticBlock title="Sequence fix" text={dimension.sequenceFix} />
-        <DiagnosticBlock title="Missing trigger" text={dimension.emotionalTrigger} />
+      <div className="mt-4 grid gap-3">
+        <DiagnosticBlock title="Your current pattern" text={dimension.yourPattern} />
+        <DiagnosticBlock title="Competitor current pattern" text={dimension.competitorPattern} />
+        <DiagnosticBlock title="Difference" text={dimension.difference} />
+        <DiagnosticBlock title="What to adapt without copying" text={dimension.adaptation} />
       </div>
       <p className="text-anywhere mt-3 rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/72">
-        {dimension.contentDirection}
+        {dimension.whyItMatters} {dimension.emotionalTrigger}
       </p>
     </div>
   );
