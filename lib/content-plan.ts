@@ -37,6 +37,15 @@ type NicheProfile = {
   ctaLanguage: string[];
 };
 
+type VisualDirectionProfile = {
+  openings: string[];
+  secondBeats: string[];
+  proofShots: string[];
+  pacing: string[];
+  ctaPlacements: string[];
+  captionVoices: string[];
+};
+
 export type VisibilityPlanContext = {
   formData?: Partial<BusinessAuditFormData>;
   profileData?: ProfileData | null;
@@ -506,6 +515,259 @@ const platformFrequency: Record<AuditPlatform, string> = {
   general: "3 visibility posts per week, 1 offer-led post, and daily response/relationship follow-up."
 };
 
+const visualDirectionProfiles: Record<string, VisualDirectionProfile> = {
+  restaurants: {
+    openings: [
+      "Open with sizzling grill footage and a tight food close-up before the viewer can think about scrolling.",
+      "Start on dinner rush energy: servers moving through packed tables, quick crowd cuts, then the plated reveal.",
+      "Lead with smoke-and-fire visuals, then cut to real customer reactions before showing the dining room.",
+      "Begin with a fast food close-up transition, then pull back into late-night crowd energy."
+    ],
+    secondBeats: [
+      "Cut from the food to the people: laughter, first bites, packed tables, and the reason the room feels alive.",
+      "Slow down for one craveable detail, then jump back into movement so the post keeps its pulse.",
+      "Move from kitchen heat to guest reaction so the viewer feels the experience, not just the item."
+    ],
+    proofShots: [
+      "line-out-the-door moments",
+      "servers moving through packed tables",
+      "sizzling grill footage",
+      "food close-up transitions",
+      "real customer reactions",
+      "smoke-and-fire visuals",
+      "late-night crowd energy"
+    ],
+    pacing: [
+      "fast first second, two quick cuts, one slow plated reveal, then the CTA on-screen",
+      "hook in the first frame, sensory close-up by second two, people by second four",
+      "quick kitchen movement, reaction shot, offer text, then a clean reservation prompt"
+    ],
+    ctaPlacements: [
+      "Put the CTA over the plated reveal, not after the energy drops.",
+      "Let the CTA appear while the room still feels busy.",
+      "Place the save/share prompt on the shot people would want to send to a friend."
+    ],
+    captionVoices: [
+      "If people cannot instantly feel why the spot is worth trying, they scroll.",
+      "Make them hungry before you ask them to reserve.",
+      "The post should feel like the table is already waiting."
+    ]
+  },
+  agencies: {
+    openings: [
+      "Open with a screen recording of the problem, then zoom into the exact fix instead of talking around it.",
+      "Start on an audit walkthrough: weak profile, missed signal, cleaner version.",
+      "Lead with an analytics reveal, then cut to the strategy whiteboard that explains why it happened.",
+      "Begin with a campaign breakdown that shows the before, the decision, and the cleaner next move."
+    ],
+    secondBeats: [
+      "Cut from the screen to the thinking: whiteboard, cursor movement, client transformation story, then the takeaway.",
+      "Show the messy version for one beat, then make the improved version visually obvious.",
+      "Use one clean annotation so the viewer sees the pattern without needing a lecture."
+    ],
+    proofShots: [
+      "screen recordings",
+      "audit walkthroughs",
+      "campaign breakdowns",
+      "strategy whiteboards",
+      "analytics reveals",
+      "client transformation stories",
+      "before/after positioning"
+    ],
+    pacing: [
+      "problem screenshot first, quick markup second, improved version third, CTA on the final frame",
+      "fast audit teardown, one pause for the insight, then a direct next step",
+      "screen capture, whiteboard beat, result context, then offer"
+    ],
+    ctaPlacements: [
+      "Put the CTA after the viewer sees the fix, not before they believe the problem.",
+      "Use the final annotated screen as the CTA frame.",
+      "Place the ask after the clearest before/after moment."
+    ],
+    captionVoices: [
+      "Show the difference between random marketing and visible demand.",
+      "Make the fix obvious enough that a business owner can feel the cost of ignoring it.",
+      "The best proof is the moment the strategy finally clicks."
+    ]
+  },
+  "gaming-creators": {
+    openings: [
+      "Open on the clutch moment, freeze for half a beat, then show the decision that made it happen.",
+      "Start with the mistake everyone recognizes, then cut into the correction before the clip cools off.",
+      "Lead with a fast reaction moment, then replay the play from the viewer's point of view."
+    ],
+    secondBeats: [
+      "Cut between gameplay, face reaction, and one short on-screen lesson.",
+      "Use the clip first, the explanation second, and the community prompt last.",
+      "Let the high-emotion moment breathe, then snap into the takeaway."
+    ],
+    proofShots: [
+      "stream highlights",
+      "reaction moments",
+      "fast-cut gameplay breakdowns",
+      "POV-style openings",
+      "rank progress",
+      "chat reactions",
+      "clutch replays"
+    ],
+    pacing: [
+      "clip first, replay second, lesson third, comment prompt last",
+      "fast cut into the play, one freeze-frame, then a quick community question",
+      "reaction, gameplay, on-screen text, CTA"
+    ],
+    ctaPlacements: [
+      "Put the follow prompt right after the lesson lands.",
+      "Ask for comments when the viewer is already judging the play.",
+      "Place the stream CTA after the clip proves the vibe."
+    ],
+    captionVoices: [
+      "Make the first second feel like something is about to happen.",
+      "Give players a reason to argue, learn, or come back for the next run.",
+      "The clip should feel like a moment from the community, not just a highlight."
+    ]
+  },
+  streamers: {
+    openings: [
+      "Open with the live reaction, then cut to the chat losing it before explaining the moment.",
+      "Start with the inside joke or unexpected clip, then show why the stream had energy.",
+      "Lead with the loudest community beat, then give the viewer a reason to catch the next live."
+    ],
+    secondBeats: [
+      "Cut from face reaction to chat, then back to the moment that triggered it.",
+      "Show the clip, the community response, and the next stream tease in that order.",
+      "Let the chaos hook first, then make the invitation feel easy."
+    ],
+    proofShots: [
+      "stream highlights",
+      "chat reactions",
+      "Discord moments",
+      "clip-worthy reactions",
+      "community challenges",
+      "live countdowns"
+    ],
+    pacing: [
+      "reaction first, chat second, clip context third, stream CTA last",
+      "fast clip, quick chat zoom, one sentence setup, follow prompt",
+      "inside joke, replay, next-live invitation"
+    ],
+    ctaPlacements: [
+      "Place the live CTA after the viewer sees the community energy.",
+      "Use the chat reaction as the proof frame before the ask.",
+      "Invite people while the clip still feels active."
+    ],
+    captionVoices: [
+      "Make new viewers feel like they almost missed the best part.",
+      "Turn the clip into an invitation, not just a recap.",
+      "The viewer should feel the room before they ever join live."
+    ]
+  },
+  "lifestyle-creators": {
+    openings: [
+      "Open with a POV-style before moment, then cut into the upgrade people want to save.",
+      "Start with the emotional confession clip, then show the small visual shift that changes the day.",
+      "Lead with the finished look or routine payoff, then reveal the steps quickly."
+    ],
+    secondBeats: [
+      "Move from honest moment to aesthetic detail to practical next step.",
+      "Cut between hands, texture, mirror checks, and the final mood.",
+      "Show the transformation before explaining the product or routine."
+    ],
+    proofShots: [
+      "POV-style openings",
+      "emotional confession clips",
+      "fast-cut storytelling",
+      "routine transitions",
+      "texture close-ups",
+      "before/after mood shifts"
+    ],
+    pacing: [
+      "payoff first, two detail cuts, human moment, save prompt",
+      "POV hook, visual sequence, one practical note, CTA",
+      "before feeling, after feeling, quick steps, comment prompt"
+    ],
+    ctaPlacements: [
+      "Put the save prompt on the most useful visual step.",
+      "Place the link/comment CTA after the viewer sees the finished result.",
+      "Ask for follows when the series promise feels clear."
+    ],
+    captionVoices: [
+      "Make the audience feel the upgrade before you explain it.",
+      "People save what feels like it could fit into their life tomorrow.",
+      "The content should feel useful and aspirational at the same time."
+    ]
+  },
+  "fitness-creators": {
+    openings: [
+      "Open with progression footage: the struggle, the rep, the confidence shift.",
+      "Start with gym energy and a clear form mistake before showing the fix.",
+      "Lead with a transformation clip, then cut to the ordinary discipline behind it."
+    ],
+    secondBeats: [
+      "Move from effort to correction to the result people can feel.",
+      "Cut between setup, rep, coaching cue, and the visible confidence moment.",
+      "Show the uncomfortable part first, then make the next step feel doable."
+    ],
+    proofShots: [
+      "transformation clips",
+      "gym energy",
+      "progression footage",
+      "discipline moments",
+      "confidence visuals",
+      "form correction close-ups"
+    ],
+    pacing: [
+      "struggle frame, correction, clean rep, CTA",
+      "fast gym hook, slower coaching cue, proof moment, comment prompt",
+      "before clip, training beat, confidence shot, next step"
+    ],
+    ctaPlacements: [
+      "Put the CTA after the viewer believes the fix is possible.",
+      "Use the clean rep as the save prompt frame.",
+      "Ask for goals after showing a realistic path."
+    ],
+    captionVoices: [
+      "Make the outcome feel possible, not perfect.",
+      "People follow when they see the discipline and the human reason behind it.",
+      "The best fitness content makes the next rep feel less intimidating."
+    ]
+  },
+  default: {
+    openings: [
+      "Open with the most visual proof of the promise, then explain the reason it matters.",
+      "Start on motion, emotion, or contrast before adding context.",
+      "Lead with the moment a viewer can understand without reading the caption."
+    ],
+    secondBeats: [
+      "Cut from the problem to the proof, then slow down for the human detail.",
+      "Show the before, the shift, and the next step in a clean sequence.",
+      "Use movement first, context second, CTA last."
+    ],
+    proofShots: [
+      "before/after moments",
+      "human reactions",
+      "process close-ups",
+      "clear result shots",
+      "behind-the-scenes clips",
+      "customer or audience proof"
+    ],
+    pacing: [
+      "visual hook first, proof second, explanation third, CTA last",
+      "fast first beat, slower proof moment, clear next step",
+      "contrast, context, credibility, CTA"
+    ],
+    ctaPlacements: [
+      "Place the CTA after the viewer sees the value.",
+      "Use the strongest proof shot as the CTA frame.",
+      "Ask for action while the outcome still feels fresh."
+    ],
+    captionVoices: [
+      "Make people feel the outcome before asking them to act.",
+      "The first three seconds should do more than introduce the topic.",
+      "Show the difference between passive attention and real intent."
+    ]
+  }
+};
+
 const visibilityDimensions = [
   {
     label: "Weak hooks",
@@ -769,12 +1031,48 @@ function getBrandCtas(profile: NicheProfile, auditResult: AiAuditResult) {
   return profile.ctaLanguage;
 }
 
+function getVisualDirectionProfile(nicheId: string) {
+  return visualDirectionProfiles[nicheId] ?? visualDirectionProfiles.default;
+}
+
 function pick(values: string[], index: number) {
   return values[index % values.length] ?? "";
 }
 
 function phraseList(values: string[], start = 0, count = 3) {
   return Array.from({ length: count }, (_, index) => pick(values, start + index)).join(", ");
+}
+
+function signalRewrite(label: string, index: number) {
+  const rewrites: Record<string, string[]> = {
+    "Weak hooks": [
+      "Make the first frame carry the promise before the caption has to work.",
+      "Use motion, contrast, or tension immediately so the viewer knows why to stay.",
+      "Turn the opening into a visual reason to keep watching."
+    ],
+    "CTA strength": [
+      "Let the ask show up while the viewer still feels the value.",
+      "Make the next step visible before interest cools off.",
+      "Use the CTA as a continuation of the moment, not a separate sales line."
+    ],
+    "Engagement quality": [
+      "Invite replies around a real decision, reaction, or identity moment.",
+      "Ask questions people can answer from lived experience, not generic opinions.",
+      "Turn comments into signals for what the next post should show."
+    ],
+    "Content gaps": [
+      "Fill the missing shots: proof, process, audience reaction, and one clear offer moment.",
+      "Cover the parts of the story viewers need before they trust the next step.",
+      "Build posts that show the promise from more than one angle."
+    ],
+    "Authority signals": [
+      "Show the evidence on camera instead of only naming the expertise.",
+      "Use visible proof, process, and context so trust has something concrete to attach to.",
+      "Let the audience see why the brand is credible before asking them to believe it."
+    ]
+  };
+
+  return pick(rewrites[label] ?? rewrites["Content gaps"], index);
 }
 
 function hookTaxonomy(
@@ -914,6 +1212,15 @@ export function createVisibilityContentPlan(
   const brandCtas = getBrandCtas(niche, auditResult);
   const cta = (index: number) => pick(brandCtas, index) || "Message us for the next step";
   const taxonomy = hookTaxonomy(niche, platform, brandCtas);
+  const visualDirection = getVisualDirectionProfile(niche.id);
+  const visual = {
+    opening: (index: number) => pick(visualDirection.openings, index),
+    secondBeat: (index: number) => pick(visualDirection.secondBeats, index),
+    proofShot: (index: number) => pick(visualDirection.proofShots, index),
+    pacing: (index: number) => pick(visualDirection.pacing, index),
+    ctaPlacement: (index: number) => pick(visualDirection.ctaPlacements, index),
+    captionVoice: (index: number) => pick(visualDirection.captionVoices, index)
+  };
 
   return {
     niche: {
@@ -929,78 +1236,78 @@ export function createVisibilityContentPlan(
     visibilitySignals,
     hookTaxonomy: taxonomy,
     contentPriorities: [
-      `Make the first three seconds feel built for ${audienceA}: ${hookSignal.insight}`,
-      `Build a repeatable rhythm around ${phraseList(niche.angleVariants, 0, 3)} instead of posting one-off ideas.`,
-      `Use proof people can see, such as ${phraseList(niche.proofVariants, 0, 3)}, before asking for action.`,
-      `Match CTAs to intent: use "${cta(0)}" for hot attention and "${cta(2)}" for warmer, conversational moments.`
+      `${signalRewrite(hookSignal.label, 0)} ${visual.opening(0)}`,
+      `Build a repeatable visual rhythm around ${visual.proofShot(0)}, ${visual.proofShot(1)}, and ${visual.proofShot(2)} instead of posting one-off ideas.`,
+      `Sequence proof like a director: ${visual.pacing(0)}.`,
+      `${visual.ctaPlacement(0)} Use "${cta(0)}" for hot attention and "${cta(2)}" for warmer, conversational moments.`
     ],
     postingFrequency: platformFrequency[platform],
     recommendedMix: [
       {
         label: "Buyer education",
         share: "30%",
-        purpose: `Answer search-intent questions like "${niche.searchPhrases[0]}" in a way that feels native to the post, not like keyword stuffing.`
+        purpose: `Answer "${niche.searchPhrases[0]}" with a visual sequence first, then use the caption to make the search phrase feel natural.`
       },
       {
         label: "Proof and authority",
         share: "25%",
-        purpose: `Show ${phraseList(niche.proofVariants, 1, 3)} so authority feels earned rather than claimed.`
+        purpose: `Show ${visual.proofShot(2)}, ${visual.proofShot(3)}, and ${visual.proofShot(4)} so authority feels earned rather than claimed.`
       },
       {
         label: "Local or niche relevance",
         share: "20%",
-        purpose: `Anchor the plan in ${platformLabel} language for ${audienceB}.`
+        purpose: `Anchor the plan in ${platformLabel} language for ${audienceB}, using scenes they recognize immediately.`
       },
       {
         label: "Offer and CTA",
         share: "15%",
-        purpose: `Move attention into plain next steps like "${cta(0)}" or "${cta(2)}."`
+        purpose: `${visual.ctaPlacement(1)} Move attention into plain next steps like "${cta(0)}" or "${cta(2)}."`
       },
       {
         label: "Engagement loops",
         share: "10%",
-        purpose: `Use prompts around ${phraseList(niche.emotionalTriggers, 0, 3)} so comments reveal what the audience actually wants.`
+        purpose: `Use prompts around ${emotionA}, ${emotionB}, and ${emotionC} so comments reveal what the audience actually wants.`
       }
     ],
     weeklySchedule: [
       {
         week: "Week 1",
         objective: "Make the first impression sharper, faster, and easier to act on.",
-        strategy: `The audit shows ${hookSignal.label.toLowerCase()} and ${ctaSignal.label.toLowerCase()} need attention. This week speaks to ${audienceA} with ${emotionA} and ${emotionB} cues, then gives them a next step before the interest cools.`,
+        strategy: `This week fixes the opening frame and the next step. Speak to ${audienceA} with ${emotionA} and ${emotionB} cues, then make the viewer feel the value before asking them to act.`,
         dailyPosts: [
           {
             day: "Monday",
             format: getPlatformNativeFormat(platform, "Short video"),
-            topic: `Show the biggest visibility leak using ${angleA}`,
-            goal: `Make the ${emotionA} payoff obvious before the scroll continues.`,
+            topic: `${visual.opening(0)} Then connect it to ${angleA}.`,
+            goal: `Make the ${emotionA} payoff obvious before the viewer has time to scroll.`,
             visibilitySignal: hookSignal.label
           },
           {
             day: "Tuesday",
             format: "Caption-led proof post",
-            topic: `Explain who the offer helps and connect it to ${audienceB}`,
-            goal: `Make the audience feel seen instead of broadly targeted.`,
+            topic: `Pair ${visual.proofShot(1)} with a caption written directly to ${audienceB}.`,
+            goal: `Make the audience feel seen, not broadly targeted.`,
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Wednesday",
             format: "Educational post",
-            topic: `Answer a search-intent question like "${niche.searchPhrases[0]}"`,
-            goal: "Build trust while adding platform-native search language.",
+            topic: `Answer "${niche.searchPhrases[0]}" with a quick visual before/after.`,
+            goal: "Make the search phrase feel useful on-platform, not pasted into the caption.",
             visibilitySignal: seoSignal.label
           },
           {
             day: "Thursday",
             format: "Behind-the-scenes clip",
-            topic: `Show ${proofB} or ${proofC}`,
-            goal: "Create authority without sounding like a hard sell.",
+            topic: `Show ${visual.proofShot(2)} or ${visual.proofShot(3)} with one human detail.`,
+            goal: "Create authority by letting viewers see what makes the brand credible.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Friday",
             format: "Direct CTA post",
-            topic: `Invite viewers to ${cta(0).toLowerCase()}`,
-            goal: "Convert profile attention into a measurable next step.",
+            topic: `${visual.ctaPlacement(0)} Invite viewers to ${cta(0).toLowerCase()}.`,
+            goal: "Turn warm attention into a next step while the moment still has energy.",
             visibilitySignal: ctaSignal.label
           }
         ],
@@ -1010,12 +1317,12 @@ export function createVisibilityContentPlan(
           taxonomy[6].hooks[0]
         ],
         videoScriptConcepts: [
-          `Open with the audit gap, show a post built around ${angleA}, explain the fix, close with "${cta(0)}."`,
-          "Use a before/after promise: unclear positioning first, sharper outcome second, then explain what changed."
+          `${visual.opening(0)} ${visual.secondBeat(0)} Close with "${cta(0)}" on the strongest proof frame.`,
+          `Use this pacing: ${visual.pacing(0)}. Keep the explanation short enough that the visuals do most of the work.`
         ],
         captionIdeas: [
-          `Visibility starts with clarity. If ${audienceA} have to guess, they will not take the next step.`,
-          `A stronger first impression can move people from passive interest to action.`
+          `If ${audienceA} cannot instantly tell why this is worth their time, they scroll.`,
+          visual.captionVoice(0)
         ],
         ctaSuggestions: [
           cta(0),
@@ -1028,48 +1335,48 @@ export function createVisibilityContentPlan(
           `Pin or save the strongest ${emotionA} question for next week's content.`
         ],
         visibilityPriorities: [
-          "Make the first line specific enough that the right viewer recognizes themselves.",
-          "Place the next step in the caption and spoken/video copy instead of only in the bio.",
-          "Create one repeatable hook format that can be reused without sounding copied."
+          signalRewrite(hookSignal.label, 1),
+          signalRewrite(ctaSignal.label, 0),
+          `Create one repeatable opening format using ${visual.proofShot(0)} without making every post feel copied.`
         ]
       },
       {
         week: "Week 2",
         objective: "Turn scattered posting into a recognizable content rhythm.",
-        strategy: `This week addresses ${consistencySignal.label.toLowerCase()} and ${gapSignal.label.toLowerCase()} by turning weak categories into ${phraseList(niche.angleVariants, 1, 3)} pillars.`,
+        strategy: `This week turns scattered posts into recognizable scenes. Repeat the strongest visual language so the audience starts knowing what the brand feels like before they read the caption.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Search-intent post",
-            topic: `Answer "${niche.searchPhrases[1]}" with a specific example`,
-            goal: `Make ${audienceC} feel like the post was made for their exact search.`,
+            topic: `Answer "${niche.searchPhrases[1]}" using ${visual.proofShot(4)} as the first visual.`,
+            goal: `Make ${audienceC} feel like the post was made for the exact decision they are trying to make.`,
             visibilitySignal: seoSignal.label
           },
           {
             day: "Tuesday",
             format: "Myth-busting video",
-            topic: `Correct a belief that keeps the audience from taking the next step`,
-            goal: "Make the audience rethink the problem without sounding like a lecture.",
+            topic: `Correct a belief with a fast contrast: weak version, stronger version, real-world example.`,
+            goal: "Make the audience rethink the problem by seeing the difference on-screen.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Wednesday",
             format: "Carousel or list post",
-            topic: `Three signs ${audienceA} are ready for the offer`,
-            goal: `Trigger identity and ${emotionA} recognition.`,
+            topic: `Three signs ${audienceA} are ready, built around ${visual.proofShot(0)}, ${visual.proofShot(1)}, and ${visual.proofShot(2)}.`,
+            goal: `Trigger identity and ${emotionA} recognition without sounding generic.`,
             visibilitySignal: gapSignal.label
           },
           {
             day: "Thursday",
             format: "Proof post",
-            topic: `Share ${proofA} with context`,
-            goal: "Add trust signals to the content mix.",
+            topic: `Share ${visual.proofShot(3)} with the context viewers usually miss.`,
+            goal: "Make trust visible in the content mix.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Friday",
             format: "Soft CTA post",
-            topic: `Invite followers to ${cta(2).toLowerCase()}`,
+            topic: `${visual.ctaPlacement(2)} Invite followers to ${cta(2).toLowerCase()}.`,
             goal: `Create low-friction conversations around ${emotionB}.`,
             visibilitySignal: engagementSignal.label
           }
@@ -1077,15 +1384,15 @@ export function createVisibilityContentPlan(
         hookIdeas: [
           taxonomy[1].hooks[0],
           taxonomy[5].hooks[1],
-          "Here is the content gap I would fix before posting more."
+          "This is the missing scene that would make the audience understand the offer faster."
         ],
         videoScriptConcepts: [
-          `Teach one buyer-intent question like "${niche.searchPhrases[0]}", give a quick example, then point to "${cta(0)}."`,
-          `Use ${angleB} to show a common mistake, explain why it happens, and give the corrected version.`
+          `Teach "${niche.searchPhrases[0]}" through visuals: ${visual.pacing(1)}.`,
+          `Use ${visual.secondBeat(1)} The viewer should understand the mistake before the voiceover explains it.`
         ],
         captionIdeas: [
-          `Consistency is not posting every thought. It is repeating ${proofA}, ${angleB}, and clear CTAs until the audience knows why to trust you.`,
-          "This week's content should make the decision easier, not just fill the calendar."
+          `People do not need more random posts. They need to see the same promise become easier to believe.`,
+          visual.captionVoice(1)
         ],
         ctaSuggestions: [
           cta(1),
@@ -1098,49 +1405,49 @@ export function createVisibilityContentPlan(
           "Track which post earns the most saves, replies, or profile visits."
         ],
         visibilityPriorities: [
-          "Repeat the strongest pillar twice this week so the audience starts recognizing the theme.",
-          "Use one search-intent phrase naturally in the first sentence of two posts.",
-          "Balance the week across education, proof, local relevance, and offer."
+          `Repeat ${visual.proofShot(0)} twice this week so the audience starts recognizing the theme.`,
+          `Use "${niche.searchPhrases[0]}" naturally in the first sentence of two posts.`,
+          signalRewrite(gapSignal.label, 0)
         ]
       },
       {
         week: "Week 3",
         objective: "Make trust visible and give the audience something to respond to.",
-        strategy: `The roadmap now shifts from clarity to credibility. Stronger ${authoritySignal.label.toLowerCase()} and ${engagementSignal.label.toLowerCase()} help ${audienceB} feel enough confidence to act.`,
+        strategy: `This week makes credibility something viewers can see. Use proof, process, and human reaction so ${audienceB} feel enough confidence to act.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Authority video",
-            topic: `Explain the ${proofB} most competitors do not show`,
-            goal: "Differentiate expertise.",
+            topic: `Show the ${visual.proofShot(5)} most competitors leave out.`,
+            goal: "Differentiate expertise with visible evidence.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Tuesday",
             format: "Testimonial or proof story",
-            topic: `Turn one ${proofA} into a narrative`,
+            topic: `Turn one ${visual.proofShot(4)} into a beginning, middle, and payoff.`,
             goal: `Reduce risk and increase ${emotionC}.`,
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Wednesday",
             format: "Objection-handling post",
-            topic: `Answer the concern that keeps ${audienceC} from acting`,
-            goal: "Move warm viewers closer to action.",
+            topic: `Answer the concern that keeps ${audienceC} from acting with a visual side-by-side.`,
+            goal: "Move warm viewers closer to action by making the answer easy to see.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Thursday",
             format: "Community prompt",
-            topic: `Ask the audience what transformation they want next`,
-            goal: "Increase comment quality and content inputs.",
+            topic: `Ask the audience which outcome they want next after showing ${visual.proofShot(1)}.`,
+            goal: "Increase comment quality with a prompt tied to a real visual moment.",
             visibilitySignal: engagementSignal.label
           },
           {
             day: "Friday",
             format: "Local or niche relevance post",
-            topic: `Tie the offer to "${niche.searchPhrases[2] ?? niche.searchPhrases[0]}"`,
-            goal: "Make the post feel tied to the exact market moment.",
+            topic: `Tie the offer to "${niche.searchPhrases[2] ?? niche.searchPhrases[0]}" with a scene the audience recognizes.`,
+            goal: "Make the post feel tied to the exact market moment, not a generic content prompt.",
             visibilitySignal: seoSignal.label
           }
         ],
@@ -1150,12 +1457,12 @@ export function createVisibilityContentPlan(
           "If you are comparing options, this detail matters."
         ],
         videoScriptConcepts: [
-          `Start with an objection, validate it, show ${proofA}, explain the process, close with "${cta(0)}."`,
-          "Break down a result into three decisions that made the outcome feel achievable."
+          `Start with the objection on-screen, validate it in one line, show ${visual.proofShot(2)}, then close with "${cta(0)}."`,
+          `Break down the result visually: ${visual.pacing(2)}. Let the proof carry the credibility.`
         ],
         captionIdeas: [
-          `Authority is built through evidence. Show ${proofA}, ${proofB}, and why it worked.`,
-          `${audienceB} trust what they can understand. Make the path visible.`
+          `Do not just say the brand is good at this. Show the moment that makes people believe it.`,
+          `${audienceB} trust what they can see. Make the path visible.`
         ],
         ctaSuggestions: [
           cta(0),
@@ -1168,49 +1475,49 @@ export function createVisibilityContentPlan(
           "Identify three audience questions that deserve dedicated posts."
         ],
         visibilityPriorities: [
-          "Use proof that removes hesitation, not proof that only looks impressive.",
-          "Turn one strong audience question into a full post instead of only replying in comments.",
-          "Show the process behind the result so trust has something concrete to attach to."
+          signalRewrite(authoritySignal.label, 1),
+          "Turn one strong audience question into a full post with a clear first frame and a useful answer.",
+          `Show ${visual.proofShot(5)} so trust has something concrete to attach to.`
         ]
       },
       {
         week: "Week 4",
         objective: "Turn attention into conversations and decide what deserves another cycle.",
-        strategy: `The final week packages the strongest content signals into a conversion push, then uses qualitative feedback to decide the next 30-day cycle for ${audienceA}.`,
+        strategy: `The final week turns the strongest scenes into action. Keep the creative cinematic, but make every post easier to respond to, save, share, or act on.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Campaign recap",
-            topic: "Summarize the biggest visibility improvement from the month",
-            goal: "Show people the difference between random posting and intentional visibility.",
+            topic: `Recap the month with the strongest opening, proof shot, and CTA frame.`,
+            goal: "Show the difference between posting to stay active and posting to create movement.",
             visibilitySignal: gapSignal.label
           },
           {
             day: "Tuesday",
             format: "FAQ video",
-            topic: `Answer the final question ${audienceB} ask before acting`,
-            goal: "Remove friction.",
+            topic: `Answer the final question ${audienceB} ask before acting, then show the answer in motion.`,
+            goal: "Remove friction with a visual answer, not a long explanation.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Wednesday",
             format: "Comparison post",
-            topic: `Show weak vs. strong ${platformLabel} visibility using ${angleC}`,
-            goal: "Make the value easy to understand.",
+            topic: `Show weak vs. strong ${platformLabel} visibility using ${visual.proofShot(6)}.`,
+            goal: "Make the value obvious in one glance.",
             visibilitySignal: hookSignal.label
           },
           {
             day: "Thursday",
             format: "Lead magnet or audit invitation",
-            topic: `Offer a simple next step: ${cta(0)}`,
-            goal: "Capture warm demand.",
+            topic: `${visual.ctaPlacement(1)} Offer a simple next step: ${cta(0)}.`,
+            goal: "Capture warm demand while the proof is still fresh.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Friday",
             format: "Strategy CTA post",
-            topic: `Invite ${audienceC} to ${cta(0).toLowerCase()}`,
-            goal: "Turn the month into pipeline.",
+            topic: `Invite ${audienceC} to ${cta(0).toLowerCase()} after the clearest before/after moment.`,
+            goal: "Turn the month into conversations without making the post feel disconnected from the content.",
             visibilitySignal: ctaSignal.label
           }
         ],
@@ -1220,12 +1527,12 @@ export function createVisibilityContentPlan(
           "Your content should create movement, not just impressions."
         ],
         videoScriptConcepts: [
-          `Recap the month: ${gapSignal.label.toLowerCase()}, fix, ${proofA}, next step. Keep it simple and conversion-focused.`,
-          "Show the cost of unclear visibility, then make the next step feel obvious."
+          `Recap the month as a mini trailer: strongest hook, best proof, clearest audience reaction, then "${cta(0)}."`,
+          `${visual.secondBeat(2)} Show the cost of unclear visibility, then make the next step feel obvious.`
         ],
         captionIdeas: [
-          `A visibility plan should end with action. The goal is not more ${platformLabel} content. The goal is clearer demand.`,
-          `Use ${emotionA}, ${proofA}, and CTA signals to decide what to repeat, cut, and scale.`
+          `The goal is not more ${platformLabel} content. The goal is content that makes people feel ready to move.`,
+          `${visual.captionVoice(2)} Repeat the scenes people saved, replied to, or acted on.`
         ],
         ctaSuggestions: [
           cta(0),
@@ -1238,8 +1545,8 @@ export function createVisibilityContentPlan(
           "Turn the strongest audience response into the next month's first campaign."
         ],
         visibilityPriorities: [
-          "Make the final CTA feel like the natural next step from the month's best-performing content.",
-          "Compare engagement quality against posts with the clearest first three seconds.",
+          signalRewrite(ctaSignal.label, 1),
+          "Compare engagement quality against posts with the clearest first frame and strongest visual payoff.",
           "Choose the next cycle based on real audience response, not content volume."
         ]
       }
