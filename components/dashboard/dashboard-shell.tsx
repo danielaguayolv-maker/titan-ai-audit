@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { TitanLogo } from "@/components/shared/titan-logo";
 
 export type TitanOsModule =
@@ -81,6 +81,32 @@ export function DashboardShell({
   activeModule,
   onModuleChange
 }: DashboardShellProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previousModuleRef = useRef<TitanOsModule>(activeModule);
+
+  useEffect(() => {
+    if (previousModuleRef.current === activeModule) {
+      return;
+    }
+
+    previousModuleRef.current = activeModule;
+
+    const isMobileLayout = window.matchMedia("(max-width: 1023px)").matches;
+
+    if (!isMobileLayout) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      contentRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start"
+      });
+    });
+  }, [activeModule]);
+
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden">
       <div className="sticky top-0 z-30 border-b border-titan-gold/10 bg-titan-black/72 backdrop-blur-xl">
@@ -117,6 +143,8 @@ export function DashboardShell({
 
               return (
                 <button
+                  aria-controls="titan-module-content"
+                  aria-current={isActive ? "page" : undefined}
                   className={`group min-w-0 rounded-lg border p-4 text-left transition ${
                     isActive
                       ? "border-titan-bright bg-titan-gold text-black shadow-gold"
@@ -150,7 +178,13 @@ export function DashboardShell({
           </nav>
         </aside>
 
-        <div className="min-w-0 max-w-full">{children}</div>
+        <div
+          className="min-w-0 max-w-full scroll-mt-24 lg:scroll-mt-0"
+          id="titan-module-content"
+          ref={contentRef}
+        >
+          {children}
+        </div>
       </div>
     </main>
   );
