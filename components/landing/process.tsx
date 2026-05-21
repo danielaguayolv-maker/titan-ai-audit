@@ -12,8 +12,9 @@ export function Process() {
             From audit signal to boardroom-ready action.
           </h2>
           <p className="mt-5 text-lg leading-8 text-titan-ivory/66">
-            Titan AI Audit is designed for owners who want a premium advisory
-            experience without drowning in dashboards.
+            Titan Visibility OS is designed for operators who want audit
+            intelligence, content execution, and reporting without drowning in
+            disconnected dashboards.
           </p>
         </div>
 

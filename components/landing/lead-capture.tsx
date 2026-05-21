@@ -9,14 +9,14 @@ export function LeadCapture() {
             Ready for the next local edge?
           </p>
           <h2 className="mt-3 text-3xl font-black text-titan-ivory sm:text-5xl">
-            Put Titan AI Audit in front of your best prospects.
+            Put Titan Visibility OS behind your next growth workflow.
           </h2>
           <p className="mt-4 max-w-3xl leading-7 text-titan-ivory/70">
-            A focused landing experience for premium AI audit offers, built to
-            convert local business owners into qualified conversations.
+            A focused operating system for visibility audits, content execution,
+            trend intelligence, and premium client-ready reporting.
           </p>
         </div>
-        <CtaButton>Request Demo</CtaButton>
+        <CtaButton>Open Platform</CtaButton>
       </div>
     </section>
   );

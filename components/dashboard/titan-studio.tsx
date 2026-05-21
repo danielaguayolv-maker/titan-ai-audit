@@ -3,17 +3,17 @@
 import type { AiAuditResult, AuditPlatform } from "@/lib/audit-ai";
 import { createVisibilityContentPlan } from "@/lib/content-plan";
 
-type ContentBuddyProps = {
+type TitanStudioProps = {
   auditResult: AiAuditResult;
   platform: AuditPlatform;
   isUsingFallback: boolean;
 };
 
-export function ContentBuddy({
+export function TitanStudio({
   auditResult,
   platform,
   isUsingFallback
-}: ContentBuddyProps) {
+}: TitanStudioProps) {
   const plan = createVisibilityContentPlan(auditResult, platform);
 
   return (
@@ -23,16 +23,18 @@ export function ContentBuddy({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-bold uppercase text-titan-muted">
-                ContentBuddy
+                Titan Studio
               </p>
               <h1 className="text-anywhere mt-3 text-4xl font-black leading-tight text-titan-ivory sm:text-6xl">
                 Audit to 30-Day Visibility Plan
               </h1>
+              <p className="mt-3 text-sm font-black uppercase text-titan-bright">
+                AI-powered content execution and visibility workflow system.
+              </p>
               <p className="text-anywhere mt-5 max-w-3xl text-lg leading-8 text-titan-ivory/66">
-                ContentBuddy turns the latest Titan audit into a practical
-                publishing plan for {auditResult.businessName}. It prioritizes
-                the weakest visibility signals first, then builds toward
-                conversion.
+                Titan Studio turns the latest Visibility Audit into a practical
+                publishing plan for {auditResult.businessName}. It prioritizes the
+                weakest visibility signals first, then builds toward conversion.
               </p>
             </div>
             <div className="rounded-lg border border-titan-gold/15 bg-black/24 p-4">
@@ -40,7 +42,7 @@ export function ContentBuddy({
                 Intelligence source
               </p>
               <p className="mt-2 text-sm font-black uppercase text-titan-bright">
-                {isUsingFallback ? "Fallback audit" : "Latest AI audit"}
+                {isUsingFallback ? "Readiness baseline" : "Latest AI audit"}
               </p>
               <p className="mt-2 text-sm text-titan-ivory/58">
                 Score {Math.round(auditResult.overallScore)}/100 - Grade{" "}

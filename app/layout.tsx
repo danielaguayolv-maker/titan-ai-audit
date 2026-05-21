@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Titan AI Audit | Premium Local Business AI Audits",
+  title: "Titan Visibility OS | Visibility Intelligence and Execution",
   description:
-    "A bold SaaS landing page for Titan AI Audit, built for local businesses that want a sharper AI growth edge."
+    "AI-powered visibility intelligence and execution system for creators and businesses."
 };
 
 export default function RootLayout({

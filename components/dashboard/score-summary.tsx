@@ -27,11 +27,11 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
       <div className="subtle-grid pointer-events-none absolute inset-x-0 top-0 h-72" />
       <div className="fade-up premium-surface relative min-w-0 max-w-full rounded-lg p-6 sm:p-8">
         <p className="text-sm font-bold uppercase text-titan-muted">
-          Audit dashboard
+          Visibility Audit
         </p>
         <h1 className="text-anywhere mt-4 text-3xl font-black leading-tight text-titan-ivory sm:text-5xl xl:text-6xl">
           <span className="block max-w-full">{auditResult.businessName}</span>
-          <span className="gold-text block">AI readiness score</span>
+          <span className="gold-text block">Visibility score</span>
         </h1>
         <p className="text-anywhere mt-5 max-w-2xl text-lg leading-8 text-titan-ivory/66">
           {auditResult.personalizedDiagnosis}
@@ -56,7 +56,7 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
             />
           </div>
           <p className="mt-3 font-bold">
-            {isUsingFallback ? "Local fallback score" : "Updated from latest AI audit"}
+            {isUsingFallback ? "Readiness baseline" : "Updated from latest Visibility Audit"}
           </p>
         </div>
         {topCategory ? (

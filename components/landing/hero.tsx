@@ -10,19 +10,19 @@ export function Hero() {
       <div className="subtle-grid pointer-events-none absolute inset-x-0 top-0 h-80" />
       <div className="fade-up relative max-w-3xl">
         <p className="mb-5 inline-flex rounded-full border border-titan-gold/30 bg-titan-gold/10 px-4 py-2 text-xs font-bold uppercase text-titan-bright">
-          Premium AI audits for local businesses
+          Premium visibility OS for creators and businesses
         </p>
         <h1 className="max-w-4xl text-5xl font-black leading-[0.96] text-titan-ivory sm:text-6xl lg:text-7xl">
           Turn hidden business gaps into a{" "}
           <span className="gold-text">gold-grade growth plan.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-titan-ivory/72 sm:text-xl">
-          Titan AI Audit gives service companies, clinics, retailers, and local
-          operators a sharper view of where AI can recover leads, speed up sales,
-          and protect reputation.
+          Titan Visibility OS gives creators, service companies, clinics,
+          retailers, and local operators a sharper system for visibility
+          intelligence, content execution, and client-ready reporting.
         </p>
         <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-          <CtaButton>Start Your Audit</CtaButton>
+          <CtaButton>Open Visibility OS</CtaButton>
           <CtaButton href="#features" variant="secondary">
             View Features
           </CtaButton>
@@ -48,10 +48,10 @@ export function Hero() {
           <div className="mb-5 flex items-center justify-between border-b border-titan-gold/15 pb-5">
             <div>
               <p className="text-xs uppercase text-titan-muted">
-                Live Audit Preview
+                Visibility OS Preview
               </p>
               <h2 className="mt-1 text-2xl font-black text-titan-ivory">
-                Main Street Dental
+                Live Profile Workspace
               </h2>
             </div>
             <div className="rounded-full bg-titan-gold px-4 py-2 text-2xl font-black text-black shadow-gold">
@@ -81,13 +81,13 @@ export function Hero() {
             <div className="rounded-lg bg-titan-gold/10 p-4">
               <p className="text-sm font-bold text-titan-bright">Top Opportunity</p>
               <p className="mt-2 text-sm leading-6 text-titan-ivory/70">
-                Add missed-call textback and AI intake routing.
+                Convert weak visibility signals into a 30-day execution plan.
               </p>
             </div>
             <div className="rounded-lg bg-white/[0.05] p-4">
               <p className="text-sm font-bold text-titan-bright">Projected Lift</p>
               <p className="mt-2 text-sm leading-6 text-titan-ivory/70">
-                Recover 12-18 warm leads per month.
+                Turn profile attention into stronger content and clearer CTAs.
               </p>
             </div>
           </div>

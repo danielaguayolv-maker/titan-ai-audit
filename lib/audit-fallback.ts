@@ -140,11 +140,11 @@ export function createFallbackAuditResult(
         : "General business page";
 
   return {
-    businessName: "Main Street Dental",
+    businessName: "Awaiting profile audit",
     overallScore: platform === "general" ? overallAuditScore : platformScore,
     grade: getGradeFromScore(platform === "general" ? overallAuditScore : platformScore),
     personalizedDiagnosis:
-      `The local ${platformLabel} fallback shows this profile is lead-ready, with the strongest upside in clearer positioning, stronger CTAs, and more consistent local conversion signals.`,
+      `The ${platformLabel} readiness baseline is loaded. Run a live Visibility Audit to replace this guidance with profile-specific diagnosis, scanned data, and execution priorities.`,
     categoryScores,
     topQuickWins: quickWins.map((win) => ({
       title: win.title,
@@ -154,20 +154,20 @@ export function createFallbackAuditResult(
     })),
     optimizedBio,
     contentRecommendations: [
-      "Publish a short AI audit offer page for local business owners.",
-      "Create before-and-after examples showing missed lead recovery.",
-      "Add review request messaging to post-service follow-up content.",
-      "Turn the audit report into a simple consultation script."
+      "Run a live profile scan before finalizing the content plan.",
+      "Use the weakest category score to choose the first execution theme.",
+      "Pair educational content with proof and a direct next step.",
+      "Turn the visibility report into a concise strategy call outline."
     ],
     leadReadyAuditReport: {
-      headline: "Lead-ready AI audit summary",
+      headline: "Visibility baseline summary",
       summary:
-        "Use the fallback report as a sales-ready starting point while the live AI audit is unavailable.",
+        "Use this readiness baseline as a temporary planning layer until a live profile audit is generated.",
       findings: reportHighlights,
       nextSteps: [
-        "Review category scores with the business owner.",
-        "Prioritize one quick win for the next 14 days.",
-        "Use the optimized bio across visible local profiles."
+        "Run a Visibility Audit with a profile URL.",
+        "Open Titan Studio to generate the 30-day execution plan.",
+        "Export the final visibility report for client delivery."
       ]
     }
   };

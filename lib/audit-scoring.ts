@@ -75,7 +75,7 @@ export const quickWins: QuickWin[] = [
 ];
 
 export const optimizedBio =
-  "Titan AI Audit helps local businesses uncover missed leads, weak follow-up systems, and AI automation opportunities with a premium, owner-friendly growth report.";
+  "Titan Visibility OS helps creators and businesses uncover visibility gaps, sharpen content execution, and turn profile attention into measurable growth workflows.";
 
 export const reportHighlights = [
   "Overall AI readiness score with category-level diagnostics",

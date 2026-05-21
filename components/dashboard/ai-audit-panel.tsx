@@ -226,11 +226,11 @@ export function AiAuditPanel({
           <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:items-start">
             <div className="min-w-0">
               <p className="text-sm font-bold uppercase text-titan-muted">
-                Titan AI Audit
+                Visibility Audit
               </p>
               <h2 className="text-anywhere mt-3 max-w-3xl text-4xl font-black leading-tight text-titan-ivory sm:text-6xl">
                 Paste a profile URL.{" "}
-                <span className="gold-text">Run a premium AI audit.</span>
+                <span className="gold-text">Run a premium visibility audit.</span>
               </h2>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-titan-ivory/66">
                 Start with an Instagram or TikTok URL. Add deeper context only if
@@ -272,7 +272,7 @@ export function AiAuditPanel({
                 disabled={status === "loading"}
                 type="submit"
               >
-                {status === "loading" ? "Running AI Audit..." : "Run AI Audit"}
+                {status === "loading" ? "Running Visibility Audit..." : "Run Visibility Audit"}
               </button>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -380,7 +380,7 @@ export function AiAuditPanel({
 
           {status === "error" ? (
             <div className="mt-5 rounded-lg border border-red-400/25 bg-red-500/10 p-4">
-              <p className="text-sm font-bold text-red-100">OpenAI request failed</p>
+              <p className="text-sm font-bold text-red-100">Visibility intelligence request failed</p>
               <p className="mt-2 text-sm leading-6 text-red-100/72">{error}</p>
               <p className="mt-2 text-sm leading-6 text-titan-ivory/58">
                 {isUsingFallback
@@ -398,7 +398,7 @@ export function AiAuditPanel({
                 Generated output
               </p>
               <h2 className="mt-3 text-3xl font-black text-titan-ivory">
-                {isUsingFallback ? "Fallback audit preview" : "OpenAI audit result"}
+                {isUsingFallback ? "Readiness baseline" : "Visibility Audit result"}
               </h2>
             </div>
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/70">
@@ -406,7 +406,7 @@ export function AiAuditPanel({
                 ? "Loading"
                 : isUsingFallback
                   ? "Local fallback"
-                  : "Live JSON"}
+                  : "Live intelligence"}
             </span>
           </div>
 

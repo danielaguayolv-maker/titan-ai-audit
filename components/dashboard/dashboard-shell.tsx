@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import { TitanLogo } from "@/components/shared/titan-logo";
 
 export type TitanOsModule =
+  | "home"
   | "audit"
-  | "contentbuddy"
+  | "titan-studio"
   | "trend-finder"
   | "competitor-intelligence"
   | "content-planner"
@@ -22,17 +23,57 @@ const modules: Array<{
   id: TitanOsModule;
   label: string;
   eyebrow: string;
+  description: string;
 }> = [
-  { id: "audit", label: "Visibility Audit", eyebrow: "Scan" },
-  { id: "contentbuddy", label: "ContentBuddy", eyebrow: "Plan" },
-  { id: "trend-finder", label: "Trend Finder", eyebrow: "Signals" },
+  {
+    id: "home",
+    label: "Command Center",
+    eyebrow: "Home",
+    description:
+      "Start here for the connected visibility workflow across audit, execution, and reports."
+  },
+  {
+    id: "audit",
+    label: "Visibility Audit",
+    eyebrow: "Intelligence",
+    description:
+      "Scan Instagram, TikTok, or business pages and identify the visibility gaps blocking growth."
+  },
+  {
+    id: "titan-studio",
+    label: "Titan Studio",
+    eyebrow: "Execution",
+    description:
+      "AI-powered content execution and visibility workflow system."
+  },
+  {
+    id: "trend-finder",
+    label: "Trend Finder",
+    eyebrow: "Signals",
+    description:
+      "Surface content angles, search patterns, and timely visibility opportunities."
+  },
   {
     id: "competitor-intelligence",
     label: "Competitor Intelligence",
-    eyebrow: "Market"
+    eyebrow: "Market",
+    description:
+      "Compare positioning, proof, content rhythm, and conversion signals against local competitors."
   },
-  { id: "content-planner", label: "Content Planner", eyebrow: "Calendar" },
-  { id: "reports", label: "Reports", eyebrow: "Client-ready" }
+  {
+    id: "content-planner",
+    label: "Content Planner",
+    eyebrow: "Calendar",
+    description:
+      "Organize approved Titan Studio outputs into a practical publishing rhythm."
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    eyebrow: "Client-ready",
+    description:
+      "Package visibility intelligence, recommendations, and next steps into polished PDF reports."
+  }
 ];
 
 export function DashboardShell({
@@ -44,7 +85,7 @@ export function DashboardShell({
     <main className="min-h-screen w-full max-w-full overflow-x-hidden">
       <div className="sticky top-0 z-30 border-b border-titan-gold/10 bg-titan-black/72 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <Link className="min-w-0 transition hover:opacity-90" href="/" aria-label="Titan AI Audit home">
+          <Link className="min-w-0 transition hover:opacity-90" href="/" aria-label="Titan Visibility OS home">
             <TitanLogo label="Titan Visibility OS" />
           </Link>
           <Link
@@ -65,8 +106,8 @@ export function DashboardShell({
               Titan Visibility OS
             </h1>
             <p className="mt-3 text-sm leading-6 text-titan-ivory/58">
-              Audit intelligence, content planning, trend signals, and reports
-              in one premium workspace.
+              AI-powered visibility intelligence and execution system for
+              creators and businesses.
             </p>
           </div>
 
@@ -83,6 +124,7 @@ export function DashboardShell({
                   }`}
                   key={module.id}
                   onClick={() => onModuleChange(module.id)}
+                  title={module.description}
                   type="button"
                 >
                   <span
@@ -94,6 +136,13 @@ export function DashboardShell({
                   </span>
                   <span className="text-anywhere mt-1 block font-black">
                     {module.label}
+                  </span>
+                  <span
+                    className={`text-anywhere mt-2 block text-xs leading-5 ${
+                      isActive ? "text-black/62" : "text-titan-ivory/48"
+                    }`}
+                  >
+                    {module.description}
                   </span>
                 </button>
               );

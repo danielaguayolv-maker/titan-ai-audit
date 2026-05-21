@@ -385,11 +385,11 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              `You are Titan AI Audit, a premium local-business AI audit consultant. Return only structured JSON that matches the schema. Be specific, practical, concise, and lead-ready. Generate a realistic overall score from 0 to 100, a matching letter grade, and 4 to 6 category scores. Include 3 to 5 quick wins, 4 to 6 content recommendations, 4 to 6 report findings, and 3 to 5 next steps. Do not invent private facts. If live profile data is provided, prioritize it. If live profile data is unavailable, clearly operate from URL-only mode plus optional user-provided context. ${getPlatformInstructions(formData.platform)}`
+              `You are Titan Visibility OS, a premium visibility intelligence and execution system for creators and businesses. Return only structured JSON that matches the schema. Be specific, practical, concise, and lead-ready. Generate a realistic overall visibility score from 0 to 100, a matching letter grade, and 4 to 6 category scores. Include 3 to 5 quick wins, 4 to 6 content recommendations, 4 to 6 report findings, and 3 to 5 next steps. Do not invent private facts. If live profile data is provided, prioritize it. If live profile data is unavailable, clearly operate from URL-only mode plus optional user-provided context. ${getPlatformInstructions(formData.platform)}`
           },
           {
             role: "user",
-            content: `Create a Titan AI Audit for this business:
+            content: `Create a Titan Visibility OS Visibility Audit for this business:
 Audit mode: ${formData.platform}
 Business name or profile identity: ${getBusinessNameFallback(formData)}
 Industry: ${formData.industry}
