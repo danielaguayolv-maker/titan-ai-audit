@@ -21,10 +21,13 @@ type NicheProfile = {
   label: string;
   keywords: string[];
   audience: string;
+  audienceContexts: string[];
   emotionalTriggers: string[];
   searchPhrases: string[];
   contentAngles: string[];
+  angleVariants: string[];
   proofSignals: string[];
+  proofVariants: string[];
   ctaLanguage: string[];
 };
 
@@ -58,6 +61,7 @@ export type VisibilityContentPlan = {
   niche: {
     label: string;
     audience: string;
+    audienceContexts: string[];
     emotionalTriggers: string[];
     searchPhrases: string[];
   };
@@ -80,10 +84,38 @@ const nicheProfiles: NicheProfile[] = [
     label: "Restaurants",
     keywords: ["restaurant", "bbq", "pizza", "cafe", "bar", "food", "menu", "dining", "chef"],
     audience: "hungry locals choosing where to eat now, where to bring friends, or what spot feels worth the trip",
+    audienceContexts: [
+      "locals planning dinner tonight",
+      "Vegas food lovers",
+      "people searching where to eat",
+      "date-night couples",
+      "tourists looking for BBQ nearby",
+      "families deciding dinner spots",
+      "people craving comfort food",
+      "groups choosing where to go tonight"
+    ],
     emotionalTriggers: ["craving", "belonging", "local status", "fear of missing out", "comfort"],
     searchPhrases: ["best BBQ in Las Vegas", "date night restaurant near me", "family dinner spot in town"],
     contentAngles: ["signature dish reveal", "busy-night proof", "chef/process story", "local favorite ranking"],
+    angleVariants: [
+      "plated food close-ups",
+      "kitchen energy",
+      "chef prep moments",
+      "comfort-food cravings",
+      "late-night order moments",
+      "date-night decision clips"
+    ],
     proofSignals: ["full dining room", "customer reactions", "fresh prep", "reviews", "limited menu items"],
+    proofVariants: [
+      "busy atmosphere",
+      "packed tables",
+      "active service moments",
+      "customer reactions",
+      "peak-hour footage",
+      "kitchen energy",
+      "crowd momentum",
+      "waitlist energy"
+    ],
     ctaLanguage: ["Reserve tonight", "Order the special", "Tag who you are bringing", "Save this for dinner"]
   },
   {
@@ -91,10 +123,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Local businesses",
     keywords: ["local", "shop", "store", "boutique", "salon", "clinic", "studio", "neighborhood"],
     audience: "nearby customers looking for a trusted local option before they spend time or money",
+    audienceContexts: [
+      "locals comparing nearby options",
+      "neighbors looking for a place they can trust",
+      "busy customers deciding quickly",
+      "community-minded shoppers",
+      "people who prefer a human recommendation",
+      "repeat buyers looking for familiarity"
+    ],
     emotionalTriggers: ["trust", "belonging", "convenience", "community pride", "status"],
     searchPhrases: ["best local shop near me", "trusted service in my area", "nearby business open today"],
     contentAngles: ["local customer story", "neighborhood guide", "why locals choose us", "behind-the-counter proof"],
+    angleVariants: [
+      "staff recommendation clips",
+      "neighborhood moments",
+      "customer favorite picks",
+      "local routine content",
+      "what to try first",
+      "owner point-of-view posts"
+    ],
     proofSignals: ["repeat customers", "local landmarks", "staff expertise", "reviews", "community involvement"],
+    proofVariants: [
+      "regular customer moments",
+      "neighborhood recognition",
+      "staff expertise",
+      "review snippets",
+      "community events",
+      "before-the-rush footage",
+      "local landmark references"
+    ],
     ctaLanguage: ["Visit this week", "Message us before you stop by", "Save this local guide", "Book your spot"]
   },
   {
@@ -102,10 +159,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Service businesses",
     keywords: ["service", "repair", "contractor", "plumber", "hvac", "cleaning", "roofing", "law", "dental"],
     audience: "problem-aware prospects who want proof, speed, clarity, and low-risk next steps",
+    audienceContexts: [
+      "homeowners trying to avoid a bigger repair",
+      "busy families who need the problem handled",
+      "price-aware prospects comparing providers",
+      "people frustrated by unclear service pages",
+      "urgent buyers who need a next step now",
+      "locals looking for someone credible"
+    ],
     emotionalTriggers: ["frustration", "relief", "trust", "urgency", "transformation"],
     searchPhrases: ["emergency HVAC repair near me", "best dental cleaning in town", "trusted contractor near me"],
     contentAngles: ["problem diagnosis", "before and after", "costly mistake", "what to expect after booking"],
+    angleVariants: [
+      "what caused this problem",
+      "repair walkthrough",
+      "price confusion explainer",
+      "before-the-call checklist",
+      "customer relief story",
+      "mistake prevention post"
+    ],
     proofSignals: ["before/after footage", "certifications", "response time", "reviews", "process walkthroughs"],
+    proofVariants: [
+      "before/after proof",
+      "arrival window clarity",
+      "technician walkthroughs",
+      "review screenshots",
+      "licensed expertise",
+      "cleanup after the job",
+      "problem solved moments"
+    ],
     ctaLanguage: ["Book an inspection", "Request an estimate", "DM the issue", "Call before it gets worse"]
   },
   {
@@ -113,10 +195,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Gaming creators",
     keywords: ["gaming", "gameplay", "fps", "ranked", "build", "loadout", "clips", "esports"],
     audience: "players who want skill, entertainment, identity, and a reason to follow the next session",
+    audienceContexts: [
+      "competitive players chasing rank",
+      "nostalgic gamers",
+      "dad gamers with limited time",
+      "casual audiences who want funny moments",
+      "stream communities looking for inside jokes",
+      "players testing the meta"
+    ],
     emotionalTriggers: ["identity", "status", "belonging", "mastery", "fear of missing out"],
     searchPhrases: ["best loadout for ranked", "how to win more games", "new meta build"],
     contentAngles: ["rank climb lesson", "loadout test", "mistake breakdown", "clutch story"],
+    angleVariants: [
+      "ranked decision breakdown",
+      "loadout comparison",
+      "clutch replay",
+      "tilt recovery moment",
+      "patch reaction",
+      "one mistake that threw the round"
+    ],
     proofSignals: ["match results", "rank progress", "clip retention", "live reactions", "community challenges"],
+    proofVariants: [
+      "rank progress",
+      "match results",
+      "clutch clips",
+      "chat reactions",
+      "community challenges",
+      "before/after gameplay",
+      "win-streak proof"
+    ],
     ctaLanguage: ["Follow for the next climb", "Drop your rank", "Join the stream", "Save this build"]
   },
   {
@@ -124,10 +231,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Lifestyle creators",
     keywords: ["lifestyle", "beauty", "fashion", "travel", "home", "routine", "vlog", "wellness"],
     audience: "aspirational followers looking for taste, identity, routines, and products that feel like them",
+    audienceContexts: [
+      "followers building a new routine",
+      "style-curious audiences",
+      "people looking for a better version of their day",
+      "viewers who save aesthetic ideas",
+      "busy creators wanting simple upgrades",
+      "followers who buy into taste and identity"
+    ],
     emotionalTriggers: ["aspiration", "identity", "belonging", "status", "transformation"],
     searchPhrases: ["morning routine for busy creators", "affordable outfit ideas", "weekend reset routine"],
     contentAngles: ["routine breakdown", "taste edit", "before/after lifestyle shift", "favorite finds"],
+    angleVariants: [
+      "day-in-the-life shift",
+      "routine reset",
+      "favorite find edit",
+      "style decision breakdown",
+      "small upgrade story",
+      "before/after mood change"
+    ],
     proofSignals: ["personal story", "use-in-real-life clips", "community saves", "comments", "visual consistency"],
+    proofVariants: [
+      "real-life use clips",
+      "saved routine moments",
+      "personal story details",
+      "visual consistency",
+      "comment questions",
+      "before/after routine footage",
+      "repeatable lifestyle cues"
+    ],
     ctaLanguage: ["Save this routine", "Comment LINK", "Follow for the full series", "Shop the edit"]
   },
   {
@@ -135,10 +267,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Streamers",
     keywords: ["stream", "streamer", "twitch", "live", "chat", "discord", "subathon"],
     audience: "viewers deciding whether the stream feels entertaining, interactive, and worth returning to",
+    audienceContexts: [
+      "lurkers deciding whether to join chat",
+      "regulars looking for community moments",
+      "clip watchers who missed the live",
+      "Discord members wanting inside jokes",
+      "new viewers testing the vibe",
+      "fans who do not want to miss the next stream"
+    ],
     emotionalTriggers: ["belonging", "fear of missing out", "identity", "status", "inside jokes"],
     searchPhrases: ["best moments from stream", "live stream highlights", "funny chat moments"],
     contentAngles: ["stream highlight", "chat challenge", "clip of the day", "behind-the-stream setup"],
+    angleVariants: [
+      "chat reaction highlight",
+      "clip-worthy moment",
+      "stream schedule tease",
+      "community challenge",
+      "Discord joke setup",
+      "unexpected live moment"
+    ],
     proofSignals: ["chat reactions", "viewer milestones", "clips", "community memes", "schedule consistency"],
+    proofVariants: [
+      "chat reactions",
+      "viewer milestones",
+      "clip momentum",
+      "community memes",
+      "inside jokes",
+      "live countdowns",
+      "stream schedule proof"
+    ],
     ctaLanguage: ["Catch the next live", "Join the Discord", "Drop a clip request", "Follow before tonight's stream"]
   },
   {
@@ -146,10 +303,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Fitness creators",
     keywords: ["fitness", "gym", "coach", "workout", "fat loss", "strength", "nutrition", "trainer"],
     audience: "people who want visible progress, discipline, confidence, and a plan they can actually follow",
+    audienceContexts: [
+      "beginners afraid of looking lost",
+      "transformation seekers",
+      "high-performers chasing discipline",
+      "busy parents rebuilding confidence",
+      "people tired of starting over",
+      "lifters trying to fix form"
+    ],
     emotionalTriggers: ["transformation", "frustration", "identity", "aspiration", "status"],
     searchPhrases: ["beginner strength workout", "fat loss meal prep ideas", "best glute workout at home"],
     contentAngles: ["form fix", "progress story", "myth busting", "simple weekly plan"],
+    angleVariants: [
+      "form correction",
+      "progress proof",
+      "simple meal decision",
+      "beginner confidence clip",
+      "workout mistake fix",
+      "discipline identity post"
+    ],
     proofSignals: ["client wins", "progress photos", "form demos", "credentials", "repeatable frameworks"],
+    proofVariants: [
+      "client wins",
+      "progress photos",
+      "form demos",
+      "training cues",
+      "repeatable frameworks",
+      "weekly check-ins",
+      "confidence milestones"
+    ],
     ctaLanguage: ["DM PLAN", "Save this workout", "Apply for coaching", "Comment your goal"]
   },
   {
@@ -157,10 +339,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Personal brands",
     keywords: ["personal brand", "founder", "coach", "consultant", "speaker", "author", "expert"],
     audience: "buyers, partners, and followers evaluating credibility, worldview, and whether the person can help them win",
+    audienceContexts: [
+      "buyers evaluating trust",
+      "operators looking for leadership",
+      "aspiring experts modeling authority",
+      "followers deciding whether the worldview fits",
+      "partners looking for signal",
+      "clients trying to reduce risk"
+    ],
     emotionalTriggers: ["status", "aspiration", "identity", "trust", "transformation"],
     searchPhrases: ["how to build authority online", "founder lessons", "consultant content strategy"],
     contentAngles: ["contrarian belief", "lesson learned", "framework reveal", "client insight"],
+    angleVariants: [
+      "contrarian point of view",
+      "hard-earned lesson",
+      "framework breakdown",
+      "client pattern",
+      "leadership stance",
+      "decision-making story"
+    ],
     proofSignals: ["case studies", "frameworks", "specific opinions", "results", "earned credibility"],
+    proofVariants: [
+      "case study details",
+      "specific opinions",
+      "named frameworks",
+      "client patterns",
+      "visible results",
+      "earned credibility",
+      "clear point of view"
+    ],
     ctaLanguage: ["DM STRATEGY", "Book a consultation", "Save the framework", "Follow for the next breakdown"]
   },
   {
@@ -168,10 +375,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Realtors",
     keywords: ["realtor", "real estate", "homes", "listing", "buyer", "seller", "mortgage"],
     audience: "buyers and sellers trying to feel confident about timing, neighborhoods, pricing, and representation",
+    audienceContexts: [
+      "first-time buyers",
+      "sellers watching the market",
+      "families comparing neighborhoods",
+      "relocators trying to understand the area",
+      "investors scanning for opportunity",
+      "homeowners wondering if now is the moment"
+    ],
     emotionalTriggers: ["security", "status", "fear of missing out", "aspiration", "trust"],
     searchPhrases: ["best neighborhoods in Austin", "homes for sale near me", "should I sell my house now"],
     contentAngles: ["neighborhood breakdown", "listing story", "buyer mistake", "market update"],
+    angleVariants: [
+      "neighborhood walk-through",
+      "listing story",
+      "buyer mistake",
+      "market timing explainer",
+      "price reality check",
+      "school-zone or commute context"
+    ],
     proofSignals: ["sold results", "market data", "tour footage", "client wins", "local expertise"],
+    proofVariants: [
+      "sold stories",
+      "market data",
+      "tour footage",
+      "client wins",
+      "neighborhood context",
+      "pricing insight",
+      "local expertise"
+    ],
     ctaLanguage: ["DM HOME", "Book a buyer consult", "Ask for the neighborhood list", "Save this market update"]
   },
   {
@@ -179,10 +411,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Med spas",
     keywords: ["med spa", "botox", "filler", "skin", "aesthetic", "laser", "facial", "injector"],
     audience: "appearance-conscious prospects who want natural results, safety, expertise, and confidence",
+    audienceContexts: [
+      "first-time treatment prospects",
+      "clients afraid of unnatural results",
+      "people preparing for an event",
+      "skincare buyers comparing providers",
+      "confidence-driven clients",
+      "people researching safety before booking"
+    ],
     emotionalTriggers: ["transformation", "status", "trust", "aspiration", "fear of regret"],
     searchPhrases: ["best Botox near me", "natural lip filler results", "laser facial in my city"],
     contentAngles: ["natural result breakdown", "treatment myth", "before/after education", "safety explanation"],
+    angleVariants: [
+      "natural result breakdown",
+      "treatment myth",
+      "consultation walk-through",
+      "safety explanation",
+      "before/after education",
+      "maintenance timeline"
+    ],
     proofSignals: ["before/after results", "credentials", "consultation process", "patient comfort", "natural outcomes"],
+    proofVariants: [
+      "natural before/after results",
+      "provider credentials",
+      "consultation process",
+      "comfort cues",
+      "treatment room trust",
+      "subtle result close-ups",
+      "aftercare clarity"
+    ],
     ctaLanguage: ["Book a consultation", "DM GLOW", "Save before your appointment", "Ask what treatment fits your goal"]
   },
   {
@@ -190,10 +447,35 @@ const nicheProfiles: NicheProfile[] = [
     label: "Agencies",
     keywords: ["agency", "marketing", "media", "ads", "branding", "seo", "content", "growth"],
     audience: "business owners who want sharper growth, proof of expertise, and confidence the agency can execute",
+    audienceContexts: [
+      "owners tired of random marketing",
+      "founders comparing agencies",
+      "local businesses needing clearer demand",
+      "operators who want proof before a call",
+      "teams frustrated by weak content",
+      "brands ready to tighten execution"
+    ],
     emotionalTriggers: ["growth ambition", "frustration", "status", "trust", "transformation"],
     searchPhrases: ["best marketing agency for local businesses", "content strategy for service business", "SEO agency near me"],
     contentAngles: ["audit teardown", "case study", "strategy framework", "mistake breakdown"],
+    angleVariants: [
+      "audit teardown",
+      "strategy map",
+      "case study breakdown",
+      "content mistake",
+      "before/after positioning",
+      "operator lesson"
+    ],
     proofSignals: ["client results", "screenshots", "process", "strategy maps", "before/after analytics"],
+    proofVariants: [
+      "client results",
+      "strategy screenshots",
+      "before/after positioning",
+      "process clarity",
+      "campaign learning",
+      "analytics context",
+      "operator-ready roadmap"
+    ],
     ctaLanguage: ["Book a strategy call", "Request an audit", "DM GROWTH", "Download the roadmap"]
   }
 ];
@@ -291,61 +573,70 @@ function getPlatformNativeFormat(platform: AuditPlatform, fallback: string) {
   return fallback;
 }
 
+function pick(values: string[], index: number) {
+  return values[index % values.length] ?? "";
+}
+
+function phraseList(values: string[], start = 0, count = 3) {
+  return Array.from({ length: count }, (_, index) => pick(values, start + index)).join(", ");
+}
+
 function hookTaxonomy(profile: NicheProfile, platform: AuditPlatform): HookTaxonomyGroup[] {
   const phrase = profile.searchPhrases[0];
-  const angle = profile.contentAngles[0];
-  const proof = profile.proofSignals[0];
+  const angle = pick(profile.angleVariants, 1);
+  const proof = pick(profile.proofVariants, 2);
   const trigger = profile.emotionalTriggers[0];
+  const audience = pick(profile.audienceContexts, 1);
   const platformLabel = getPlatformLabel(platform);
 
   return [
     {
       category: "Curiosity Hooks",
       hooks: [
-        `Most ${profile.label.toLowerCase()} profiles lose attention before people understand this one thing.`,
-        `I checked the visibility signals, and this ${angle} gap is probably costing profile actions.`
+        `Most people do not leave because the offer is bad. They leave because the first moment feels unclear.`,
+        `If ${audience} land on the profile, this is the detail that makes them keep watching.`
       ]
     },
     {
       category: "Authority Hooks",
       hooks: [
-        `Here is the ${proof} signal I would show first if I wanted more trust on ${platformLabel}.`,
-        `If your audience is comparing options, this proof point makes the decision easier.`
+        `Here is the ${proof} signal I would show before asking anyone to take the next step.`,
+        `If the audience is comparing options, this makes the safer choice feel obvious.`
       ]
     },
     {
       category: "Storytelling Hooks",
       hooks: [
-        `A viewer found the profile, hesitated, and left. Here is the content path that would bring them back.`,
-        `Before the offer gets stronger, the audience needs to see this ${profile.label.toLowerCase()} story.`
+        `Someone found the profile, hesitated, and left. This is the story that would pull them back.`,
+        `Before the offer gets stronger, the audience needs to see the moment behind ${angle}.`
       ]
     },
     {
       category: "Emotional Hooks",
       hooks: [
-        `If your audience wants ${trigger}, your first sentence has to make that outcome feel close.`,
-        `People do not just want information here. They want ${profile.emotionalTriggers[1] ?? trigger}.`
+        `If the audience wants ${trigger}, the first sentence has to make that outcome feel close.`,
+        `People do not just want information here. They want to feel ${profile.emotionalTriggers[1] ?? trigger}.`
       ]
     },
     {
       category: "Conversion Hooks",
       hooks: [
-        `If someone is ready to act today, this is the CTA they need to see.`,
-        `Stop ending posts with vague engagement bait. Tell them to ${profile.ctaLanguage[0].toLowerCase()}.`
+        "If someone is ready to act today, this is the next step they need to see.",
+        `Stop ending posts with vague engagement bait. Say "${profile.ctaLanguage[0]}" when the intent is warm.`
       ]
     },
     {
       category: "Local SEO Hooks",
       hooks: [
-        `Use phrases like "${phrase}" in the first sentence, caption, and profile language.`,
-        `If someone searched "${profile.searchPhrases[1] ?? phrase}", this post should feel made for them.`
+        `Use a phrase like "${phrase}" in the first sentence without making it sound stuffed in.`,
+        `If someone searched "${profile.searchPhrases[1] ?? phrase}", the post should feel like the answer, not an ad.`
       ]
     },
     {
       category: "Pattern Interrupt Hooks",
       hooks: [
-        `Posting more is not the strategy. Making ${angle} obvious is.`,
-        `The content is not the problem. The missing ${proof} signal is.`
+        `Posting more is not the strategy. Making ${angle} impossible to miss is.`,
+        `The content volume is not the problem. The missing ${proof} signal is.`
       ]
     }
   ];
@@ -404,69 +695,83 @@ export function createVisibilityContentPlan(
   const engagementSignal = signalByLabel(visibilitySignals, "Engagement quality");
   const seoSignal = signalByLabel(visibilitySignals, "Local SEO/search intent");
   const gapSignal = signalByLabel(visibilitySignals, "Content gaps");
+  const audienceA = pick(niche.audienceContexts, 0);
+  const audienceB = pick(niche.audienceContexts, 2);
+  const audienceC = pick(niche.audienceContexts, 4);
+  const angleA = pick(niche.angleVariants, 0);
+  const angleB = pick(niche.angleVariants, 2);
+  const angleC = pick(niche.angleVariants, 4);
+  const proofA = pick(niche.proofVariants, 0);
+  const proofB = pick(niche.proofVariants, 2);
+  const proofC = pick(niche.proofVariants, 4);
+  const emotionA = pick(niche.emotionalTriggers, 0);
+  const emotionB = pick(niche.emotionalTriggers, 1);
+  const emotionC = pick(niche.emotionalTriggers, 3);
+  const taxonomy = hookTaxonomy(niche, platform);
 
   return {
     niche: {
       label: niche.label,
       audience: niche.audience,
+      audienceContexts: niche.audienceContexts,
       emotionalTriggers: niche.emotionalTriggers,
       searchPhrases: niche.searchPhrases
     },
     weakAreas,
     visibilitySignals,
-    hookTaxonomy: hookTaxonomy(niche, platform),
+    hookTaxonomy: taxonomy,
     contentPriorities: [
-      `Lead with niche-native hooks for ${niche.audience}: ${hookSignal.insight}`,
-      `Build a repeatable ${niche.label.toLowerCase()} rhythm using ${niche.contentAngles.slice(0, 3).join(", ")}.`,
-      `Raise authority with ${niche.proofSignals.slice(0, 3).join(", ")} instead of generic credibility claims.`,
-      `Convert with CTAs like "${niche.ctaLanguage[0]}" and "${niche.ctaLanguage[1]}" when the post earns high-intent attention.`
+      `Make the first three seconds feel built for ${audienceA}: ${hookSignal.insight}`,
+      `Build a repeatable rhythm around ${phraseList(niche.angleVariants, 0, 3)} instead of posting one-off ideas.`,
+      `Use proof people can see, such as ${phraseList(niche.proofVariants, 0, 3)}, before asking for action.`,
+      `Match CTAs to intent: use "${niche.ctaLanguage[0]}" for hot attention and "${niche.ctaLanguage[2]}" for warmer, conversational moments.`
     ],
     postingFrequency: platformFrequency[platform],
     recommendedMix: [
       {
         label: "Buyer education",
         share: "30%",
-        purpose: `Answer search-intent questions such as "${niche.searchPhrases[0]}" and "${niche.searchPhrases[1]}."`
+        purpose: `Answer search-intent questions like "${niche.searchPhrases[0]}" in a way that feels native to the post, not like keyword stuffing.`
       },
       {
         label: "Proof and authority",
         share: "25%",
-        purpose: `Show ${niche.proofSignals.slice(0, 3).join(", ")} so authority feels concrete.`
+        purpose: `Show ${phraseList(niche.proofVariants, 1, 3)} so authority feels earned rather than claimed.`
       },
       {
         label: "Local or niche relevance",
         share: "20%",
-        purpose: `Anchor the plan in ${platformLabel} language for ${niche.audience}.`
+        purpose: `Anchor the plan in ${platformLabel} language for ${audienceB}.`
       },
       {
         label: "Offer and CTA",
         share: "15%",
-        purpose: `Move attention into actions like "${niche.ctaLanguage[0]}" or "${niche.ctaLanguage[2]}."`
+        purpose: `Move attention into plain next steps like "${niche.ctaLanguage[0]}" or "${niche.ctaLanguage[2]}."`
       },
       {
         label: "Engagement loops",
         share: "10%",
-        purpose: `Create prompts around ${niche.emotionalTriggers.slice(0, 3).join(", ")} to improve signal quality.`
+        purpose: `Use prompts around ${phraseList(niche.emotionalTriggers, 0, 3)} so comments reveal what the audience actually wants.`
       }
     ],
     weeklySchedule: [
       {
         week: "Week 1",
-        objective: `Clarify the ${niche.label.toLowerCase()} promise and strengthen first-touch hooks.`,
-        strategy: `The audit shows ${hookSignal.label.toLowerCase()} and ${ctaSignal.label.toLowerCase()} need attention. This week uses ${niche.emotionalTriggers[0]} and ${niche.emotionalTriggers[1]} psychology so the offer feels relevant before a viewer scrolls away.`,
+        objective: "Make the first impression sharper, faster, and easier to act on.",
+        strategy: `The audit shows ${hookSignal.label.toLowerCase()} and ${ctaSignal.label.toLowerCase()} need attention. This week speaks to ${audienceA} with ${emotionA} and ${emotionB} cues, then gives them a next step before the interest cools.`,
         dailyPosts: [
           {
             day: "Monday",
             format: getPlatformNativeFormat(platform, "Short video"),
-            topic: `Show the biggest ${niche.label.toLowerCase()} visibility leak using ${niche.contentAngles[0]}`,
-            goal: `Make the ${niche.emotionalTriggers[0]} payoff obvious in the first three seconds.`,
+            topic: `Show the biggest visibility leak using ${angleA}`,
+            goal: `Make the ${emotionA} payoff obvious before the scroll continues.`,
             visibilitySignal: hookSignal.label
           },
           {
             day: "Tuesday",
             format: "Caption-led proof post",
-            topic: `Explain who the offer helps and connect it to ${niche.audience}`,
-            goal: `Tighten positioning around ${niche.emotionalTriggers[2]} and attract the right audience.`,
+            topic: `Explain who the offer helps and connect it to ${audienceB}`,
+            goal: `Make the audience feel seen instead of broadly targeted.`,
             visibilitySignal: ctaSignal.label
           },
           {
@@ -479,7 +784,7 @@ export function createVisibilityContentPlan(
           {
             day: "Thursday",
             format: "Behind-the-scenes clip",
-            topic: `Show ${niche.proofSignals[1]} or ${niche.proofSignals[2]}`,
+            topic: `Show ${proofB} or ${proofC}`,
             goal: "Create authority without sounding like a hard sell.",
             visibilitySignal: authoritySignal.label
           },
@@ -492,17 +797,17 @@ export function createVisibilityContentPlan(
           }
         ],
         hookIdeas: [
-          hookTaxonomy(niche, platform)[0].hooks[0],
-          hookTaxonomy(niche, platform)[3].hooks[0],
-          hookTaxonomy(niche, platform)[6].hooks[0]
+          taxonomy[0].hooks[0],
+          taxonomy[3].hooks[0],
+          taxonomy[6].hooks[0]
         ],
         videoScriptConcepts: [
-          `Open with the audit gap, show a ${niche.contentAngles[0]} example, explain the fix, close with "${niche.ctaLanguage[0]}."`,
-          `Use a before/after promise: weak ${niche.label.toLowerCase()} positioning first, sharper outcome second, then explain the conversion difference.`
+          `Open with the audit gap, show a ${angleA} example, explain the fix, close with "${niche.ctaLanguage[0]}."`,
+          "Use a before/after promise: unclear positioning first, sharper outcome second, then explain what changed."
         ],
         captionIdeas: [
-          `Visibility starts with clarity. If ${niche.audience} have to guess, they will not take the next step.`,
-          `A stronger first impression can move people from ${niche.emotionalTriggers[1]} to action.`
+          `Visibility starts with clarity. If ${audienceA} have to guess, they will not take the next step.`,
+          `A stronger first impression can move people from passive interest to action.`
         ],
         ctaSuggestions: [
           niche.ctaLanguage[0],
@@ -510,9 +815,9 @@ export function createVisibilityContentPlan(
           niche.ctaLanguage[2]
         ],
         engagementTasks: [
-          `Reply to every comment with a ${niche.label.toLowerCase()}-specific follow-up question within 24 hours.`,
+          "Reply to every comment with a follow-up question that reveals intent, not just appreciation.",
           `Comment on 10 niche-relevant posts using phrases like "${niche.searchPhrases[0]}."`,
-          `Pin or save the strongest ${niche.emotionalTriggers[0]} question for next week's content.`
+          `Pin or save the strongest ${emotionA} question for next week's content.`
         ],
         visibilityPriorities: [
           hookSignal.insight,
@@ -522,34 +827,34 @@ export function createVisibilityContentPlan(
       },
       {
         week: "Week 2",
-        objective: `Build consistency around ${niche.label.toLowerCase()} buyer intent and content gaps.`,
-        strategy: `This week addresses ${consistencySignal.label.toLowerCase()} and ${gapSignal.label.toLowerCase()} by turning weak categories into ${niche.contentAngles.slice(0, 3).join(", ")} pillars.`,
+        objective: "Turn scattered posting into a recognizable content rhythm.",
+        strategy: `This week addresses ${consistencySignal.label.toLowerCase()} and ${gapSignal.label.toLowerCase()} by turning weak categories into ${phraseList(niche.angleVariants, 1, 3)} pillars.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Search-intent post",
             topic: `Answer "${niche.searchPhrases[1]}" with a specific example`,
-            goal: `Improve discoverability for ${niche.audience}.`,
+            goal: `Make ${audienceC} feel like the post was made for their exact search.`,
             visibilitySignal: seoSignal.label
           },
           {
             day: "Tuesday",
             format: "Myth-busting video",
-            topic: `Correct a belief that blocks ${niche.emotionalTriggers[4] ?? niche.emotionalTriggers[0]}`,
-            goal: "Create authority and retention without repeating the same advice.",
+            topic: `Correct a belief that keeps the audience stuck in ${niche.emotionalTriggers[4] ?? emotionA}`,
+            goal: "Make the audience rethink the problem without sounding like a lecture.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Wednesday",
             format: "Carousel or list post",
-            topic: `Three signs ${niche.audience} need the offer`,
-            goal: `Trigger identity and ${niche.emotionalTriggers[0]} recognition.`,
+            topic: `Three signs ${audienceA} are ready for the offer`,
+            goal: `Trigger identity and ${emotionA} recognition.`,
             visibilitySignal: gapSignal.label
           },
           {
             day: "Thursday",
             format: "Proof post",
-            topic: `Share ${niche.proofSignals[0]} with context`,
+            topic: `Share ${proofA} with context`,
             goal: "Add trust signals to the content mix.",
             visibilitySignal: authoritySignal.label
           },
@@ -557,26 +862,26 @@ export function createVisibilityContentPlan(
             day: "Friday",
             format: "Soft CTA post",
             topic: `Invite followers to ${niche.ctaLanguage[2].toLowerCase()}`,
-            goal: `Create low-friction conversations around ${niche.emotionalTriggers[1]}.`,
+            goal: `Create low-friction conversations around ${emotionB}.`,
             visibilitySignal: engagementSignal.label
           }
         ],
         hookIdeas: [
-          hookTaxonomy(niche, platform)[1].hooks[0],
-          hookTaxonomy(niche, platform)[5].hooks[1],
-          `Here is the ${niche.label.toLowerCase()} content gap I would fix before posting more.`
+          taxonomy[1].hooks[0],
+          taxonomy[5].hooks[1],
+          "Here is the content gap I would fix before posting more."
         ],
         videoScriptConcepts: [
           `Teach one buyer-intent question like "${niche.searchPhrases[0]}", give a quick example, then point to "${niche.ctaLanguage[0]}."`,
-          `Show a common ${niche.label.toLowerCase()} mistake, explain why it happens, and give the corrected version.`
+          `Show a common mistake through ${angleB}, explain why it happens, and give the corrected version.`
         ],
         captionIdeas: [
-          `Consistency is not posting every thought. It is repeating ${niche.proofSignals[0]}, ${niche.contentAngles[1]}, and clear CTAs until the audience knows why to trust you.`,
-          `This week's content should make the ${niche.label.toLowerCase()} decision easier, not just fill the calendar.`
+          `Consistency is not posting every thought. It is repeating ${proofA}, ${angleB}, and clear CTAs until the audience knows why to trust you.`,
+          "This week's content should make the decision easier, not just fill the calendar."
         ],
         ctaSuggestions: [
           niche.ctaLanguage[1],
-          `Message us the word FIX and we will point you to the first ${niche.label.toLowerCase()} improvement.`,
+          "Message us the word FIX and we will point you to the first visible improvement.",
           "Save this before you update your profile."
         ],
         engagementTasks: [
@@ -592,34 +897,34 @@ export function createVisibilityContentPlan(
       },
       {
         week: "Week 3",
-        objective: `Increase ${niche.label.toLowerCase()} authority, engagement quality, and trust density.`,
-        strategy: `The roadmap now shifts from clarity to credibility. Stronger ${authoritySignal.label.toLowerCase()} and ${engagementSignal.label.toLowerCase()} help ${niche.audience} feel enough confidence to act.`,
+        objective: "Make trust visible and give the audience something to respond to.",
+        strategy: `The roadmap now shifts from clarity to credibility. Stronger ${authoritySignal.label.toLowerCase()} and ${engagementSignal.label.toLowerCase()} help ${audienceB} feel enough confidence to act.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Authority video",
-            topic: `Explain the ${niche.proofSignals[1]} most competitors do not show`,
+            topic: `Explain the ${proofB} most competitors do not show`,
             goal: "Differentiate expertise.",
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Tuesday",
             format: "Testimonial or proof story",
-            topic: `Turn one ${niche.proofSignals[0]} into a narrative`,
-            goal: `Reduce risk and increase ${niche.emotionalTriggers[3] ?? "trust"}.`,
+            topic: `Turn one ${proofA} into a narrative`,
+            goal: `Reduce risk and increase ${emotionC}.`,
             visibilitySignal: authoritySignal.label
           },
           {
             day: "Wednesday",
             format: "Objection-handling post",
-            topic: `Answer the concern that keeps ${niche.audience} from acting`,
+            topic: `Answer the concern that keeps ${audienceC} from acting`,
             goal: "Move warm viewers closer to action.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Thursday",
             format: "Community prompt",
-            topic: `Ask the audience what ${niche.emotionalTriggers[6] ?? "transformation"} they want next`,
+            topic: `Ask the audience what transformation they want next`,
             goal: "Increase comment quality and content inputs.",
             visibilitySignal: engagementSignal.label
           },
@@ -627,26 +932,26 @@ export function createVisibilityContentPlan(
             day: "Friday",
             format: "Local or niche relevance post",
             topic: `Tie the offer to "${niche.searchPhrases[2] ?? niche.searchPhrases[0]}"`,
-            goal: "Improve relevance and search context.",
+            goal: "Make the post feel tied to the exact market moment.",
             visibilitySignal: seoSignal.label
           }
         ],
         hookIdeas: [
-          hookTaxonomy(niche, platform)[1].hooks[1],
-          `This is the ${niche.proofSignals[1]} part most people never see.`,
-          `If you are comparing ${niche.label.toLowerCase()} options, this detail matters.`
+          taxonomy[1].hooks[1],
+          `This is the ${proofB} part most people never see.`,
+          "If you are comparing options, this detail matters."
         ],
         videoScriptConcepts: [
-          `Start with a ${niche.label.toLowerCase()} objection, validate it, show ${niche.proofSignals[0]}, explain the process, close with "${niche.ctaLanguage[0]}."`,
-          `Break down a result into three decisions that created ${niche.emotionalTriggers[6] ?? "transformation"}.`
+          `Start with an objection, validate it, show ${proofA}, explain the process, close with "${niche.ctaLanguage[0]}."`,
+          "Break down a result into three decisions that made the outcome feel achievable."
         ],
         captionIdeas: [
-          `Authority is built through evidence. Show ${niche.proofSignals[0]}, ${niche.proofSignals[1]}, and why it worked.`,
-          `${niche.audience} trust what they can understand. Make the path visible.`
+          `Authority is built through evidence. Show ${proofA}, ${proofB}, and why it worked.`,
+          `${audienceB} trust what they can understand. Make the path visible.`
         ],
         ctaSuggestions: [
           "Want us to map this for your brand? Book a strategy call.",
-          `DM PROOF and we will show you the first ${niche.label.toLowerCase()} trust signal to fix.`,
+          "DM PROOF and we will show you the first trust signal to fix.",
           `Ask what this would look like for your ${platformLabel} profile.`
         ],
         engagementTasks: [
@@ -662,27 +967,27 @@ export function createVisibilityContentPlan(
       },
       {
         week: "Week 4",
-        objective: `Convert ${niche.label.toLowerCase()} visibility into leads and refine the next growth cycle.`,
-        strategy: `The final week packages the strongest content signals into a conversion push, then uses performance feedback to decide the next 30-day cycle for ${niche.audience}.`,
+        objective: "Turn attention into conversations and decide what deserves another cycle.",
+        strategy: `The final week packages the strongest content signals into a conversion push, then uses qualitative feedback to decide the next 30-day cycle for ${audienceA}.`,
         dailyPosts: [
           {
             day: "Monday",
             format: "Campaign recap",
-            topic: `Summarize the biggest ${niche.label.toLowerCase()} visibility improvement from the month`,
-            goal: "Reinforce the strategic arc.",
+            topic: "Summarize the biggest visibility improvement from the month",
+            goal: "Show people the difference between random posting and intentional visibility.",
             visibilitySignal: gapSignal.label
           },
           {
             day: "Tuesday",
             format: "FAQ video",
-            topic: `Answer the final ${niche.label.toLowerCase()} question before someone acts`,
+            topic: `Answer the final question ${audienceB} ask before acting`,
             goal: "Remove friction.",
             visibilitySignal: ctaSignal.label
           },
           {
             day: "Wednesday",
             format: "Comparison post",
-            topic: `Show weak vs. strong ${platformLabel} visibility using ${niche.contentAngles[2]}`,
+            topic: `Show weak vs. strong ${platformLabel} visibility using ${angleC}`,
             goal: "Make the value easy to understand.",
             visibilitySignal: hookSignal.label
           },
@@ -696,23 +1001,23 @@ export function createVisibilityContentPlan(
           {
             day: "Friday",
             format: "Strategy CTA post",
-            topic: `Invite ${niche.audience} to book a Titan Visibility Strategy Call`,
+            topic: `Invite ${audienceC} to book a Titan Visibility Strategy Call`,
             goal: "Turn the month into pipeline.",
             visibilitySignal: ctaSignal.label
           }
         ],
         hookIdeas: [
-          hookTaxonomy(niche, platform)[4].hooks[0],
-          `This is how ${niche.label.toLowerCase()} profile attention becomes a real next step.`,
-          `Your content should create ${niche.emotionalTriggers[6] ?? "transformation"}, not just impressions.`
+          taxonomy[4].hooks[0],
+          "This is how profile attention becomes a real next step.",
+          "Your content should create movement, not just impressions."
         ],
         videoScriptConcepts: [
-          `Recap the month: ${gapSignal.label.toLowerCase()}, fix, ${niche.proofSignals[0]}, next step. Keep it simple and conversion-focused.`,
-          `Show the cost of unclear ${niche.label.toLowerCase()} visibility, then make the strategy call the obvious next move.`
+          `Recap the month: ${gapSignal.label.toLowerCase()}, fix, ${proofA}, next step. Keep it simple and conversion-focused.`,
+          "Show the cost of unclear visibility, then make the strategy call the obvious next move."
         ],
         captionIdeas: [
           `A visibility plan should end with action. The goal is not more ${platformLabel} content. The goal is clearer demand.`,
-          `Use ${niche.emotionalTriggers[0]}, ${niche.proofSignals[0]}, and CTA signals to decide what to repeat, cut, and scale.`
+          `Use ${emotionA}, ${proofA}, and CTA signals to decide what to repeat, cut, and scale.`
         ],
         ctaSuggestions: [
           "Book a Titan Visibility Strategy Call.",

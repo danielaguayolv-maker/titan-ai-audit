@@ -68,6 +68,7 @@ export function TitanStudio({
               {plan.niche.audience}
             </p>
             <div className="mt-5 grid gap-3">
+              <PillGroup title="Audience identity contexts" items={plan.niche.audienceContexts.slice(0, 8)} />
               <PillGroup title="Emotional triggers" items={plan.niche.emotionalTriggers} />
               <PillGroup title="Search phrases to seed into content" items={plan.niche.searchPhrases} />
             </div>
