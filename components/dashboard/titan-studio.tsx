@@ -59,6 +59,22 @@ export function TitanStudio({
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
             <p className="text-sm font-bold uppercase text-titan-muted">
+              Niche intelligence profile
+            </p>
+            <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
+              {plan.niche.label}
+            </h2>
+            <p className="text-anywhere mt-4 leading-7 text-titan-ivory/64">
+              {plan.niche.audience}
+            </p>
+            <div className="mt-5 grid gap-3">
+              <PillGroup title="Emotional triggers" items={plan.niche.emotionalTriggers} />
+              <PillGroup title="Search phrases to seed into content" items={plan.niche.searchPhrases} />
+            </div>
+          </article>
+
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+            <p className="text-sm font-bold uppercase text-titan-muted">
               Visibility intelligence map
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -85,7 +101,9 @@ export function TitanStudio({
               ))}
             </div>
           </article>
+        </div>
 
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
             <p className="text-sm font-bold uppercase text-titan-muted">
               Execution strategy
@@ -118,6 +136,37 @@ export function TitanStudio({
                   <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
                     {item.purpose}
                   </p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              Hook taxonomy
+            </p>
+            <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
+              Categorized hooks for stronger creative variation
+            </h2>
+            <div className="mt-6 grid gap-3">
+              {plan.hookTaxonomy.map((group) => (
+                <div
+                  className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                  key={group.category}
+                >
+                  <p className="text-xs font-black uppercase text-titan-bright">
+                    {group.category}
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {group.hooks.map((hook) => (
+                      <p
+                        className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/66"
+                        key={hook}
+                      >
+                        {hook}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -223,6 +272,24 @@ function MiniList({ title, items }: { title: string; items: string[] }) {
           >
             {item}
           </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PillGroup({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+      <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            className="text-anywhere rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright"
+            key={item}
+          >
+            {item}
+          </span>
         ))}
       </div>
     </div>
