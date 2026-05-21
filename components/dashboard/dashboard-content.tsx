@@ -12,6 +12,7 @@ import type {
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
 import { CategoryScores } from "./category-scores";
+import { CompetitorIntelligence } from "./competitor-intelligence";
 import { DashboardStates } from "./dashboard-states";
 import { DashboardShell, type TitanOsModule } from "./dashboard-shell";
 import { QuickWins } from "./quick-wins";
@@ -132,9 +133,14 @@ export function DashboardContent() {
         </div>
       ) : null}
 
+      {activeModule === "competitor-intelligence" ? (
+        <CompetitorIntelligence platform={platform} />
+      ) : null}
+
       {activeModule !== "audit" &&
       activeModule !== "home" &&
       activeModule !== "titan-studio" &&
+      activeModule !== "competitor-intelligence" &&
       activeModule !== "reports" ? (
         <ModulePlaceholder
           auditResult={auditResult}
