@@ -10,6 +10,7 @@ import { DashboardStates } from "./dashboard-states";
 import { DashboardShell, type TitanOsModule } from "./dashboard-shell";
 import { QuickWins } from "./quick-wins";
 import { ScoreSummary } from "./score-summary";
+import { StrategyCta } from "./strategy-cta";
 import { TitanStudio } from "./titan-studio";
 
 export function DashboardContent() {
@@ -35,7 +36,6 @@ export function DashboardContent() {
   function handleAuditGenerated(result: AiAuditResult) {
     setAuditResult(result);
     setIsUsingFallback(false);
-    setActiveModule("titan-studio");
   }
 
   function handlePlatformChange(platform: AuditPlatform) {
@@ -65,6 +65,15 @@ export function DashboardContent() {
           <CategoryScores categories={auditResult.categoryScores} />
           <QuickWins quickWins={auditResult.topQuickWins} />
           <DashboardStates auditResult={auditResult} requestStatus={requestStatus} />
+          {!isUsingFallback && requestStatus === "success" ? (
+            <StrategyCta
+              auditResult={auditResult}
+              liveScan={liveScan}
+              onGeneratePlan={() => setActiveModule("titan-studio")}
+              platform={platform}
+              profileUrl={profileUrl}
+            />
+          ) : null}
         </>
       ) : null}
 

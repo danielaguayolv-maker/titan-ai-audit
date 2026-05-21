@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   emptyBusinessAuditForm,
   type AuditPlatform,
@@ -22,8 +22,17 @@ type AiAuditPanelProps = {
   onStatusChange: (status: RequestStatus) => void;
 };
 
+export type LeadCaptureData = {
+  name: string;
+  email: string;
+  businessCreatorName: string;
+  phone: string;
+  capturedAt?: string;
+};
+
 const fieldClass =
   "mt-2 w-full rounded-lg border border-titan-gold/15 bg-black/30 px-4 py-3 text-sm text-titan-ivory outline-none transition placeholder:text-titan-ivory/30 focus:border-titan-bright focus:ring-2 focus:ring-titan-gold/20";
+const leadStorageKey = "titan-visibility-os-lead";
 
 const loadingStages = [
   "Scanning profile",
@@ -104,11 +113,29 @@ export function AiAuditPanel({
   const [status, setStatus] = useState<RequestStatus>("idle");
   const [error, setError] = useState("");
   const [liveScan, setLiveScan] = useState<LiveScanResult>(initialLiveScan);
+  const [leadData, setLeadData] = useState<LeadCaptureData>({
+    name: "",
+    email: "",
+    businessCreatorName: "",
+    phone: ""
+  });
   const currentLoadingStage = status === "loading" ? loadingStages.length - 2 : -1;
   const showFallbackReason =
     process.env.NODE_ENV !== "production" &&
     (liveScan.status === "fallback" || liveScan.status === "failed") &&
     Boolean(liveScan.fallbackReason);
+
+  useEffect(() => {
+    try {
+      const storedLead = window.localStorage.getItem(leadStorageKey);
+
+      if (storedLead) {
+        setLeadData(JSON.parse(storedLead) as LeadCaptureData);
+      }
+    } catch {
+      // Local persistence is optional and should never block an audit.
+    }
+  }, []);
 
   function inferPlatformFromUrl(url: string): AuditPlatform | null {
     const normalizedUrl = url.toLowerCase();
@@ -154,14 +181,41 @@ export function AiAuditPanel({
     }));
   }
 
+  function updateLeadField(event: ChangeEvent<HTMLInputElement>) {
+    const { name, value } = event.target;
+
+    setLeadData((current) => ({
+      ...current,
+      [name]: value
+    }));
+  }
+
   async function submitAudit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const requestPlatform = inferPlatformFromUrl(formData.profileUrl) ?? formData.platform;
     const requestData = {
       ...formData,
       platform: requestPlatform,
-      profileUrl: formData.profileUrl.trim()
+      profileUrl: formData.profileUrl.trim(),
+      businessName:
+        formData.businessName ||
+        formData.usernameDisplayName ||
+        leadData.businessCreatorName
     };
+    const capturedLead: LeadCaptureData = {
+      ...leadData,
+      name: leadData.name.trim(),
+      email: leadData.email.trim(),
+      businessCreatorName: leadData.businessCreatorName.trim(),
+      phone: leadData.phone.trim(),
+      capturedAt: new Date().toISOString()
+    };
+
+    try {
+      window.localStorage.setItem(leadStorageKey, JSON.stringify(capturedLead));
+    } catch {
+      // Temporary local lead storage is best-effort until database persistence is added.
+    }
 
     if (requestPlatform !== formData.platform) {
       setFormData((current) => ({
@@ -265,6 +319,58 @@ export function AiAuditPanel({
                     <option value="general">General Page</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4">
+                <p className="text-xs font-black uppercase text-titan-muted">
+                  Unlock the full report
+                </p>
+                <h3 className="mt-2 text-xl font-black text-titan-ivory">
+                  Where should we send the visibility strategy?
+                </h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                    Name
+                    <input
+                      className={fieldClass}
+                      name="name"
+                      onChange={updateLeadField}
+                      required
+                      value={leadData.name}
+                    />
+                  </label>
+                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                    Email
+                    <input
+                      className={fieldClass}
+                      name="email"
+                      onChange={updateLeadField}
+                      required
+                      type="email"
+                      value={leadData.email}
+                    />
+                  </label>
+                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                    Business / Creator Name
+                    <input
+                      className={fieldClass}
+                      name="businessCreatorName"
+                      onChange={updateLeadField}
+                      required
+                      value={leadData.businessCreatorName}
+                    />
+                  </label>
+                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                    Phone <span className="text-titan-ivory/36">(optional)</span>
+                    <input
+                      className={fieldClass}
+                      name="phone"
+                      onChange={updateLeadField}
+                      type="tel"
+                      value={leadData.phone}
+                    />
+                  </label>
+                </div>
               </div>
 
               <button
@@ -391,6 +497,7 @@ export function AiAuditPanel({
           ) : null}
         </form>
 
+        {status === "idle" && isUsingFallback ? null : (
         <article className="premium-surface mt-5 min-w-0 max-w-full rounded-lg p-6 sm:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -654,6 +761,7 @@ export function AiAuditPanel({
             </div>
           )}
         </article>
+        )}
       </div>
     </section>
   );
