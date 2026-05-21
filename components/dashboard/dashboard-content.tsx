@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { createFallbackAuditResult } from "@/lib/audit-fallback";
-import type { AiAuditResult, AuditPlatform, LiveScanResult } from "@/lib/audit-ai";
+import type {
+  AiAuditResult,
+  AuditPlatform,
+  BusinessAuditFormData,
+  LiveScanResult,
+  ProfileData
+} from "@/lib/audit-ai";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
 import { CategoryScores } from "./category-scores";
@@ -23,6 +29,10 @@ export function DashboardContent() {
   const [requestStatus, setRequestStatus] = useState<RequestStatus>("idle");
   const [platform, setPlatform] = useState<AuditPlatform>(initialPlatform);
   const [profileUrl, setProfileUrl] = useState("");
+  const [planContext, setPlanContext] = useState<{
+    formData?: BusinessAuditFormData;
+    profileData?: ProfileData | null;
+  }>({});
   const [liveScan, setLiveScan] = useState<LiveScanResult>({
     status: "skipped",
     message: "Live Scan: Ready",
@@ -33,16 +43,31 @@ export function DashboardContent() {
     metricsStatus: "limited"
   });
 
-  function handleAuditGenerated(result: AiAuditResult) {
+  function handleAuditGenerated(
+    result: AiAuditResult,
+    context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
+  ) {
     setAuditResult(result);
+    setPlanContext(context);
     setIsUsingFallback(false);
   }
 
   function handlePlatformChange(platform: AuditPlatform) {
     setPlatform(platform);
     setAuditResult(createFallbackAuditResult(platform));
+    setPlanContext({});
     setIsUsingFallback(true);
     setRequestStatus("idle");
+  }
+
+  function handleRequestStatusChange(status: RequestStatus) {
+    if (status === "loading") {
+      setPlanContext({});
+      setAuditResult(createFallbackAuditResult(platform));
+      setIsUsingFallback(true);
+    }
+
+    setRequestStatus(status);
   }
 
   return (
@@ -59,7 +84,7 @@ export function DashboardContent() {
             onLiveScanChange={setLiveScan}
             onPlatformChange={handlePlatformChange}
             onProfileUrlChange={setProfileUrl}
-            onStatusChange={setRequestStatus}
+            onStatusChange={handleRequestStatusChange}
           />
           <ScoreSummary auditResult={auditResult} isUsingFallback={isUsingFallback} />
           <CategoryScores categories={auditResult.categoryScores} />
@@ -90,6 +115,7 @@ export function DashboardContent() {
       {activeModule === "titan-studio" ? (
         <TitanStudio
           auditResult={auditResult}
+          context={planContext}
           isUsingFallback={isUsingFallback}
           platform={platform}
         />

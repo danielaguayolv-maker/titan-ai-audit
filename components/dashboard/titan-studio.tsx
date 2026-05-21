@@ -1,23 +1,30 @@
 "use client";
 
+import { useMemo } from "react";
 import type { AiAuditResult, AuditPlatform } from "@/lib/audit-ai";
 import {
   createVisibilityContentPlan,
+  type VisibilityPlanContext,
   type WeeklyVisibilityPlan
 } from "@/lib/content-plan";
 
 type TitanStudioProps = {
   auditResult: AiAuditResult;
+  context?: VisibilityPlanContext;
   platform: AuditPlatform;
   isUsingFallback: boolean;
 };
 
 export function TitanStudio({
   auditResult,
+  context,
   platform,
   isUsingFallback
 }: TitanStudioProps) {
-  const plan = createVisibilityContentPlan(auditResult, platform);
+  const plan = useMemo(
+    () => createVisibilityContentPlan(auditResult, platform, context),
+    [auditResult, context, platform]
+  );
 
   return (
     <section className="px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
@@ -52,6 +59,17 @@ export function TitanStudio({
                 Score {Math.round(auditResult.overallScore)}/100 - Grade{" "}
                 {auditResult.grade}
               </p>
+              <div className="mt-4 rounded-md border border-titan-gold/15 bg-titan-gold/10 p-3">
+                <p className="text-[11px] font-black uppercase text-titan-muted">
+                  Detected Niche
+                </p>
+                <p className="text-anywhere mt-1 text-sm font-black text-titan-bright">
+                  {plan.niche.label}
+                </p>
+                <p className="mt-1 text-xs font-bold uppercase text-titan-ivory/50">
+                  {plan.niche.confidence}% confidence
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -62,7 +80,7 @@ export function TitanStudio({
               Niche intelligence profile
             </p>
             <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
-              {plan.niche.label}
+              Detected Niche: {plan.niche.label}
             </h2>
             <p className="text-anywhere mt-4 leading-7 text-titan-ivory/64">
               {plan.niche.audience}

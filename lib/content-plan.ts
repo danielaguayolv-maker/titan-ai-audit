@@ -1,4 +1,10 @@
-import type { AiAuditCategoryScore, AiAuditResult, AuditPlatform } from "@/lib/audit-ai";
+import type {
+  AiAuditCategoryScore,
+  AiAuditResult,
+  AuditPlatform,
+  BusinessAuditFormData,
+  ProfileData
+} from "@/lib/audit-ai";
 
 export type VisibilitySignal = {
   label: string;
@@ -31,6 +37,11 @@ type NicheProfile = {
   ctaLanguage: string[];
 };
 
+export type VisibilityPlanContext = {
+  formData?: Partial<BusinessAuditFormData>;
+  profileData?: ProfileData | null;
+};
+
 export type HookTaxonomyGroup = {
   category: HookCategory;
   hooks: string[];
@@ -59,7 +70,9 @@ export type WeeklyVisibilityPlan = {
 
 export type VisibilityContentPlan = {
   niche: {
+    id: string;
     label: string;
+    confidence: number;
     audience: string;
     audienceContexts: string[];
     emotionalTriggers: string[];
@@ -81,7 +94,7 @@ export type VisibilityContentPlan = {
 const nicheProfiles: NicheProfile[] = [
   {
     id: "restaurants",
-    label: "Restaurants",
+    label: "Restaurant",
     keywords: ["restaurant", "bbq", "pizza", "cafe", "bar", "food", "menu", "dining", "chef"],
     audience: "hungry locals choosing where to eat now, where to bring friends, or what spot feels worth the trip",
     audienceContexts: [
@@ -100,7 +113,7 @@ const nicheProfiles: NicheProfile[] = [
     angleVariants: [
       "plated food close-ups",
       "kitchen energy",
-      "chef prep moments",
+      "prep-line close-ups",
       "comfort-food cravings",
       "late-night order moments",
       "date-night decision clips"
@@ -127,7 +140,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "local-businesses",
-    label: "Local businesses",
+    label: "Local business",
     keywords: ["local", "shop", "store", "boutique", "salon", "clinic", "studio", "neighborhood"],
     audience: "nearby customers looking for a trusted local option before they spend time or money",
     audienceContexts: [
@@ -163,7 +176,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "service-businesses",
-    label: "Service businesses",
+    label: "Local service business",
     keywords: ["service", "repair", "contractor", "plumber", "hvac", "cleaning", "roofing", "law", "dental"],
     audience: "problem-aware prospects who want proof, speed, clarity, and low-risk next steps",
     audienceContexts: [
@@ -199,7 +212,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "gaming-creators",
-    label: "Gaming creators",
+    label: "Gaming creator",
     keywords: ["gaming", "gameplay", "fps", "ranked", "build", "loadout", "clips", "esports"],
     audience: "players who want skill, entertainment, identity, and a reason to follow the next session",
     audienceContexts: [
@@ -235,7 +248,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "lifestyle-creators",
-    label: "Lifestyle creators",
+    label: "Lifestyle creator",
     keywords: ["lifestyle", "beauty", "fashion", "travel", "home", "routine", "vlog", "wellness"],
     audience: "aspirational followers looking for taste, identity, routines, and products that feel like them",
     audienceContexts: [
@@ -271,7 +284,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "streamers",
-    label: "Streamers",
+    label: "Streamer",
     keywords: ["stream", "streamer", "twitch", "live", "chat", "discord", "subathon"],
     audience: "viewers deciding whether the stream feels entertaining, interactive, and worth returning to",
     audienceContexts: [
@@ -307,7 +320,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "fitness-creators",
-    label: "Fitness creators",
+    label: "Fitness creator",
     keywords: ["fitness", "gym", "coach", "workout", "fat loss", "strength", "nutrition", "trainer"],
     audience: "people who want visible progress, discipline, confidence, and a plan they can actually follow",
     audienceContexts: [
@@ -343,7 +356,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "personal-brands",
-    label: "Personal brands",
+    label: "Personal brand",
     keywords: ["personal brand", "founder", "coach", "consultant", "speaker", "author", "expert"],
     audience: "buyers, partners, and followers evaluating credibility, worldview, and whether the person can help them win",
     audienceContexts: [
@@ -379,7 +392,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "realtors",
-    label: "Realtors",
+    label: "Realtor",
     keywords: ["realtor", "real estate", "homes", "listing", "buyer", "seller", "mortgage"],
     audience: "buyers and sellers trying to feel confident about timing, neighborhoods, pricing, and representation",
     audienceContexts: [
@@ -415,7 +428,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "med-spas",
-    label: "Med spas",
+    label: "Med spa",
     keywords: ["med spa", "botox", "filler", "skin", "aesthetic", "laser", "facial", "injector"],
     audience: "appearance-conscious prospects who want natural results, safety, expertise, and confidence",
     audienceContexts: [
@@ -451,7 +464,7 @@ const nicheProfiles: NicheProfile[] = [
   },
   {
     id: "agencies",
-    label: "Agencies",
+    label: "Marketing agency",
     keywords: ["agency", "marketing", "media", "ads", "branding", "seo", "content", "growth"],
     audience: "business owners who want sharper growth, proof of expertise, and confidence the agency can execute",
     audienceContexts: [
@@ -558,20 +571,179 @@ function getAuditText(auditResult: AiAuditResult) {
     .toLowerCase();
 }
 
-function inferNiche(auditResult: AiAuditResult) {
-  const text = getAuditText(auditResult);
-  const scoredProfiles = nicheProfiles.map((profile) => ({
-    profile,
-    score: profile.keywords.reduce(
-      (total, keyword) => total + (text.includes(keyword) ? 1 : 0),
-      0
-    )
-  }));
-  const bestMatch = scoredProfiles.sort((first, second) => second.score - first.score)[0];
+function getPlanContextText(
+  auditResult: AiAuditResult,
+  context?: VisibilityPlanContext
+) {
+  const formData = context?.formData;
+  const profileData = context?.profileData;
 
-  return bestMatch?.score > 0
-    ? bestMatch.profile
-    : nicheProfiles.find((profile) => profile.id === "local-businesses") ?? nicheProfiles[0];
+  return [
+    formData?.businessName,
+    formData?.industry,
+    formData?.goals,
+    formData?.currentChallenges,
+    formData?.profileUrl,
+    formData?.bio,
+    formData?.usernameDisplayName,
+    formData?.pinnedPostTopics,
+    formData?.recentCaptions,
+    formData?.targetCustomer,
+    formData?.offer,
+    formData?.location,
+    formData?.businessGoal,
+    profileData?.username,
+    profileData?.displayName,
+    profileData?.bio,
+    profileData?.profileUrl,
+    profileData?.postingFrequencyEstimate,
+    ...(profileData?.hashtagsUsed ?? []),
+    ...(profileData?.recentContent ?? []).flatMap((item) => [
+      item.caption,
+      ...(item.hashtags ?? [])
+    ]),
+    ...(profileData?.pinnedContent ?? []).flatMap((item) => [
+      item.caption,
+      ...(item.hashtags ?? [])
+    ]),
+    getAuditText(auditResult)
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function countKeywordHits(text: string, keywords: string[]) {
+  return keywords.reduce((total, keyword) => {
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matches = text.match(new RegExp(`\\b${escapedKeyword}\\b`, "gi"));
+
+    return total + (matches?.length ?? 0);
+  }, 0);
+}
+
+function inferNiche(auditResult: AiAuditResult, context?: VisibilityPlanContext) {
+  const text = getPlanContextText(auditResult, context);
+  const scoredProfiles = nicheProfiles.map((profile) => {
+    const keywordScore = countKeywordHits(text, profile.keywords) * 8;
+    const searchScore = countKeywordHits(text, profile.searchPhrases) * 5;
+    const angleScore = countKeywordHits(text, [
+      ...profile.contentAngles,
+      ...profile.angleVariants,
+      ...profile.proofSignals,
+      ...profile.proofVariants
+    ]);
+
+    return {
+      profile,
+      score: keywordScore + searchScore + angleScore
+    };
+  });
+  const bestMatch = scoredProfiles.sort((first, second) => second.score - first.score)[0];
+  const fallbackProfile =
+    nicheProfiles.find((profile) => profile.id === "local-businesses") ?? nicheProfiles[0];
+  const selectedProfile = bestMatch?.score > 0 ? bestMatch.profile : fallbackProfile;
+  const confidence = bestMatch?.score
+    ? Math.min(96, Math.max(58, 48 + bestMatch.score * 4))
+    : 45;
+
+  return {
+    profile: selectedProfile,
+    confidence
+  };
+}
+
+const nicheContaminationTerms: Record<string, string[]> = {
+  restaurants: [
+    "restaurant",
+    "restaurants",
+    "bbq",
+    "pizza",
+    "cafe",
+    "bar",
+    "menu",
+    "dining",
+    "chef",
+    "foodies",
+    "dinner",
+    "kitchen",
+    "plated",
+    "waitlist",
+    "tables",
+    "comfort food",
+    "reserve tonight",
+    "order online"
+  ],
+  agencies: [
+    "agency",
+    "agencies",
+    "marketing agency",
+    "media agency",
+    "ads",
+    "branding",
+    "seo agency",
+    "growth agency",
+    "strategy call",
+    "request an audit",
+    "roadmap"
+  ],
+  creators: [
+    "gaming",
+    "gameplay",
+    "ranked",
+    "loadout",
+    "stream",
+    "streamer",
+    "twitch",
+    "discord",
+    "lifestyle",
+    "routine",
+    "vlog"
+  ],
+  fitness: ["fitness", "gym", "workout", "fat loss", "strength", "trainer", "meal prep"],
+  realtors: ["realtor", "real estate", "listing", "mortgage", "neighborhood list", "homes for sale"],
+  "med-spas": ["med spa", "botox", "filler", "injector", "laser facial", "treatment room"],
+  "service-businesses": ["contractor", "plumber", "hvac", "roofing", "repair", "inspection", "estimate"]
+};
+
+const contaminationGroupsByNiche: Record<string, string[]> = {
+  restaurants: ["agencies", "creators", "fitness", "realtors", "med-spas", "service-businesses"],
+  agencies: ["restaurants", "creators", "fitness", "realtors", "med-spas", "service-businesses"],
+  "gaming-creators": ["restaurants", "agencies", "fitness", "realtors", "med-spas", "service-businesses"],
+  streamers: ["restaurants", "agencies", "fitness", "realtors", "med-spas", "service-businesses"],
+  "lifestyle-creators": ["restaurants", "agencies", "fitness", "realtors", "med-spas", "service-businesses"],
+  "fitness-creators": ["restaurants", "agencies", "realtors", "med-spas", "service-businesses"],
+  realtors: ["restaurants", "agencies", "creators", "fitness", "med-spas", "service-businesses"],
+  "med-spas": ["restaurants", "agencies", "creators", "fitness", "realtors", "service-businesses"],
+  "service-businesses": ["restaurants", "agencies", "creators", "fitness", "realtors", "med-spas"],
+  "local-businesses": ["restaurants", "agencies", "creators", "fitness", "realtors", "med-spas", "service-businesses"]
+};
+
+function getForeignTerms(nicheId: string) {
+  return (contaminationGroupsByNiche[nicheId] ?? [])
+    .flatMap((group) => nicheContaminationTerms[group] ?? [])
+    .filter(Boolean);
+}
+
+function hasForeignNicheLanguage(text: string, nicheId: string) {
+  const normalizedText = text.toLowerCase();
+
+  return getForeignTerms(nicheId).some((term) => normalizedText.includes(term));
+}
+
+function lockSignalToNiche(signal: VisibilitySignal, niche: NicheProfile) {
+  if (!hasForeignNicheLanguage(signal.insight, niche.id)) {
+    return signal;
+  }
+
+  const fallback =
+    visibilityDimensions.find((dimension) => dimension.label === signal.label)?.fallback ??
+    "Keep the recommendation tied to this brand's current audience, offer, and platform.";
+
+  return {
+    ...signal,
+    insight: fallback
+  };
 }
 
 function getPlatformNativeFormat(platform: AuditPlatform, fallback: string) {
@@ -605,7 +777,11 @@ function phraseList(values: string[], start = 0, count = 3) {
   return Array.from({ length: count }, (_, index) => pick(values, start + index)).join(", ");
 }
 
-function hookTaxonomy(profile: NicheProfile, platform: AuditPlatform): HookTaxonomyGroup[] {
+function hookTaxonomy(
+  profile: NicheProfile,
+  platform: AuditPlatform,
+  ctaLanguage: string[] = profile.ctaLanguage
+): HookTaxonomyGroup[] {
   const phrase = profile.searchPhrases[0];
   const angle = pick(profile.angleVariants, 1);
   const proof = pick(profile.proofVariants, 2);
@@ -646,7 +822,7 @@ function hookTaxonomy(profile: NicheProfile, platform: AuditPlatform): HookTaxon
       category: "Conversion Hooks",
       hooks: [
         "If someone is ready to act today, this is the next step they need to see.",
-        `Stop ending posts with vague engagement bait. Say "${profile.ctaLanguage[0]}" when the intent is warm.`
+        `Stop ending posts with vague engagement bait. Say "${pick(ctaLanguage, 0)}" when the intent is warm.`
       ]
     },
     {
@@ -705,12 +881,16 @@ function signalByLabel(signals: VisibilitySignal[], label: string) {
 
 export function createVisibilityContentPlan(
   auditResult: AiAuditResult,
-  platform: AuditPlatform
+  platform: AuditPlatform,
+  context?: VisibilityPlanContext
 ): VisibilityContentPlan {
   const weakCategories = getWeakCategories(auditResult);
   const weakAreas = weakCategories.map((category) => category.name);
-  const visibilitySignals = buildVisibilitySignals(auditResult);
-  const niche = inferNiche(auditResult);
+  const nicheResolution = inferNiche(auditResult, context);
+  const niche = nicheResolution.profile;
+  const visibilitySignals = buildVisibilitySignals(auditResult).map((signal) =>
+    lockSignalToNiche(signal, niche)
+  );
   const platformLabel = getPlatformLabel(platform);
   const hookSignal = signalByLabel(visibilitySignals, "Weak hooks");
   const consistencySignal = signalByLabel(visibilitySignals, "Posting consistency");
@@ -731,13 +911,15 @@ export function createVisibilityContentPlan(
   const emotionA = pick(niche.emotionalTriggers, 0);
   const emotionB = pick(niche.emotionalTriggers, 1);
   const emotionC = pick(niche.emotionalTriggers, 3);
-  const taxonomy = hookTaxonomy(niche, platform);
   const brandCtas = getBrandCtas(niche, auditResult);
   const cta = (index: number) => pick(brandCtas, index) || "Message us for the next step";
+  const taxonomy = hookTaxonomy(niche, platform, brandCtas);
 
   return {
     niche: {
+      id: niche.id,
       label: niche.label,
+      confidence: nicheResolution.confidence,
       audience: niche.audience,
       audienceContexts: niche.audienceContexts,
       emotionalTriggers: niche.emotionalTriggers,

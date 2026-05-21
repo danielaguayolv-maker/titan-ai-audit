@@ -7,7 +7,8 @@ import {
   type AiAuditResult,
   type AuditApiResponse,
   type BusinessAuditFormData,
-  type LiveScanResult
+  type LiveScanResult,
+  type ProfileData
 } from "@/lib/audit-ai";
 
 export type RequestStatus = "idle" | "loading" | "success" | "error";
@@ -15,7 +16,10 @@ export type RequestStatus = "idle" | "loading" | "success" | "error";
 type AiAuditPanelProps = {
   auditResult: AiAuditResult;
   isUsingFallback: boolean;
-  onAuditGenerated: (result: AiAuditResult) => void;
+  onAuditGenerated: (
+    result: AiAuditResult,
+    context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
+  ) => void;
   onLiveScanChange: (liveScan: LiveScanResult) => void;
   onPlatformChange: (platform: AuditPlatform) => void;
   onProfileUrlChange: (profileUrl: string) => void;
@@ -258,7 +262,10 @@ export function AiAuditPanel({
 
       setLiveScan(payload.liveScan);
       onLiveScanChange(payload.liveScan);
-      onAuditGenerated(payload.result);
+      onAuditGenerated(payload.result, {
+        formData: requestData,
+        profileData: payload.profileData
+      });
       setStatus("success");
       onStatusChange("success");
     } catch (caughtError) {
