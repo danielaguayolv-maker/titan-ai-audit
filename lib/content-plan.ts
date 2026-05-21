@@ -11,6 +11,9 @@ export type VisibilitySignal = {
   score: number;
   status: string;
   insight: string;
+  whyItMatters: string;
+  attentionLeak: string;
+  sequenceFix: string;
 };
 
 type HookCategory =
@@ -772,37 +775,79 @@ const visibilityDimensions = [
   {
     label: "Weak hooks",
     keys: ["hook", "profile clarity", "bio", "clarity"],
-    fallback: "Open each post with a sharper problem, payoff, local angle, or curiosity gap."
+    fallback: "Open each post with a sharper problem, payoff, local angle, or curiosity gap.",
+    whyItMatters:
+      "Hook weakness hurts because the audience has to decode the value before they feel curiosity, tension, or payoff.",
+    attentionLeak:
+      "Attention usually drops when context appears before intrigue, movement starts too late, or the first frame lacks emotional contrast.",
+    sequenceFix:
+      "Start with motion or contrast, reveal the stakes immediately, then explain only after the viewer has a reason to care."
   },
   {
     label: "Posting consistency",
     keys: ["content consistency", "consistency", "posting"],
-    fallback: "Turn scattered ideas into a repeatable weekly publishing rhythm."
+    fallback: "Turn scattered ideas into a repeatable weekly publishing rhythm.",
+    whyItMatters:
+      "Inconsistent posting makes every piece of content work alone instead of training the audience to recognize the brand's rhythm.",
+    attentionLeak:
+      "Momentum leaks when the audience cannot predict what type of value comes next or why the account is worth returning to.",
+    sequenceFix:
+      "Build recurring weekly formats with familiar openings, rotating examples, and a clear proof-to-CTA arc."
   },
   {
     label: "Authority signals",
     keys: ["trust", "authority", "proof", "retention"],
-    fallback: "Add proof, outcomes, testimonials, process details, and credibility signals."
+    fallback: "Add proof, outcomes, testimonials, process details, and credibility signals.",
+    whyItMatters:
+      "Authority feels thin when expertise is stated before it is demonstrated. Viewers need visible evidence before belief.",
+    attentionLeak:
+      "Trust drops when proof arrives too late, stays too abstract, or never connects to the audience's hesitation.",
+    sequenceFix:
+      "Show the proof frame first, add one sentence of context, then explain the process or decision that created the result."
   },
   {
     label: "CTA strength",
     keys: ["cta", "conversion", "offer"],
-    fallback: "Make every high-intent post tell the viewer exactly what to do next."
+    fallback: "Make every high-intent post tell the viewer exactly what to do next.",
+    whyItMatters:
+      "CTA weakness turns warm attention into passive interest. The viewer may like the content but never understands the next move.",
+    attentionLeak:
+      "Intent leaks when the CTA only appears in the bio, lands after the energy drops, or does not match the viewer's readiness.",
+    sequenceFix:
+      "Place the CTA on the strongest proof or payoff frame, say it plainly, then reinforce it in the caption."
   },
   {
     label: "Engagement quality",
     keys: ["engagement", "retention", "content"],
-    fallback: "Use comments, questions, and replies to create stronger audience signal loops."
+    fallback: "Use comments, questions, and replies to create stronger audience signal loops.",
+    whyItMatters:
+      "Weak engagement signals mean the audience is consuming without revealing intent, objections, identity, or desire.",
+    attentionLeak:
+      "Replies stay shallow when the prompt appears before recognition or asks for a generic opinion instead of a real decision.",
+    sequenceFix:
+      "Show a relatable moment first, then ask a question tied to the viewer's situation, preference, or desired outcome."
   },
   {
     label: "Local SEO/search intent",
     keys: ["seo", "search", "keyword", "local"],
-    fallback: "Use service, location, and buyer-intent language in topics, captions, and profiles."
+    fallback: "Use service, location, and buyer-intent language in topics, captions, and profiles.",
+    whyItMatters:
+      "Search intent is weak when the content does not mirror the words buyers or viewers use when they are ready to choose.",
+    attentionLeak:
+      "Relevance drops when location, category, or buyer-intent phrases are buried too late or feel disconnected from the visual.",
+    sequenceFix:
+      "Open with a recognizable local or category scene, then use the search phrase naturally in the first caption line."
   },
   {
     label: "Content gaps",
     keys: ["gap", "content", "offer", "profile"],
-    fallback: "Fill the missing mix of education, proof, local relevance, and offer-led content."
+    fallback: "Fill the missing mix of education, proof, local relevance, and offer-led content.",
+    whyItMatters:
+      "Content gaps leave the audience without enough proof, context, identity, or offer clarity to move from interest to action.",
+    attentionLeak:
+      "The story feels incomplete when posts show the offer but skip the emotional reason, proof moment, or decision path.",
+    sequenceFix:
+      "Build each week with education, visible proof, audience identity, and one direct offer moment so the account feels complete."
   }
 ];
 
@@ -1168,7 +1213,10 @@ function buildVisibilitySignals(auditResult: AiAuditResult): VisibilitySignal[] 
       label: dimension.label,
       score: category?.score ?? Math.round(auditResult.overallScore),
       status: category?.benchmark ?? "Needs focus",
-      insight: category?.insight ?? dimension.fallback
+      insight: category?.insight ?? dimension.fallback,
+      whyItMatters: dimension.whyItMatters,
+      attentionLeak: dimension.attentionLeak,
+      sequenceFix: dimension.sequenceFix
     };
   });
 }

@@ -116,6 +116,11 @@ export function TitanStudio({
                   <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
                     {signal.insight}
                   </p>
+                  <div className="mt-4 grid gap-2">
+                    <SignalDiagnostic title="Why it matters" text={signal.whyItMatters} />
+                    <SignalDiagnostic title="Attention leak" text={signal.attentionLeak} />
+                    <SignalDiagnostic title="Sequence fix" text={signal.sequenceFix} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -293,6 +298,19 @@ function MiniList({ title, items }: { title: string; items: string[] }) {
           </p>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SignalDiagnostic({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-md border border-titan-gold/10 bg-white/[0.03] p-3">
+      <p className="text-[11px] font-black uppercase text-titan-bright">
+        {title}
+      </p>
+      <p className="text-anywhere mt-1 text-xs leading-5 text-titan-ivory/58">
+        {text}
+      </p>
     </div>
   );
 }
