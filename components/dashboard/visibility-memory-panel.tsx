@@ -9,7 +9,9 @@ import type {
 import {
   createVisibilityMemoryReport,
   normalizeAccountKey,
-  readVisibilityMemoryEntries,
+  readVisibilityMemoryEntriesWithDebug,
+  visibilityMemoryStorageKey,
+  type VisibilityMemoryDebugState,
   type VisibilityMemoryEntry
 } from "@/lib/visibility-memory";
 
@@ -17,6 +19,7 @@ type VisibilityMemoryPanelProps = {
   auditResult: AiAuditResult;
   context: { formData?: BusinessAuditFormData; profileData?: ProfileData | null };
   isUsingFallback: boolean;
+  memoryDebug: VisibilityMemoryDebugState;
   memoryAccountKey: string;
   memoryRevision: number;
   profileUrl: string;
@@ -26,11 +29,13 @@ export function VisibilityMemoryPanel({
   auditResult,
   context,
   isUsingFallback,
+  memoryDebug,
   memoryAccountKey,
   memoryRevision,
   profileUrl
 }: VisibilityMemoryPanelProps) {
   const [entries, setEntries] = useState<VisibilityMemoryEntry[]>([]);
+  const [readDebug, setReadDebug] = useState<VisibilityMemoryDebugState | null>(null);
   const accountKey =
     memoryAccountKey ||
     normalizeAccountKey(
@@ -39,7 +44,9 @@ export function VisibilityMemoryPanel({
     );
 
   useEffect(() => {
-    setEntries(readVisibilityMemoryEntries());
+    const memoryReadResult = readVisibilityMemoryEntriesWithDebug();
+    setEntries(memoryReadResult.entries);
+    setReadDebug(memoryReadResult.debug);
   }, [memoryRevision]);
 
   const memoryReport = useMemo(
@@ -74,6 +81,56 @@ export function VisibilityMemoryPanel({
               </span>
             </div>
           </div>
+
+          <details className="mt-6 rounded-lg border border-titan-gold/15 bg-black/24 p-4">
+            <summary className="cursor-pointer text-sm font-black uppercase text-titan-bright">
+              Memory Debug Panel
+            </summary>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <DebugItem label="Normalized account key" value={accountKey || "Not set"} />
+              <DebugItem
+                label="Saved account key"
+                value={memoryDebug.normalizedAccountKey || "No save attempted"}
+              />
+              <DebugItem
+                label="localStorage write key"
+                value={memoryDebug.storageWriteKey || visibilityMemoryStorageKey}
+              />
+              <DebugItem
+                label="localStorage read key"
+                value={readDebug?.storageReadKey || memoryDebug.storageReadKey || visibilityMemoryStorageKey}
+              />
+              <DebugItem label="Stored audits found" value={String(entries.length)} />
+              <DebugItem
+                label="Matching audits for account"
+                value={String(memoryReport.auditCount)}
+              />
+              <DebugItem
+                label="Last attempted save"
+                value={memoryDebug.lastAttemptedSaveAt || "No save attempted"}
+              />
+              <DebugItem
+                label="saveMemoryAudit() called"
+                value={memoryDebug.saveMemoryAuditCalled ? "Yes" : "No"}
+              />
+              <DebugItem
+                label="Audit passed validation"
+                value={memoryDebug.auditObjectPassedValidation ? "Yes" : "No"}
+              />
+              <DebugItem
+                label="Window/localStorage available"
+                value={memoryDebug.windowAvailable || readDebug?.windowAvailable ? "Yes" : "No"}
+              />
+              <DebugItem
+                label="Save error"
+                value={memoryDebug.saveError || "None"}
+              />
+              <DebugItem
+                label="Read error"
+                value={readDebug?.readError || memoryDebug.readError || "None"}
+              />
+            </div>
+          </details>
 
           {isUsingFallback ? (
             <div className="mt-7 rounded-lg border border-titan-gold/10 bg-black/24 p-5">
@@ -140,6 +197,17 @@ export function VisibilityMemoryPanel({
         </article>
       </div>
     </section>
+  );
+}
+
+function DebugItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-[11px] font-black uppercase text-titan-muted">{label}</p>
+      <p className="text-anywhere mt-2 text-xs leading-5 text-titan-ivory/70">
+        {value}
+      </p>
+    </div>
   );
 }
 

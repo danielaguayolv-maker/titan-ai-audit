@@ -49,7 +49,35 @@ export type VisibilityMemoryReport = {
   predictiveSignals: string[];
 };
 
+export type VisibilityMemoryDebugState = {
+  normalizedAccountKey: string;
+  storageWriteKey: string;
+  storageReadKey: string;
+  storedAuditsFound: number;
+  matchingAuditsFound: number;
+  lastAttemptedSaveAt: string;
+  saveMemoryAuditCalled: boolean;
+  auditObjectPassedValidation: boolean;
+  windowAvailable: boolean;
+  saveError: string;
+  readError: string;
+};
+
 const memoryLimitPerAccount = 8;
+
+export const emptyVisibilityMemoryDebug: VisibilityMemoryDebugState = {
+  normalizedAccountKey: "",
+  storageWriteKey: visibilityMemoryStorageKey,
+  storageReadKey: visibilityMemoryStorageKey,
+  storedAuditsFound: 0,
+  matchingAuditsFound: 0,
+  lastAttemptedSaveAt: "",
+  saveMemoryAuditCalled: false,
+  auditObjectPassedValidation: false,
+  windowAvailable: false,
+  saveError: "",
+  readError: ""
+};
 
 function normalizeText(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
@@ -253,6 +281,23 @@ export function createVisibilityMemoryEntry(
   };
 }
 
+export function validateVisibilityMemoryAudit(auditResult: AiAuditResult) {
+  return Boolean(
+    auditResult &&
+      typeof auditResult.businessName === "string" &&
+      typeof auditResult.overallScore === "number" &&
+      typeof auditResult.grade === "string" &&
+      typeof auditResult.personalizedDiagnosis === "string" &&
+      Array.isArray(auditResult.categoryScores) &&
+      auditResult.categoryScores.length > 0 &&
+      Array.isArray(auditResult.topQuickWins) &&
+      Array.isArray(auditResult.contentRecommendations) &&
+      auditResult.leadReadyAuditReport &&
+      Array.isArray(auditResult.leadReadyAuditReport.findings) &&
+      Array.isArray(auditResult.leadReadyAuditReport.nextSteps)
+  );
+}
+
 function countOccurrences(entries: VisibilityMemoryEntry[], field: "recurringStrengths" | "recurringWeaknesses") {
   const counts = new Map<string, number>();
 
@@ -413,18 +458,50 @@ export function createVisibilityMemoryReport(
   };
 }
 
-export function readVisibilityMemoryEntries() {
+export function readVisibilityMemoryEntriesWithDebug() {
   if (typeof window === "undefined") {
-    return [];
+    return {
+      entries: [] as VisibilityMemoryEntry[],
+      debug: {
+        ...emptyVisibilityMemoryDebug,
+        readError: "window is unavailable; localStorage read skipped"
+      }
+    };
   }
 
   try {
     const stored = window.localStorage.getItem(visibilityMemoryStorageKey);
-    return stored ? (JSON.parse(stored) as VisibilityMemoryEntry[]) : [];
+    const parsedEntries = stored ? (JSON.parse(stored) as unknown) : [];
+    const entries = Array.isArray(parsedEntries)
+      ? (parsedEntries as VisibilityMemoryEntry[])
+      : [];
+
+    return {
+      entries,
+      debug: {
+        ...emptyVisibilityMemoryDebug,
+        storageReadKey: visibilityMemoryStorageKey,
+        storedAuditsFound: entries.length,
+        windowAvailable: true
+      }
+    };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown memory read error";
     console.error("Titan Visibility Memory read failed", error);
-    return [];
+    return {
+      entries: [] as VisibilityMemoryEntry[],
+      debug: {
+        ...emptyVisibilityMemoryDebug,
+        storageReadKey: visibilityMemoryStorageKey,
+        windowAvailable: true,
+        readError: message
+      }
+    };
   }
+}
+
+export function readVisibilityMemoryEntries() {
+  return readVisibilityMemoryEntriesWithDebug().entries;
 }
 
 export function writeVisibilityMemoryEntries(entries: VisibilityMemoryEntry[]) {
@@ -458,4 +535,94 @@ export function saveVisibilityMemoryEntry(entry: VisibilityMemoryEntry) {
   const updatedEntries = upsertVisibilityMemoryEntry(currentEntries, entry);
   writeVisibilityMemoryEntries(updatedEntries);
   return updatedEntries;
+}
+
+export function saveMemoryAudit(
+  auditResult: AiAuditResult,
+  platform: AuditPlatform,
+  context: { formData?: BusinessAuditFormData; profileData?: ProfileData | null }
+) {
+  const attemptedAt = new Date().toISOString();
+  const profileUrl = context.formData?.profileUrl ?? context.profileData?.profileUrl ?? "";
+  const normalizedAccountKey = normalizeAccountKey(profileUrl, auditResult.businessName);
+  const auditObjectPassedValidation = validateVisibilityMemoryAudit(auditResult);
+  const baseDebug: VisibilityMemoryDebugState = {
+    ...emptyVisibilityMemoryDebug,
+    normalizedAccountKey,
+    storageWriteKey: visibilityMemoryStorageKey,
+    storageReadKey: visibilityMemoryStorageKey,
+    lastAttemptedSaveAt: attemptedAt,
+    saveMemoryAuditCalled: true,
+    auditObjectPassedValidation,
+    windowAvailable: typeof window !== "undefined"
+  };
+
+  if (typeof window === "undefined") {
+    return {
+      entry: null,
+      entries: [] as VisibilityMemoryEntry[],
+      debug: {
+        ...baseDebug,
+        saveError: "window is unavailable; localStorage write skipped"
+      }
+    };
+  }
+
+  const readResult = readVisibilityMemoryEntriesWithDebug();
+
+  if (!auditObjectPassedValidation) {
+    return {
+      entry: null,
+      entries: readResult.entries,
+      debug: {
+        ...baseDebug,
+        readError: readResult.debug.readError,
+        storedAuditsFound: readResult.entries.length,
+        matchingAuditsFound: readResult.entries.filter(
+          (entry) => entry.accountKey === normalizedAccountKey
+        ).length,
+        saveError: "audit object failed memory validation"
+      }
+    };
+  }
+
+  try {
+    const entry = createVisibilityMemoryEntry(auditResult, platform, context);
+    const updatedEntries = upsertVisibilityMemoryEntry(readResult.entries, entry);
+    window.localStorage.setItem(
+      visibilityMemoryStorageKey,
+      JSON.stringify(updatedEntries)
+    );
+
+    return {
+      entry,
+      entries: updatedEntries,
+      debug: {
+        ...baseDebug,
+        normalizedAccountKey: entry.accountKey,
+        readError: readResult.debug.readError,
+        storedAuditsFound: updatedEntries.length,
+        matchingAuditsFound: updatedEntries.filter(
+          (storedEntry) => storedEntry.accountKey === entry.accountKey
+        ).length
+      }
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown memory save error";
+    console.error("Titan Visibility Memory save failed", error);
+
+    return {
+      entry: null,
+      entries: readResult.entries,
+      debug: {
+        ...baseDebug,
+        readError: readResult.debug.readError,
+        storedAuditsFound: readResult.entries.length,
+        matchingAuditsFound: readResult.entries.filter(
+          (entry) => entry.accountKey === normalizedAccountKey
+        ).length,
+        saveError: message
+      }
+    };
+  }
 }

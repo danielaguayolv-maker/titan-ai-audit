@@ -18,9 +18,10 @@ import {
   type PersistedAuditWorkspace
 } from "@/lib/workspace-persistence";
 import {
-  createVisibilityMemoryEntry,
+  emptyVisibilityMemoryDebug,
   normalizeAccountKey,
-  saveVisibilityMemoryEntry
+  saveMemoryAudit,
+  type VisibilityMemoryDebugState
 } from "@/lib/visibility-memory";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
@@ -46,6 +47,12 @@ export function DashboardContent() {
   const [profileUrl, setProfileUrl] = useState("");
   const [memoryAccountKey, setMemoryAccountKey] = useState("");
   const [memoryRevision, setMemoryRevision] = useState(0);
+  const [memoryDebug, setMemoryDebug] =
+    useState<VisibilityMemoryDebugState>(emptyVisibilityMemoryDebug);
+  const [pendingMemorySave, setPendingMemorySave] = useState<{
+    result: AiAuditResult;
+    context: { formData: BusinessAuditFormData; profileData: ProfileData | null };
+  } | null>(null);
   const [planContext, setPlanContext] = useState<{
     formData?: BusinessAuditFormData;
     profileData?: ProfileData | null;
@@ -102,23 +109,45 @@ export function DashboardContent() {
     });
   }, [auditResult, isUsingFallback, liveScan, planContext, platform, profileUrl]);
 
+  useEffect(() => {
+    if (!pendingMemorySave || isUsingFallback) {
+      return;
+    }
+
+    if (
+      auditResult !== pendingMemorySave.result ||
+      planContext !== pendingMemorySave.context
+    ) {
+      return;
+    }
+
+    const memorySaveResult = saveMemoryAudit(
+      pendingMemorySave.result,
+      pendingMemorySave.context.formData.platform,
+      pendingMemorySave.context
+    );
+
+    if (memorySaveResult.entry) {
+      setMemoryAccountKey(memorySaveResult.entry.accountKey);
+    } else {
+      setMemoryAccountKey(memorySaveResult.debug.normalizedAccountKey);
+    }
+
+    setMemoryDebug(memorySaveResult.debug);
+    setMemoryRevision((currentRevision) => currentRevision + 1);
+    setPendingMemorySave(null);
+  }, [auditResult, isUsingFallback, pendingMemorySave, planContext]);
+
   function handleAuditGenerated(
     result: AiAuditResult,
     context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
   ) {
-    const memoryEntry = createVisibilityMemoryEntry(
-      result,
-      context.formData.platform,
-      context
-    );
-    saveVisibilityMemoryEntry(memoryEntry);
-    setMemoryAccountKey(memoryEntry.accountKey);
-    setMemoryRevision((currentRevision) => currentRevision + 1);
     setAuditResult(result);
     setPlanContext(context);
     setProfileUrl(context.formData.profileUrl);
     setPlatform(context.formData.platform);
     setIsUsingFallback(false);
+    setPendingMemorySave({ result, context });
   }
 
   function handlePlatformChange(platform: AuditPlatform) {
@@ -145,6 +174,7 @@ export function DashboardContent() {
     setPlanContext({});
     setProfileUrl("");
     setMemoryAccountKey("");
+    setMemoryDebug(emptyVisibilityMemoryDebug);
     setIsUsingFallback(true);
     setRequestStatus("idle");
     setLiveScan({
@@ -185,6 +215,7 @@ export function DashboardContent() {
             auditResult={auditResult}
             context={planContext}
             isUsingFallback={isUsingFallback}
+            memoryDebug={memoryDebug}
             memoryAccountKey={memoryAccountKey}
             memoryRevision={memoryRevision}
             profileUrl={profileUrl}
