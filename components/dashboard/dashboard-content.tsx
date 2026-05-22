@@ -44,6 +44,8 @@ import { VisibilityMemoryPanel } from "./visibility-memory-panel";
 export function DashboardContent() {
   const initialPlatform: AuditPlatform = "instagram";
   const [activeModule, setActiveModule] = useState<TitanOsModule>("home");
+  const [showGuidedOnboarding, setShowGuidedOnboarding] = useState(false);
+  const [uxMode, setUxMode] = useState<TitanUxMode>("strategist");
   const [auditResult, setAuditResult] = useState<AiAuditResult>(() =>
     createFallbackAuditResult(initialPlatform)
   );
@@ -75,6 +77,18 @@ export function DashboardContent() {
     confidenceScore: 0,
     metricsStatus: "limited"
   });
+
+  useEffect(() => {
+    setShowGuidedOnboarding(
+      window.localStorage.getItem(titanGuidedOnboardingStorageKey) !== "complete"
+    );
+
+    const savedMode = window.localStorage.getItem(titanUxModeStorageKey);
+
+    if (isTitanUxMode(savedMode)) {
+      setUxMode(savedMode);
+    }
+  }, []);
 
   useEffect(() => {
     const savedWorkspace = readJsonStorage<PersistedAuditWorkspace>(
@@ -200,11 +214,31 @@ export function DashboardContent() {
     });
   }
 
+  function completeGuidedOnboarding() {
+    window.localStorage.setItem(titanGuidedOnboardingStorageKey, "complete");
+    setShowGuidedOnboarding(false);
+  }
+
+  function handleUxModeChange(mode: TitanUxMode) {
+    window.localStorage.setItem(titanUxModeStorageKey, mode);
+    setUxMode(mode);
+  }
+
   return (
     <DashboardShell
       activeModule={activeModule}
       onModuleChange={setActiveModule}
     >
+      {showGuidedOnboarding ? (
+        <GuidedOnboardingFlow
+          onComplete={completeGuidedOnboarding}
+          onOpenAudit={() => {
+            completeGuidedOnboarding();
+            setActiveModule("audit");
+          }}
+        />
+      ) : null}
+
       {activeModule === "audit" ? (
         <>
           <AiAuditPanel
@@ -255,6 +289,8 @@ export function DashboardContent() {
           onOpenAudit={() => setActiveModule("audit")}
           onOpenStudio={() => setActiveModule("titan-studio")}
           onOpenReports={() => setActiveModule("reports")}
+          onUxModeChange={handleUxModeChange}
+          uxMode={uxMode}
         />
       ) : null}
 
@@ -402,7 +438,9 @@ function DashboardHome({
   onClearResults,
   onOpenAudit,
   onOpenReports,
-  onOpenStudio
+  onOpenStudio,
+  onUxModeChange,
+  uxMode
 }: {
   auditResult: AiAuditResult;
   isUsingFallback: boolean;
@@ -412,6 +450,8 @@ function DashboardHome({
   onOpenAudit: () => void;
   onOpenReports: () => void;
   onOpenStudio: () => void;
+  onUxModeChange: (mode: TitanUxMode) => void;
+  uxMode: TitanUxMode;
 }) {
   const [activeExploration, setActiveExploration] = useState("Hook Stability");
   const weakestCategories = [...auditResult.categoryScores]
@@ -480,10 +520,37 @@ function DashboardHome({
   const activeSignal =
     drillDownSignals.find((signal) => signal.id === activeExploration) ??
     drillDownSignals[0];
+  const healthHistory = buildAccountHealthHistory(
+    evolutionReport,
+    auditResult,
+    memoryReport.auditCount
+  );
+  const dailyReturnSignals = buildDailyReturnSignals(
+    momentum.label,
+    strategicMetrics,
+    warnings,
+    opportunities,
+    recommendations
+  );
+  const learningCards = buildStrategicLearningCards(activeSignal, uxMode);
+  const adaptiveNextSteps = buildAdaptiveNextSteps(
+    primaryBlocker,
+    strategicFocus,
+    opportunities,
+    isUsingFallback
+  );
+  const showDeepIntelligence = uxMode === "deep";
+  const showStrategistContent = uxMode === "strategist" || uxMode === "deep";
+  const showSimplified = uxMode === "simplified";
 
   return (
     <section className="px-5 py-8 sm:px-8 sm:py-10">
       <div className="mx-auto w-full max-w-7xl">
+        <IntelligenceModeSelector
+          mode={uxMode}
+          onModeChange={onUxModeChange}
+        />
+
         <article className="premium-surface min-w-0 overflow-hidden rounded-lg p-6 shadow-gold sm:p-8 lg:p-10">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:items-center">
             <div className="min-w-0">
@@ -560,6 +627,18 @@ function DashboardHome({
           <StrategicPriorityRanking priorities={strategicPriorities} />
         </div>
 
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+          <DailyReturnLayer signals={dailyReturnSignals} />
+          <AdaptiveNextStepPanel steps={adaptiveNextSteps} />
+        </div>
+
+        {isUsingFallback ? (
+          <FirstAuditGuidance
+            onOpenAudit={onOpenAudit}
+            onOpenStudio={onOpenStudio}
+          />
+        ) : null}
+
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
           <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -600,38 +679,51 @@ function DashboardHome({
           </article>
         </div>
 
-        <DrillDownIntelligencePanel signal={activeSignal} />
+        {!showSimplified ? <DrillDownIntelligencePanel signal={activeSignal} /> : null}
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <TitanPulseFeed items={pulseFeed} />
-          <MovementVisualization metrics={strategicMetrics} />
-        </div>
+        {showStrategistContent ? (
+          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <TitanPulseFeed items={pulseFeed} />
+            <MovementVisualization metrics={strategicMetrics} />
+          </div>
+        ) : null}
 
-        <div className="titan-readable-grid mt-5">
-          <CommandListCard
-            eyebrow="Behavioral warnings"
-            items={warnings}
-            onItemSelect={(item) => setActiveExploration(`warning-${item}`)}
-            tone="warning"
-            title="What could quietly weaken performance"
-          />
-          <CommandListCard
-            eyebrow="Opportunity signals"
-            items={opportunities}
-            onItemSelect={(item) => setActiveExploration(`opportunity-${item}`)}
-            tone="positive"
-            title="Where momentum can be created"
-          />
-          <CommandListCard
-            eyebrow="Strategic recommendations"
-            items={recommendations}
-            onItemSelect={(item) => setActiveExploration(`recommendation-${item}`)}
-            tone="neutral"
-            title="What to do this week"
-          />
-        </div>
+        {!showSimplified ? (
+          <div className="titan-readable-grid mt-5">
+            <CommandListCard
+              eyebrow="Behavioral warnings"
+              items={warnings}
+              onItemSelect={(item) => setActiveExploration(`warning-${item}`)}
+              tone="warning"
+              title="What could quietly weaken performance"
+            />
+            <CommandListCard
+              eyebrow="Opportunity signals"
+              items={opportunities}
+              onItemSelect={(item) => setActiveExploration(`opportunity-${item}`)}
+              tone="positive"
+              title="Where momentum can be created"
+            />
+            <CommandListCard
+              eyebrow="Strategic recommendations"
+              items={recommendations}
+              onItemSelect={(item) => setActiveExploration(`recommendation-${item}`)}
+              tone="neutral"
+              title="What to do this week"
+            />
+          </div>
+        ) : null}
 
         <StrategicFocusMode focus={strategicFocus} />
+
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+          <AccountHealthHistory history={healthHistory} />
+          <StrategicLearningLayer cards={learningCards} />
+        </div>
+
+        {showDeepIntelligence ? (
+          <AgencyClientFoundation />
+        ) : null}
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
           <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
@@ -777,6 +869,12 @@ type CommandMetric = {
   interpretation: string;
 };
 
+type TitanUxMode =
+  | "executive"
+  | "strategist"
+  | "deep"
+  | "simplified";
+
 type StrategicSeverity =
   | "Critical"
   | "High Priority"
@@ -848,6 +946,44 @@ type DrillDownSignal = {
   education: string;
   trend: number[];
 };
+
+type HealthHistoryPoint = {
+  label: string;
+  score: number;
+  movement: EvolutionMovementStatus;
+  summary: string;
+};
+
+type DailyReturnSignal = {
+  label: string;
+  message: string;
+  severity: StrategicSeverity;
+  movement: EvolutionMovementStatus;
+};
+
+type StrategicLearningCard = {
+  eyebrow: string;
+  title: string;
+  explanation: string;
+};
+
+type AdaptiveNextStep = {
+  label: string;
+  value: string;
+  severity: StrategicSeverity;
+};
+
+const titanGuidedOnboardingStorageKey = "titan-guided-onboarding-complete";
+const titanUxModeStorageKey = "titan-ux-mode";
+
+function isTitanUxMode(value: string | null): value is TitanUxMode {
+  return (
+    value === "executive" ||
+    value === "strategist" ||
+    value === "deep" ||
+    value === "simplified"
+  );
+}
 
 function movementArrow(status: EvolutionMovementStatus) {
   const arrows: Record<EvolutionMovementStatus, string> = {
@@ -1643,6 +1779,608 @@ function educationForSignal(label: string) {
   }
 
   return "People remember emotional contrast before information.";
+}
+
+function buildAccountHealthHistory(
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
+  auditResult: AiAuditResult,
+  auditCount: number
+): HealthHistoryPoint[] {
+  const movementPoints = evolutionReport.movementScores.slice(0, 6).map((metric) => ({
+    label: metric.label,
+    score: Math.round(metric.currentScore),
+    movement: metric.status,
+    summary: metric.summary
+  }));
+
+  if (movementPoints.length > 0) {
+    return movementPoints;
+  }
+
+  return [
+    {
+      label: "Visibility baseline",
+      score: Math.round(auditResult.overallScore),
+      movement: auditCount > 0 ? "stable" : "emerging",
+      summary:
+        auditCount > 0
+          ? "Titan has a first memory point. The next audit starts movement tracking."
+          : "Run the first audit to create the baseline."
+    },
+    {
+      label: "Momentum trajectory",
+      score: auditCount > 0 ? 46 : 28,
+      movement: "emerging",
+      summary: "Momentum becomes clearer once Titan compares the account over time."
+    },
+    {
+      label: "Emotional identity",
+      score: auditCount > 0 ? 52 : 34,
+      movement: "emerging",
+      summary: "Titan is watching for repeated emotional texture, audience language, and visual identity."
+    }
+  ];
+}
+
+function buildDailyReturnSignals(
+  momentumLabel: string,
+  metrics: CommandMetric[],
+  warnings: string[],
+  opportunities: string[],
+  recommendations: string[]
+): DailyReturnSignal[] {
+  const declining = metrics.find((metric) => metric.direction === "declining");
+  const improving = metrics.find((metric) => metric.direction === "improving");
+  const volatile = metrics.find((metric) => metric.direction === "inconsistent");
+
+  return [
+    {
+      label: "Daily pulse",
+      message:
+        momentumLabel === "Weakening"
+          ? "Momentum is weakening in a place worth checking today."
+          : momentumLabel === "Strengthening"
+            ? "Momentum is strengthening. Repeat the behavior before changing the strategy."
+            : "Titan is watching for the next meaningful signal shift.",
+      severity: momentumLabel === "Weakening" ? "Critical" : "Emerging",
+      movement: momentumLabel === "Weakening" ? "declining" : "emerging"
+    },
+    {
+      label: declining ? `${declining.label} pressure` : "Primary watch",
+      message:
+        declining?.interpretation ??
+        warnings[0] ??
+        "No single danger signal is dominating the dashboard yet.",
+      severity: declining ? "High Priority" : "Stable",
+      movement: declining?.direction ?? "stable"
+    },
+    {
+      label: improving ? `${improving.label} lift` : "Opportunity watch",
+      message:
+        improving?.interpretation ??
+        opportunities[0] ??
+        "Titan is looking for a repeatable signal that can become the weekly focus.",
+      severity: "Opportunity",
+      movement: improving?.direction ?? "emerging"
+    },
+    {
+      label: volatile ? "Volatility check" : "Next action",
+      message:
+        volatile?.interpretation ??
+        recommendations[0] ??
+        "Return after the next audit to compare movement and update the roadmap.",
+      severity: volatile ? "Volatile" : "High Confidence",
+      movement: volatile?.direction ?? "improving"
+    }
+  ];
+}
+
+function buildStrategicLearningCards(
+  signal: DrillDownSignal,
+  mode: TitanUxMode
+): StrategicLearningCard[] {
+  const deepCards = [
+    {
+      eyebrow: "Common Visibility Pattern",
+      title: "The audience feels before it evaluates.",
+      explanation: signal.education
+    },
+    {
+      eyebrow: "Strategic Insight",
+      title: signal.label,
+      explanation: signal.why
+    },
+    {
+      eyebrow: "High-Leverage Adjustment",
+      title: "Change the first behavior, not the whole strategy.",
+      explanation: signal.highestLeverage
+    },
+    {
+      eyebrow: "Retention Read",
+      title: "Momentum comes from repeated behavior.",
+      explanation: signal.prediction
+    }
+  ];
+
+  if (mode === "executive" || mode === "simplified") {
+    return deepCards.slice(0, 2);
+  }
+
+  return deepCards;
+}
+
+function buildAdaptiveNextSteps(
+  blocker: StrategicBlocker,
+  focus: StrategicFocus,
+  opportunities: string[],
+  isUsingFallback: boolean
+): AdaptiveNextStep[] {
+  if (isUsingFallback) {
+    return [
+      {
+        label: "Start here",
+        value: "Run the first Visibility Audit to create the account baseline.",
+        severity: "High Priority"
+      },
+      {
+        label: "Then",
+        value: "Review the Primary Blocker before opening Titan Studio.",
+        severity: "Emerging"
+      },
+      {
+        label: "Return reason",
+        value: "Run a second audit later to unlock movement and memory comparison.",
+        severity: "Stable"
+      }
+    ];
+  }
+
+  return [
+    {
+      label: "Focus next",
+      value: focus.focusThisWeek,
+      severity: blocker.severity
+    },
+    {
+      label: "Ignore temporarily",
+      value: focus.ignoreTemporarily,
+      severity: "Stable"
+    },
+    {
+      label: "Experiment to run",
+      value: opportunities[0] ?? "Test one reaction-first opening across the next five posts.",
+      severity: "Opportunity"
+    },
+    {
+      label: "Strategic risk",
+      value: focus.becomingDangerous,
+      severity: "Warning"
+    }
+  ];
+}
+
+function GuidedOnboardingFlow({
+  onComplete,
+  onOpenAudit
+}: {
+  onComplete: () => void;
+  onOpenAudit: () => void;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const steps = [
+    {
+      eyebrow: "Welcome to Titan Visibility OS",
+      title: "Titan studies visibility movement, not just one-off scores.",
+      body: "The OS reads profile clarity, audience behavior, emotional identity, conversion friction, and momentum so each audit becomes part of a larger strategic picture."
+    },
+    {
+      eyebrow: "Momentum",
+      title: "Momentum shows where the account is moving.",
+      body: "Strengthening, flattening, volatile, and weakening signals help you decide what deserves attention now instead of reacting to every metric equally."
+    },
+    {
+      eyebrow: "Memory + Evolution",
+      title: "Titan becomes smarter as it remembers recurring behavior.",
+      body: "The platform learns hook habits, CTA timing, pacing patterns, visual identity, emotional triggers, and repeated wins across audits on this device."
+    },
+    {
+      eyebrow: "Titan Studio",
+      title: "The audit turns into execution.",
+      body: "Titan Studio uses the latest audit, memory, evolution, and predictive strategy to generate adaptive hooks, scripts, CTAs, captions, and a 30-day roadmap."
+    }
+  ];
+  const step = steps[stepIndex];
+  const isFinalStep = stepIndex === steps.length - 1;
+
+  return (
+    <section className="px-5 pt-8 sm:px-8 sm:pt-10">
+      <article className="premium-surface mx-auto max-w-7xl overflow-hidden rounded-lg p-6 shadow-gold sm:p-8">
+        <div className="titan-pulse-line mb-6" />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.45fr)] lg:items-end">
+          <div className="min-w-0">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-titan-muted">
+              Guided onboarding
+            </p>
+            <p className="mt-5 text-sm font-black uppercase text-titan-bright">
+              {step.eyebrow}
+            </p>
+            <h2 className="mt-3 max-w-4xl text-3xl font-black leading-tight text-titan-ivory sm:text-5xl">
+              {step.title}
+            </h2>
+            <p className="titan-copy mt-5 text-base text-titan-ivory/68 sm:text-lg">
+              {step.body}
+            </p>
+          </div>
+          <div className="titan-panel rounded-lg p-5">
+            <p className="text-xs font-black uppercase text-titan-muted">
+              Progress
+            </p>
+            <div className="mt-4 grid gap-2">
+              {steps.map((item, index) => (
+                <button
+                  className={`rounded-lg border p-3 text-left text-xs font-black uppercase transition ${
+                    index === stepIndex
+                      ? "border-titan-bright bg-titan-gold text-black shadow-gold"
+                      : "border-titan-gold/10 bg-black/20 text-titan-ivory/58 hover:border-titan-bright/40"
+                  }`}
+                  key={item.eyebrow}
+                  onClick={() => setStepIndex(index)}
+                  type="button"
+                >
+                  {index + 1}. {item.eyebrow}
+                </button>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-col gap-3">
+              <button
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-titan-gold px-5 text-xs font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+                onClick={
+                  isFinalStep
+                    ? onOpenAudit
+                    : () => setStepIndex((current) => current + 1)
+                }
+                type="button"
+              >
+                {isFinalStep ? "Run First Audit" : "Continue"}
+              </button>
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-5 text-xs font-black uppercase text-titan-ivory/64 transition hover:border-titan-bright hover:text-titan-bright"
+                onClick={onComplete}
+                type="button"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function IntelligenceModeSelector({
+  mode,
+  onModeChange
+}: {
+  mode: TitanUxMode;
+  onModeChange: (mode: TitanUxMode) => void;
+}) {
+  const modes: Array<{
+    id: TitanUxMode;
+    label: string;
+    description: string;
+  }> = [
+    {
+      id: "executive",
+      label: "Executive Summary",
+      description: "Concise, high-level, fast strategic read."
+    },
+    {
+      id: "strategist",
+      label: "Strategist",
+      description: "Interpretation, recommendations, and movement analysis."
+    },
+    {
+      id: "deep",
+      label: "Deep Intelligence",
+      description: "Full drilldowns, simulations, memory, and agency prep."
+    },
+    {
+      id: "simplified",
+      label: "Simplified",
+      description: "Reduced complexity with only the next best moves."
+    }
+  ];
+
+  return (
+    <article className="premium-surface mb-5 rounded-lg p-4 sm:p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase text-titan-muted">
+            UX intelligence mode
+          </p>
+          <p className="titan-copy mt-1 text-sm text-titan-ivory/60">
+            Choose how much strategic depth Titan shows while keeping the same intelligence underneath.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {modes.map((item) => {
+            const isActive = item.id === mode;
+
+            return (
+              <button
+                className={`rounded-lg border p-3 text-left transition ${
+                  isActive
+                    ? "border-titan-bright bg-titan-gold text-black shadow-gold"
+                    : "border-titan-gold/10 bg-black/24 text-titan-ivory hover:border-titan-bright/40"
+                }`}
+                key={item.id}
+                onClick={() => onModeChange(item.id)}
+                type="button"
+              >
+                <span className="block text-xs font-black uppercase">
+                  {item.label}
+                </span>
+                <span
+                  className={`mt-1 block text-xs leading-5 ${
+                    isActive ? "text-black/62" : "text-titan-ivory/50"
+                  }`}
+                >
+                  {item.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function DailyReturnLayer({ signals }: { signals: DailyReturnSignal[] }) {
+  return (
+    <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Daily return layer
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+            Reasons to check Titan today.
+          </h2>
+        </div>
+        <span className="relative flex size-11 items-center justify-center rounded-full border border-titan-gold/20 bg-titan-gold/10">
+          <span className="absolute size-7 animate-ping rounded-full bg-titan-gold/15" />
+          <span className="size-2 rounded-full bg-titan-bright shadow-gold" />
+        </span>
+      </div>
+      <div className="mt-5 grid gap-3">
+        {signals.map((signal) => (
+          <div
+            className={`rounded-lg p-4 ${severityVisual(signal.severity).panelClass}`}
+            key={`${signal.label}-${signal.message}`}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="titan-card-title text-sm font-black text-titan-ivory">
+                {signal.label}
+              </p>
+              <SeverityBadge severity={signal.severity} />
+            </div>
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/64">
+              {signal.message}
+            </p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function AdaptiveNextStepPanel({ steps }: { steps: AdaptiveNextStep[] }) {
+  return (
+    <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+      <p className="text-sm font-bold uppercase text-titan-muted">
+        Adaptive next-step recommendations
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+        What to do next, and what to leave alone.
+      </h2>
+      <div className="mt-5 grid gap-3">
+        {steps.map((step) => (
+          <div
+            className={`rounded-lg p-4 ${severityVisual(step.severity).panelClass}`}
+            key={step.label}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-black uppercase text-titan-muted">
+                {step.label}
+              </p>
+              <SeverityBadge severity={step.severity} />
+            </div>
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/68">
+              {step.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function FirstAuditGuidance({
+  onOpenAudit,
+  onOpenStudio
+}: {
+  onOpenAudit: () => void;
+  onOpenStudio: () => void;
+}) {
+  const steps = [
+    "Paste an Instagram or TikTok URL and run the first Visibility Audit.",
+    "Read the Primary Blocker before scanning the rest of the dashboard.",
+    "Use Titan Studio to turn the audit into an adaptive 30-day roadmap.",
+    "Return after new content or a later audit to unlock movement tracking."
+  ];
+
+  return (
+    <article className="premium-surface mt-5 rounded-lg p-6 sm:p-7">
+      <p className="text-sm font-bold uppercase text-titan-muted">
+        First audit guidance
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+        Start with one account. Let Titan build memory over time.
+      </h2>
+      <div className="titan-readable-grid mt-5">
+        {steps.map((step, index) => (
+          <div className="titan-signal-card rounded-lg p-4" key={step}>
+            <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+              Step {index + 1}
+            </span>
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/68">{step}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <button
+          className="inline-flex min-h-12 items-center justify-center rounded-full bg-titan-gold px-6 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+          onClick={onOpenAudit}
+          type="button"
+        >
+          Run First Audit
+        </button>
+        <button
+          className="luxury-border inline-flex min-h-12 items-center justify-center rounded-full bg-white/5 px-6 text-sm font-bold uppercase text-titan-ivory transition hover:border-titan-bright hover:bg-white/10"
+          onClick={onOpenStudio}
+          type="button"
+        >
+          Preview Titan Studio
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function AccountHealthHistory({ history }: { history: HealthHistoryPoint[] }) {
+  return (
+    <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+      <p className="text-sm font-bold uppercase text-titan-muted">
+        Account health history
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+        Movement timeline.
+      </h2>
+      <div className="mt-6 grid gap-4">
+        {history.map((point, index) => {
+          const visual = severityVisual(
+            severityFromMovement(point.movement, point.score)
+          );
+          const trend = buildMiniTrend(
+            {
+              confidence: 66,
+              direction: point.movement,
+              interpretation: point.summary,
+              label: point.label,
+              score: point.score
+            },
+            index
+          );
+
+          return (
+            <div className="titan-signal-card rounded-lg p-4" key={point.label}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="titan-card-title font-black text-titan-ivory">
+                    {point.label}
+                  </p>
+                  <p className="mt-1 text-xs font-black uppercase text-titan-muted">
+                    {movementArrow(point.movement)} {point.movement}
+                  </p>
+                </div>
+                <span className={`size-2.5 rounded-full ${visual.dotClass} ${visual.pulseClass}`} />
+              </div>
+              <div className="mt-4 flex h-12 items-end gap-1.5">
+                {trend.map((height, trendIndex) => (
+                  <span
+                    className="flex-1 rounded-full bg-gradient-to-t from-titan-gold/20 to-titan-bright"
+                    key={`${point.label}-${height}-${trendIndex}`}
+                    style={{ height: `${height}%` }}
+                  />
+                ))}
+              </div>
+              <p className="titan-copy mt-4 text-sm text-titan-ivory/62">
+                {point.summary}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
+function StrategicLearningLayer({
+  cards
+}: {
+  cards: StrategicLearningCard[];
+}) {
+  return (
+    <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+      <p className="text-sm font-bold uppercase text-titan-muted">
+        Strategic learning layer
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+        Titan teaches the strategy while you use it.
+      </h2>
+      <div className="mt-5 grid gap-3">
+        {cards.map((card) => (
+          <div className="titan-signal-card rounded-lg p-4" key={card.title}>
+            <p className="text-xs font-black uppercase text-titan-bright">
+              {card.eyebrow}
+            </p>
+            <h3 className="titan-card-title mt-2 text-lg font-black text-titan-ivory">
+              {card.title}
+            </h3>
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/64">
+              {card.explanation}
+            </p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function AgencyClientFoundation() {
+  const foundations = [
+    "Client dashboard shell prepared around account health, primary blocker, and movement history.",
+    "Shareable strategic view can reuse executive mode without exposing internal debug or deep analysis.",
+    "Agency workspace mode can group accounts by normalized profile key when Supabase is added.",
+    "White-label compatibility is preserved by keeping Titan strategy surfaces modular."
+  ];
+
+  return (
+    <article className="premium-surface mt-5 rounded-lg p-6 sm:p-7">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Agency and client foundation
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+            Structured for future multi-account intelligence.
+          </h2>
+        </div>
+        <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+          Future-ready
+        </span>
+      </div>
+      <div className="titan-readable-grid mt-5">
+        {foundations.map((item) => (
+          <div className="titan-signal-card rounded-lg p-4" key={item}>
+            <p className="titan-copy text-sm text-titan-ivory/66">{item}</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
 }
 
 function DrillDownIntelligencePanel({ signal }: { signal: DrillDownSignal }) {
