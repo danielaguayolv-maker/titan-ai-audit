@@ -19,6 +19,7 @@ import { QuickWins } from "./quick-wins";
 import { ScoreSummary } from "./score-summary";
 import { StrategyCta } from "./strategy-cta";
 import { TitanStudio } from "./titan-studio";
+import { VisibilityMemoryPanel } from "./visibility-memory-panel";
 
 export function DashboardContent() {
   const initialPlatform: AuditPlatform = "instagram";
@@ -91,6 +92,13 @@ export function DashboardContent() {
           <CategoryScores categories={auditResult.categoryScores} />
           <QuickWins quickWins={auditResult.topQuickWins} />
           <DashboardStates auditResult={auditResult} requestStatus={requestStatus} />
+          <VisibilityMemoryPanel
+            auditResult={auditResult}
+            context={planContext}
+            isUsingFallback={isUsingFallback}
+            platform={platform}
+            profileUrl={profileUrl}
+          />
           {!isUsingFallback && requestStatus === "success" ? (
             <StrategyCta
               auditResult={auditResult}
