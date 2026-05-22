@@ -544,23 +544,22 @@ function DimensionCard({
         {dimension.strategicRead}
       </p>
       <div className="mt-4 grid gap-3">
-        <DiagnosticBlock title="Your current pattern" text={dimension.yourPattern} />
-        <DiagnosticBlock title="Competitor current pattern" text={dimension.competitorPattern} />
-        <DiagnosticBlock title="Difference" text={dimension.difference} />
-        <DiagnosticBlock title="What to adapt without copying" text={dimension.adaptation} />
+        <ObservationBlock text={dimension.yourPattern} />
+        <ObservationBlock text={dimension.competitorPattern} />
+        <ObservationBlock text={dimension.difference} />
+        <ObservationBlock text={dimension.adaptation} />
       </div>
       <p className="text-anywhere mt-3 rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/72">
-        {dimension.whyItMatters} {dimension.emotionalTrigger}
+        {dimension.whyItMatters} {dimension.emotionalRead}
       </p>
     </div>
   );
 }
 
-function DiagnosticBlock({ title, text }: { title: string; text: string }) {
+function ObservationBlock({ text }: { text: string }) {
   return (
     <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/20 p-4">
-      <p className="text-xs font-black uppercase text-titan-bright">{title}</p>
-      <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/62">
+      <p className="text-anywhere text-sm leading-6 text-titan-ivory/64">
         {text}
       </p>
     </div>

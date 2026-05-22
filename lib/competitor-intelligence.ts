@@ -24,7 +24,7 @@ export type CompetitorComparisonDimension = {
   whyItMatters: string;
   retentionRead: string;
   sequenceFix: string;
-  emotionalTrigger: string;
+  emotionalRead: string;
   contentDirection: string;
   scoreDelta: number;
   confidenceLanguage: "appears to" | "likely" | "shows";
@@ -57,7 +57,7 @@ type ComparisonBlueprint = {
   whyItMatters: string;
   retentionRead: string;
   sequenceFix: string;
-  emotionalTrigger: string;
+  emotionalRead: string;
   direction: string;
 };
 
@@ -77,8 +77,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Check whether movement starts in the first frame, whether the payoff appears before second three, and whether tension is visible before explanation begins.",
     sequenceFix:
       "Lead with motion or contrast, reveal the stakes immediately after, then slow down for proof once curiosity is already active.",
-    emotionalTrigger:
-      "Missing trigger: curiosity plus tension. The viewer needs a reason to wonder what happens next.",
+    emotionalRead:
+      "curiosity plus tension. The viewer needs a reason to wonder what happens next.",
     direction:
       "Compare first frames: movement, contrast, emotional reaction, and whether the viewer understands the payoff in under three seconds."
   },
@@ -97,8 +97,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Look for whether the account repeats visual formats, recurring topics, and familiar opening structures without making the feed feel copied.",
     sequenceFix:
       "Create two repeatable series: one proof-led, one education-led. Keep the first visual consistent, but rotate the story, example, and CTA.",
-    emotionalTrigger:
-      "Missing trigger: familiarity. People return when the account feels recognizable and useful.",
+    emotionalRead:
+      "familiarity. People return when the account feels recognizable and useful.",
     direction:
       "Look for repeatable weekly formats, recurring visual scenes, and whether each post feels like part of the same brand world."
   },
@@ -117,8 +117,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Study whether proof appears early enough: process footage, before/after contrast, client/customer reactions, results, or visible expertise before the pitch.",
     sequenceFix:
       "Open with the proof frame, add one line of context, then explain the mechanism that created the result.",
-    emotionalTrigger:
-      "Missing trigger: trust and risk reduction. The audience wants to feel safe choosing this option.",
+    emotionalRead:
+      "trust and risk reduction. The audience wants to feel safe choosing this option.",
     direction:
       "Audit how each account shows evidence: before/after moments, process footage, testimonials, credentials, and real audience reactions."
   },
@@ -137,8 +137,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Check whether the CTA is spoken, captioned, shown as on-screen text, reinforced in the caption, and timed while the viewer still feels the payoff.",
     sequenceFix:
       "Place the CTA on the strongest proof or reveal frame. Use a low-friction action for warm viewers and a direct action for high-intent viewers.",
-    emotionalTrigger:
-      "Missing trigger: action confidence. The viewer needs the next step to feel obvious and low-risk.",
+    emotionalRead:
+      "action confidence. The viewer needs the next step to feel obvious and low-risk.",
     direction:
       "Compare whether the CTA appears in the bio only, the caption, on-screen text, spoken copy, or all three."
   },
@@ -157,8 +157,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Watch whether the post creates a moment worth responding to before the question appears. A strong prompt lands after recognition, not before it.",
     sequenceFix:
       "Show the relatable moment first, then ask a specific question tied to the viewer's decision, obstacle, or desired outcome.",
-    emotionalTrigger:
-      "Missing trigger: identity and participation. People comment when the post lets them say something about themselves.",
+    emotionalRead:
+      "identity and participation. People comment when the post lets them say something about themselves.",
     direction:
       "Look for prompts that create real replies: choices, objections, identity signals, and moments people want to tag or save."
   },
@@ -177,8 +177,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Look for whether the search phrase appears near the beginning and is supported by a visual that proves the account belongs in that query.",
     sequenceFix:
       "Start with the recognizable local or category scene, use the search phrase naturally in the first sentence, then show proof tied to that exact intent.",
-    emotionalTrigger:
-      "Missing trigger: relevance. The viewer should feel, 'This is for someone like me, right now, in this market.'",
+    emotionalRead:
+      "relevance. The viewer should feel, 'This is for someone like me, right now, in this market.'",
     direction:
       "Compare location language, service/category phrases, neighborhood cues, and whether the first sentence answers a real search."
   },
@@ -197,8 +197,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Check whether the emotional payoff arrives before the explanation gets heavy. If the viewer has to wait too long to feel something, retention softens.",
     sequenceFix:
       "Open with the emotion, prove it with a real scene, then explain the offer after the viewer already feels the stakes.",
-    emotionalTrigger:
-      "Missing trigger: felt outcome. The content needs to show what changes for the viewer, not just what the account sells.",
+    emotionalRead:
+      "felt outcome. The content needs to show what changes for the viewer, not just what the account sells.",
     direction:
       "Look for aspiration, frustration, belonging, status, relief, transformation, and fear-of-missing-out cues in the first half of each post."
   },
@@ -217,8 +217,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Analyze movement density, delayed reveals, visual payoff timing, editing rhythm, and whether tension releases at the moment curiosity peaks.",
     sequenceFix:
       "Start with the strongest visual, delay one reveal just long enough to create curiosity, then land emotional proof before the CTA.",
-    emotionalTrigger:
-      "Missing trigger: anticipation. The viewer should feel that a payoff is coming and stay to see it.",
+    emotionalRead:
+      "anticipation. The viewer should feel that a payoff is coming and stay to see it.",
     direction:
       "Reverse-engineer opening movement, reaction shots, delayed reveals, proof frames, and where the CTA lands."
   },
@@ -237,8 +237,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Look for whether each week has a repeatable arc or if every post asks the audience to recalibrate from scratch.",
     sequenceFix:
       "Build a weekly loop: hook-heavy proof, audience identity post, authority breakdown, then CTA-led conversion post.",
-    emotionalTrigger:
-      "Missing trigger: momentum. The audience should feel the account is leading them somewhere.",
+    emotionalRead:
+      "momentum. The audience should feel the account is leading them somewhere.",
     direction:
       "Compare how often each account rotates between proof, education, audience reaction, and direct offer moments."
   },
@@ -257,8 +257,8 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Check whether the post names the viewer's situation before pitching the solution. Identity should arrive before the offer.",
     sequenceFix:
       "Lead with the audience's lived moment, show the tension they already feel, then introduce the brand as the bridge.",
-    emotionalTrigger:
-      "Missing trigger: recognition. The viewer needs to feel seen before they feel sold to.",
+    emotionalRead:
+      "recognition. The viewer needs to feel seen before they feel sold to.",
     direction:
       "Compare whether each account names the real buyer/viewer: their desire, hesitation, identity, location, or situation."
   }
@@ -313,21 +313,21 @@ function lowerConfidence(
 }
 
 function strengthContext(score: number, label: "your" | "competitor") {
-  const owner = label === "your" ? "You" : "The competitor";
+  const owner = label === "your" ? "Your account" : "The competitor";
 
   if (score >= 82) {
-    return `${owner} are strong here and should protect the edge.`;
+    return `${owner} is genuinely strong here, so the move is to protect the edge and make it more visible.`;
   }
 
   if (score >= 68) {
-    return `${owner} have a relative advantage, but this is still not fully optimized.`;
+    return `${owner} is ahead, but the signal is not finished; there is still room to sharpen timing, proof, and conversion.`;
   }
 
   if (score >= 52) {
-    return `${owner} are ahead comparatively, but still leaving performance on the table.`;
+    return `${owner} is winning this comparison, but the execution is still leaving attention or action on the table.`;
   }
 
-  return `${owner} may be ahead only because the other account is weaker here; this still needs serious tightening.`;
+  return `${owner} is only ahead because the other side is weaker here; this still needs a cleaner creative sequence.`;
 }
 
 function currentPattern(
@@ -336,7 +336,8 @@ function currentPattern(
   signal: string,
   confidence: "appears to" | "likely" | "shows"
 ) {
-  return `${owner} current pattern ${confidence} centered on ${dimension.toLowerCase()}: ${signal}`;
+  const opener = owner === "Your" ? "Your side" : "The competitor";
+  return `${opener} ${confidence} leaning on ${dimension.toLowerCase()} through this signal: ${signal}`;
 }
 
 function differenceRead(
@@ -345,26 +346,26 @@ function differenceRead(
   confidence: "appears to" | "likely" | "shows"
 ) {
   if (scoreDelta > 4) {
-    return `Difference: the competitor ${confidence} ahead on ${dimension.toLowerCase()}, so study the behavior creating the edge before changing the creative.`;
+    return `The competitor ${confidence} ahead on ${dimension.toLowerCase()} because the behavior behind the content is doing more work than the surface style. Study where attention is created before changing the creative.`;
   }
 
   if (scoreDelta < -4) {
-    return `Difference: your account ${confidence} ahead on ${dimension.toLowerCase()}, but the edge should be sharpened rather than treated as finished.`;
+    return `Your account ${confidence} ahead on ${dimension.toLowerCase()}, but the edge should be sharpened rather than treated as finished. Stronger than the competitor does not automatically mean fully optimized.`;
   }
 
-  return `Difference: both accounts are close on ${dimension.toLowerCase()}, so execution details like pacing, first frame, and CTA placement will decide the advantage.`;
+  return `Both accounts are close on ${dimension.toLowerCase()}. The advantage will come from the details: first frame, pacing, payoff timing, and whether the CTA lands while attention is still warm.`;
 }
 
 function adaptationRead(blueprint: ComparisonBlueprint, scoreDelta: number) {
   if (scoreDelta > 4) {
-    return `What to adapt without copying: borrow the competitor's underlying timing behavior, then express it through your own niche visuals. ${blueprint.sequenceFix}`;
+    return `Do not copy the competitor's format. Study the timing: what appears first, when the proof arrives, and where the viewer feels the reason to keep watching. ${blueprint.sequenceFix}`;
   }
 
   if (scoreDelta < -4) {
-    return `What to adapt without copying: keep your relative edge, but pressure-test it against stronger execution. ${blueprint.retentionRead}`;
+    return `Keep the edge, but make it harder to catch. ${blueprint.retentionRead}`;
   }
 
-  return `What to adapt without copying: run a controlled creative test around the sequence. ${blueprint.sequenceFix}`;
+  return `Run a small creative test around the sequence rather than changing everything at once. ${blueprint.sequenceFix}`;
 }
 
 function buildPlan(snapshot: CompetitorSnapshot) {
@@ -438,7 +439,7 @@ function createDimensionComparison(
     whyItMatters: blueprint.whyItMatters,
     retentionRead: blueprint.retentionRead,
     sequenceFix: blueprint.sequenceFix,
-    emotionalTrigger: blueprint.emotionalTrigger,
+    emotionalRead: blueprint.emotionalRead,
     contentDirection: blueprint.direction,
     scoreDelta,
     confidenceLanguage,
@@ -466,6 +467,10 @@ function diagnosticOpportunity(dimension: CompetitorComparisonDimension) {
   return `${dimension.label}: ${dimension.relativeContext} ${dimension.adaptation}`;
 }
 
+function observationLine(dimension: CompetitorComparisonDimension) {
+  return `${dimension.difference} ${dimension.adaptation}`;
+}
+
 export function createCompetitorIntelligenceReport(
   yours: CompetitorSnapshot,
   competitor: CompetitorSnapshot
@@ -488,9 +493,9 @@ export function createCompetitorIntelligenceReport(
     dimensions,
     whatTheyDoBetter: competitorEdges.map(toActionSentence),
     whatYouDoBetter: yourEdges.map(toActionSentence),
-    biggestOpportunityGap: `${largestGap.label}: close the gap by identifying where attention is being lost, then rebuild the sequence. ${largestGap.whyItMatters} ${largestGap.sequenceFix} Adapt the behavior without copying the format: borrow the timing, pacing, and emotional trigger, then express it in your own niche language.`,
+    biggestOpportunityGap: `${largestGap.label}: ${largestGap.whyItMatters} ${largestGap.sequenceFix} The fix is not to copy the competitor's look; it is to rebuild the moment where attention, proof, and intent connect.`,
     strategicStrengths: [
-      ...yourEdges.map((dimension) => `${dimension.label}: protect this advantage by making it visible before the midpoint of the post. ${dimension.emotionalTrigger}`),
+      ...yourEdges.map((dimension) => `${dimension.label}: ${dimension.relativeContext} Make that strength visible before the midpoint of the post, where viewers are still deciding whether to stay.`),
       `Niche lock: your plan is reading as ${yourPlan.niche.label}, so keep the language native to that audience.`
     ].slice(0, 4),
     strategicWeaknesses: [
@@ -507,16 +512,14 @@ export function createCompetitorIntelligenceReport(
       `Turn the biggest competitor edge into a weekly creative test: one opening style, one delayed reveal, one CTA placement, then compare saves, replies, and profile actions.`
     ],
     hookStyleDifferences: [
-      `Your current pattern: ${yourVisualCue}`,
-      `Competitor current pattern: ${competitorVisualCue}`,
-      `Difference: ${dimensions.find((dimension) => dimension.label === "Hook strength")?.difference ?? "Compare which account creates intrigue before context."}`,
-      `What to adapt without copying: ${dimensions.find((dimension) => dimension.label === "Hook strength")?.adaptation ?? "Borrow the timing behavior, not the competitor's exact creative format."}`
+      `Your feed reads this way: ${yourVisualCue}`,
+      `The competitor reads this way: ${competitorVisualCue}`,
+      observationLine(dimensions.find((dimension) => dimension.label === "Hook strength") ?? dimensions[0])
     ],
     ctaDifferences: [
-      `Your current pattern: ${dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing.")}`,
-      `Competitor current pattern: ${dimensionSignal(competitor.result, ["cta", "conversion", "offer"], "Competitor CTA signal is developing.")}`,
-      `Difference: ${dimensions.find((dimension) => dimension.label === "CTA strength")?.difference ?? "Compare which CTA appears while attention is still warm."}`,
-      `What to adapt without copying: ${dimensions.find((dimension) => dimension.label === "CTA strength")?.adaptation ?? "Place the CTA over the strongest proof shot, reinforce it in caption and on-screen copy, and match it to viewer intent."}`
+      `Your CTA behavior: ${dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing.")}`,
+      `Competitor CTA behavior: ${dimensionSignal(competitor.result, ["cta", "conversion", "offer"], "Competitor CTA signal is developing.")}`,
+      observationLine(dimensions.find((dimension) => dimension.label === "CTA strength") ?? dimensions[0])
     ],
     visualExecutionDifferences: [
       "Watch whether the competitor opens with movement faster, delays the reveal until curiosity peaks, or uses more emotional reaction shots before explaining.",
