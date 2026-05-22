@@ -438,6 +438,29 @@ function CompetitorReport({
 
       <div className="grid gap-5 xl:grid-cols-2">
         <InsightCard
+          eyebrow="Emotional brand"
+          items={report.emotionalBrandDifferences}
+          title="Atmosphere and feeling"
+        />
+        <InsightCard
+          eyebrow="Memorability"
+          items={report.memorabilityDifferences}
+          title="What sticks after the scroll"
+        />
+        <InsightCard
+          eyebrow="Brand presence"
+          items={report.presenceDifferences}
+          title="Personality and connection"
+        />
+        <InsightCard
+          eyebrow="Cultural identity"
+          items={report.culturalIdentityDifferences}
+          title="Community and belonging"
+        />
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <InsightCard
           eyebrow="Hook / style differences"
           items={report.hookStyleDifferences}
           title="First-frame psychology"

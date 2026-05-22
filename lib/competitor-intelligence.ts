@@ -22,6 +22,7 @@ export type CompetitorComparisonDimension = {
   adaptation: string;
   strategicRead: string;
   sharpRead: string;
+  visualTaste: string;
   whyItMatters: string;
   retentionRead: string;
   sequenceFix: string;
@@ -47,6 +48,10 @@ export type CompetitorIntelligenceReport = {
   ctaDifferences: string[];
   visualExecutionDifferences: string[];
   audiencePsychologyDifferences: string[];
+  emotionalBrandDifferences: string[];
+  memorabilityDifferences: string[];
+  presenceDifferences: string[];
+  culturalIdentityDifferences: string[];
 };
 
 type ComparisonBlueprint = {
@@ -325,6 +330,110 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "The viewer has to feel seen before they feel sold to.",
     direction:
       "Compare whether each account names the real buyer/viewer: their desire, hesitation, identity, location, or situation."
+  },
+  {
+    label: "Emotional brand atmosphere",
+    keys: ["bio", "content", "trust", "engagement", "offer"],
+    strongerCompetitor:
+      "The competitor sells more of the feeling around the brand, not just the thing being offered.",
+    strongerYou:
+      "Your brand atmosphere is clearer. Push that feeling harder so the account becomes easier to remember.",
+    closeRead:
+      "Both accounts explain what they do, but neither fully owns an atmosphere yet.",
+    sharpRead:
+      "The audience understands the offer, but not the room it lives in.",
+    visualTaste:
+      "Atmosphere is texture: sound, pace, faces, reactions, lighting, crowd energy, inside jokes, and the feeling of being there.",
+    tacticalMove:
+      "Make one post this week about the feeling around the brand, not the offer itself.",
+    whyItMatters:
+      "An account can be clear and still forgettable if the emotional tone never settles into a recognizable vibe.",
+    retentionRead:
+      "The brand should leave a mood behind after the video ends.",
+    sequenceFix:
+      "Lead with atmosphere, then reveal the product or offer inside that world.",
+    emotionalRead:
+      "The viewer should understand what it feels like to belong here.",
+    direction:
+      "Compare emotional tone, social energy, atmosphere, vibe consistency, and whether the brand feels like a place or personality people want to be around."
+  },
+  {
+    label: "Memorability",
+    keys: ["content", "profile clarity", "trust", "engagement"],
+    strongerCompetitor:
+      "The competitor leaves a stronger mental image after the post ends.",
+    strongerYou:
+      "Your account has more memorable raw material; it needs a more repeatable signature.",
+    closeRead:
+      "Neither account has a strong enough memory hook yet.",
+    sharpRead:
+      "Nothing sticks if every post resets the visual language.",
+    visualTaste:
+      "The strongest creators leave one image behind: a face, a phrase, a shot, a ritual, a sound, a recurring scene.",
+    tacticalMove:
+      "Choose one visual anchor and repeat it until the audience starts recognizing it before the caption.",
+    whyItMatters:
+      "Memorability is what makes people recall the account later, not just enjoy a post in the moment.",
+    retentionRead:
+      "A memorable account has a recurring cue the audience can picture after they close the app.",
+    sequenceFix:
+      "Give each post one signature image or phrase instead of trying to make every frame carry equal weight.",
+    emotionalRead:
+      "The best content leaves a residue: craving, confidence, curiosity, belonging, or status.",
+    direction:
+      "Compare visual anchors, recurring identity cues, signature edits, memorable moments, and whether the account has a recognizable emotional pattern."
+  },
+  {
+    label: "Creator / brand presence",
+    keys: ["authority", "trust", "bio", "content", "profile"],
+    strongerCompetitor:
+      "The competitor feels more present. The account has more personality behind the content.",
+    strongerYou:
+      "Your brand presence is stronger; let that confidence show more often instead of hiding behind information.",
+    closeRead:
+      "Both accounts could use more human presence.",
+    sharpRead:
+      "The viewer sees the product, but not enough of the personality behind it.",
+    visualTaste:
+      "Presence is confidence on camera, decisive captions, human voice, staff energy, creator POV, and the feeling that someone is actually leading the room.",
+    tacticalMove:
+      "Put a person, voice, or point of view closer to the front of the content.",
+    whyItMatters:
+      "Product-only content can inform people without making them feel connected to the brand.",
+    retentionRead:
+      "People follow personalities, confidence, and point of view faster than they follow polished information.",
+    sequenceFix:
+      "Open with the human angle, then use the product or proof to support it.",
+    emotionalRead:
+      "The account should feel like it comes from the brand, not just about the brand.",
+    direction:
+      "Compare personality, charisma, confidence, staff or creator energy, human voice, and whether the viewer feels a relationship forming."
+  },
+  {
+    label: "Cultural / social identity",
+    keys: ["local", "community", "engagement", "content", "seo"],
+    strongerCompetitor:
+      "The competitor feels more socially alive and easier to place inside a real community.",
+    strongerYou:
+      "Your local or cultural identity is clearer; make it feel more lived-in and less caption-dependent.",
+    closeRead:
+      "Both accounts could feel more culturally specific.",
+    sharpRead:
+      "The content could happen anywhere, which makes it harder to feel attached to.",
+    visualTaste:
+      "Cultural identity shows up in people, place, rituals, language, neighborhood cues, shared references, and the kind of energy followers want to claim.",
+    tacticalMove:
+      "Show the community around the offer, not just the offer.",
+    whyItMatters:
+      "Content becomes more contagious when it gives people a place, group, or identity to attach themselves to.",
+    retentionRead:
+      "The account should feel locally or socially specific enough that the right audience feels ownership.",
+    sequenceFix:
+      "Start with the social scene, then reveal the brand's role inside it.",
+    emotionalRead:
+      "Belonging is the lever here. People share what makes them feel part of something.",
+    direction:
+      "Compare local cues, cultural relevance, community feeling, social proof, aspirational identity, and whether the account feels emotionally contagious."
   }
 ];
 
@@ -515,6 +624,7 @@ function createDimensionComparison(
     adaptation: adaptationRead(blueprint, scoreDelta),
     strategicRead,
     sharpRead: blueprint.sharpRead,
+    visualTaste: blueprint.visualTaste,
     whyItMatters: blueprint.whyItMatters,
     retentionRead: blueprint.retentionRead,
     sequenceFix: blueprint.sequenceFix,
@@ -558,6 +668,10 @@ function observationLine(dimension: CompetitorComparisonDimension) {
   return `${dimension.difference} ${dimension.adaptation}`;
 }
 
+function dimensionByLabel(dimensions: CompetitorComparisonDimension[], label: string) {
+  return dimensions.find((dimension) => dimension.label === label) ?? dimensions[0];
+}
+
 export function createCompetitorIntelligenceReport(
   yours: CompetitorSnapshot,
   competitor: CompetitorSnapshot
@@ -570,6 +684,12 @@ export function createCompetitorIntelligenceReport(
   const competitorEdges = strongestCompetitorEdges(dimensions);
   const yourEdges = strongestYourEdges(dimensions);
   const largestGap = competitorEdges[0] ?? dimensions[0];
+  const hookDimension = dimensionByLabel(dimensions, "Hook strength");
+  const ctaDimension = dimensionByLabel(dimensions, "CTA strength");
+  const emotionalBrandDimension = dimensionByLabel(dimensions, "Emotional brand atmosphere");
+  const memorabilityDimension = dimensionByLabel(dimensions, "Memorability");
+  const presenceDimension = dimensionByLabel(dimensions, "Creator / brand presence");
+  const culturalDimension = dimensionByLabel(dimensions, "Cultural / social identity");
   const yourVisualCue = yourPlan.contentPriorities[0] ?? "Make the opening frame clearer.";
   const competitorVisualCue =
     competitorPlan.contentPriorities[0] ?? "Competitor opens with a clearer visual promise.";
@@ -594,19 +714,19 @@ export function createCompetitorIntelligenceReport(
       .slice(0, 4)
       .map((dimension) => `${dimension.label}: ${dimension.sharpRead ?? dimension.contentDirection}`),
     contentOpportunities: [
-      `Create a comparison-style post that shows your strongest ${yourPlan.niche.searchPhrases[0]} angle with movement in the first frame, proof by second three, and the CTA on the payoff shot.`,
-      `Build one proof-led series around ${yourPlan.niche.audienceContexts[0]} so the audience sees a consistent reason to trust you before they are asked to act.`,
-      `Turn the biggest competitor edge into a weekly creative test: one opening style, one delayed reveal, one CTA placement, then compare saves, replies, and profile actions.`
+      `Create one post built around atmosphere instead of information: the room, the faces, the sound, the movement, the feeling.`,
+      `Give the account a recurring memory cue: one visual anchor, phrase, ritual, or edit that can become recognizable over time.`,
+      `Put more human presence near the front of the content so the viewer feels who is behind the brand, not just what is being sold.`
     ],
     hookStyleDifferences: [
       `Your feed reads this way: ${yourVisualCue}`,
       `The competitor reads this way: ${competitorVisualCue}`,
-      observationLine(dimensions.find((dimension) => dimension.label === "Hook strength") ?? dimensions[0])
+      observationLine(hookDimension)
     ],
     ctaDifferences: [
       `Your CTA behavior: ${dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing.")}`,
       `Competitor CTA behavior: ${dimensionSignal(competitor.result, ["cta", "conversion", "offer"], "Competitor CTA signal is developing.")}`,
-      observationLine(dimensions.find((dimension) => dimension.label === "CTA strength") ?? dimensions[0])
+      observationLine(ctaDimension)
     ],
     visualExecutionDifferences: [
       "Look at what hits first: movement, face, food pull, screen reveal, reaction, or explanation. The first frame tells you who understands the platform better.",
@@ -616,7 +736,27 @@ export function createCompetitorIntelligenceReport(
     audiencePsychologyDifferences: [
       `Your audience identity: ${yourPlan.niche.audience}`,
       `Competitor audience identity: ${competitorPlan.niche.audience}`,
-      "Compare how each account speaks to identity, frustration, aspiration, status, belonging, and fear of missing out."
+      "The stronger account makes the viewer feel like the content belongs to their life, not just their feed."
+    ],
+    emotionalBrandDifferences: [
+      observationLine(emotionalBrandDimension),
+      emotionalBrandDimension.visualTaste,
+      "If the audience understands the offer but not the atmosphere, the brand stays useful but not sticky."
+    ],
+    memorabilityDifferences: [
+      observationLine(memorabilityDimension),
+      memorabilityDimension.visualTaste,
+      "The goal is one image, phrase, ritual, or feeling people remember after the scroll."
+    ],
+    presenceDifferences: [
+      observationLine(presenceDimension),
+      presenceDimension.visualTaste,
+      "The account should feel like it comes from someone, somewhere, with a point of view."
+    ],
+    culturalIdentityDifferences: [
+      observationLine(culturalDimension),
+      culturalDimension.visualTaste,
+      "Local and social identity make content feel claimable. People share what says something about them."
     ]
   };
 }
