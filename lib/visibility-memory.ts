@@ -49,6 +49,46 @@ export type VisibilityMemoryReport = {
   predictiveSignals: string[];
 };
 
+export type EvolutionMovementStatus =
+  | "improving"
+  | "declining"
+  | "stable"
+  | "inconsistent"
+  | "emerging";
+
+export type VisibilityEvolutionMetric = {
+  label: string;
+  status: EvolutionMovementStatus;
+  currentScore: number;
+  previousScore?: number;
+  delta: number;
+  summary: string;
+};
+
+export type VisibilityAuditTimelineItem = {
+  id: string;
+  createdAt: string;
+  score: number;
+  grade: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+};
+
+export type VisibilityEvolutionReport = {
+  auditCount: number;
+  improvements: string[];
+  regressions: string[];
+  repeatedWeaknesses: string[];
+  strengtheningSignals: string[];
+  emergingPatterns: string[];
+  unstablePatterns: string[];
+  movementScores: VisibilityEvolutionMetric[];
+  identityEvolution: string[];
+  momentumAnalysis: string[];
+  timeline: VisibilityAuditTimelineItem[];
+};
+
 export type VisibilityMemoryDebugState = {
   activeSaveFunctionVersion: string;
   normalizedAccountKey: string;
@@ -70,6 +110,41 @@ export type VisibilityMemoryDebugState = {
 };
 
 const memoryLimitPerAccount = 8;
+
+const evolutionMetrics = [
+  {
+    label: "Hook Strength",
+    keys: ["hook", "profile clarity", "bio", "clarity"]
+  },
+  {
+    label: "Retention Potential",
+    keys: ["retention", "watch", "pacing", "hook"]
+  },
+  {
+    label: "CTA Strength",
+    keys: ["cta", "conversion", "offer"]
+  },
+  {
+    label: "Memorability",
+    keys: ["memorability", "memory", "visual", "content"]
+  },
+  {
+    label: "Emotional Identity",
+    keys: ["emotion", "identity", "brand", "audience"]
+  },
+  {
+    label: "Profile Conversion",
+    keys: ["profile", "conversion", "bio", "offer"]
+  },
+  {
+    label: "Content Consistency",
+    keys: ["consistency", "posting", "content"]
+  },
+  {
+    label: "Search/Keyword Alignment",
+    keys: ["search", "keyword", "seo", "local"]
+  }
+] as const;
 
 export const emptyVisibilityMemoryDebug: VisibilityMemoryDebugState = {
   activeSaveFunctionVersion: "",
@@ -467,6 +542,213 @@ export function createVisibilityMemoryReport(
         ? `Likely weak structure: any post that repeats the ${repeatedWeaknesses[0][0].toLowerCase()} weakness without a stronger first beat.`
         : "Likely weak structure: polished content that resolves before curiosity forms."
     ]
+  };
+}
+
+function accountHistory(entries: VisibilityMemoryEntry[], accountKey: string) {
+  return entries
+    .filter((entry) => entry.accountKey === accountKey)
+    .sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt))
+    .slice(-memoryLimitPerAccount);
+}
+
+function metricScore(entry: VisibilityMemoryEntry | undefined, keys: readonly string[]) {
+  if (!entry) {
+    return 0;
+  }
+
+  return categoryByNeed(entry.categoryScores, [...keys])?.score ?? entry.score;
+}
+
+function movementStatus(
+  currentScore: number,
+  previousScore: number | undefined,
+  historyScores: number[]
+): EvolutionMovementStatus {
+  if (previousScore === undefined || historyScores.length < 2) {
+    return "emerging";
+  }
+
+  const delta = currentScore - previousScore;
+  const recentDeltas = historyScores
+    .slice(1)
+    .map((score, index) => score - historyScores[index]);
+  const hasMixedDirection =
+    recentDeltas.some((recentDelta) => recentDelta >= 4) &&
+    recentDeltas.some((recentDelta) => recentDelta <= -4);
+
+  if (hasMixedDirection) {
+    return "inconsistent";
+  }
+
+  if (delta >= 5) {
+    return "improving";
+  }
+
+  if (delta <= -5) {
+    return "declining";
+  }
+
+  return "stable";
+}
+
+function movementSummary(label: string, status: EvolutionMovementStatus, delta: number) {
+  if (status === "emerging") {
+    return `${label} has its first memory point. Titan needs another audit to read movement.`;
+  }
+
+  if (status === "improving") {
+    return `${label} improved since the previous audit.`;
+  }
+
+  if (status === "declining") {
+    return `${label} slipped by ${Math.abs(delta)} points since the previous audit.`;
+  }
+
+  if (status === "inconsistent") {
+    return `${label} is moving unevenly. The signal shows up, then disappears.`;
+  }
+
+  return `${label} is stable. The account is repeating the same behavior.`;
+}
+
+function repeatedItems(entries: VisibilityMemoryEntry[], field: "recurringStrengths" | "recurringWeaknesses") {
+  return countOccurrences(entries, field)
+    .filter(([, count]) => count > 1)
+    .map(([name]) => name);
+}
+
+export function createVisibilityEvolutionReport(
+  entries: VisibilityMemoryEntry[],
+  accountKey: string
+): VisibilityEvolutionReport {
+  const history = accountHistory(entries, accountKey);
+  const latest = history.at(-1);
+  const previous = history.at(-2);
+  const repeatedWeaknessNames = repeatedItems(history, "recurringWeaknesses");
+  const repeatedStrengthNames = repeatedItems(history, "recurringStrengths");
+
+  if (!latest) {
+    return {
+      auditCount: 0,
+      improvements: [],
+      regressions: [],
+      repeatedWeaknesses: [],
+      strengtheningSignals: [],
+      emergingPatterns: ["Run a completed Visibility Audit to start evolution tracking."],
+      unstablePatterns: [],
+      movementScores: [],
+      identityEvolution: [],
+      momentumAnalysis: [],
+      timeline: []
+    };
+  }
+
+  const movementScores = evolutionMetrics.map((metric) => {
+    const currentScore = metricScore(latest, metric.keys);
+    const previousScore = previous ? metricScore(previous, metric.keys) : undefined;
+    const historyScores = history.map((entry) => metricScore(entry, metric.keys));
+    const delta = previousScore === undefined ? 0 : currentScore - previousScore;
+    const status = movementStatus(currentScore, previousScore, historyScores);
+
+    return {
+      label: metric.label,
+      status,
+      currentScore,
+      previousScore,
+      delta,
+      summary: movementSummary(metric.label, status, delta)
+    };
+  });
+
+  const improvements = movementScores
+    .filter((metric) => metric.status === "improving")
+    .map((metric) => metric.summary);
+  const regressions = movementScores
+    .filter((metric) => metric.status === "declining")
+    .map((metric) => metric.summary);
+  const unstablePatterns = movementScores
+    .filter((metric) => metric.status === "inconsistent")
+    .map((metric) => metric.summary);
+  const emergingPatterns = [
+    ...movementScores
+      .filter((metric) => metric.status === "emerging")
+      .slice(0, 3)
+      .map((metric) => `${metric.label} is being tracked as a new movement signal.`),
+    latest.visualSignatures.length > 0
+      ? `Visual identity is forming around ${latest.visualSignatures.slice(0, 2).join(" and ")}.`
+      : "Visual fingerprints are still forming."
+  ].slice(0, 4);
+
+  const identityEvolution = [
+    history.length > 1 && latest.aestheticConsistency !== previous?.aestheticConsistency
+      ? latest.aestheticConsistency
+      : "The account is developing more recognizable emotional patterns.",
+    latest.emotionalTone,
+    latest.audienceIdentityLanguage,
+    latest.visualStyle
+  ].slice(0, 4);
+
+  const improvingCount = movementScores.filter((metric) => metric.status === "improving").length;
+  const decliningCount = movementScores.filter((metric) => metric.status === "declining").length;
+  const inconsistentCount = movementScores.filter((metric) => metric.status === "inconsistent").length;
+  const momentumRead =
+    improvingCount >= 3
+      ? "Strengthening momentum. Multiple signals are moving in the right direction."
+      : decliningCount >= 2
+        ? "Flattening momentum. The account is losing ground in visible places."
+        : inconsistentCount >= 2
+          ? "Inconsistent execution. The account has useful instincts, but they are not repeating cleanly."
+          : "Momentum is steady. The next move is making the winning signals more repeatable.";
+
+  const timeline = [...history]
+    .reverse()
+    .map((entry, index) => ({
+      id: entry.id,
+      createdAt: entry.createdAt,
+      score: entry.score,
+      grade: entry.grade,
+      summary:
+        index === 0
+          ? "Latest audit snapshot."
+          : `Previous snapshot: ${entry.recurringStrengths[0] ?? "visibility"} led while ${entry.recurringWeaknesses[0] ?? "consistency"} needed work.`,
+      strengths: entry.recurringStrengths.slice(0, 3),
+      weaknesses: entry.recurringWeaknesses.slice(0, 3)
+    }));
+
+  return {
+    auditCount: history.length,
+    improvements:
+      improvements.length > 0
+        ? improvements
+        : ["No major improvement spike yet. The account is still establishing a baseline."],
+    regressions:
+      regressions.length > 0
+        ? regressions
+        : ["No major regression detected in the latest movement read."],
+    repeatedWeaknesses:
+      repeatedWeaknessNames.length > 0
+        ? repeatedWeaknessNames.map((name) => `${name} keeps returning across audits.`)
+        : latest.recurringWeaknesses.map((name) => `${name} is a current weakness. One more audit will show whether it persists.`),
+    strengtheningSignals:
+      repeatedStrengthNames.length > 0
+        ? repeatedStrengthNames.map((name) => `${name} is becoming more reliable.`)
+        : latest.recurringStrengths.map((name) => `${name} is currently carrying the account.`),
+    emergingPatterns,
+    unstablePatterns:
+      unstablePatterns.length > 0
+        ? unstablePatterns
+        : ["No unstable movement pattern is dominant yet."],
+    movementScores,
+    identityEvolution,
+    momentumAnalysis: [
+      momentumRead,
+      latest.emotionalTriggers[0]
+        ? `The strongest emotional trigger continues to be ${latest.emotionalTriggers[0]}.`
+        : "The dominant emotional trigger is still unresolved.",
+      latest.pacingBehavior
+    ],
+    timeline
   };
 }
 

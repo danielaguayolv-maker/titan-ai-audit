@@ -7,11 +7,14 @@ import type {
   ProfileData
 } from "@/lib/audit-ai";
 import {
+  createVisibilityEvolutionReport,
   createVisibilityMemoryReport,
   normalizeAccountKey,
   readVisibilityMemoryEntriesWithDebug,
   visibilityMemoryStorageKey,
+  type EvolutionMovementStatus,
   type VisibilityMemoryDebugState,
+  type VisibilityEvolutionMetric,
   type VisibilityMemoryEntry
 } from "@/lib/visibility-memory";
 
@@ -57,6 +60,10 @@ export function VisibilityMemoryPanel({
 
   const memoryReport = useMemo(
     () => createVisibilityMemoryReport(entries, accountKey),
+    [accountKey, entries]
+  );
+  const evolutionReport = useMemo(
+    () => createVisibilityEvolutionReport(entries, accountKey),
     [accountKey, entries]
   );
 
@@ -176,62 +183,216 @@ export function VisibilityMemoryPanel({
               </p>
             </div>
           ) : (
-            <div className="mt-7 grid min-w-0 gap-5 xl:grid-cols-2">
-              <MemoryCard
-                eyebrow="Compared to last audit"
-                items={memoryReport.comparedToLastAudit}
-                title="Movement"
-              />
-              <MemoryCard
-                eyebrow="Persistent weaknesses"
-                items={memoryReport.persistentWeaknesses}
-                title="Patterns that keep returning"
-              />
-              <MemoryCard
-                eyebrow="Evolving strengths"
-                items={memoryReport.evolvingStrengths}
-                title="What is getting more reliable"
-              />
-              <MemoryCard
-                eyebrow="Repeated mistakes"
-                items={memoryReport.repeatedMistakes}
-                title="Habits to break"
-              />
-              <MemoryCard
-                eyebrow="Repeated wins"
-                items={memoryReport.repeatedWins}
-                title="What keeps working"
-              />
-              <MemoryCard
-                eyebrow="Emotional patterns"
-                items={memoryReport.emotionalPatterns}
-                title="Tone and triggers"
-              />
-              <MemoryCard
-                eyebrow="Creative identity"
-                items={memoryReport.identityAnalysis}
-                title="Brand fingerprints"
-              />
-              <MemoryCard
-                eyebrow="Pacing and CTA habits"
-                items={memoryReport.pacingHabits}
-                title="Behavioral rhythm"
-              />
-              <MemoryCard
-                eyebrow="Creator presence"
-                items={memoryReport.creatorPresenceTrends}
-                title="How the account feels"
-              />
-              <MemoryCard
-                eyebrow="Predictive strategy"
-                items={memoryReport.predictiveSignals}
-                title="Likely next winners"
-              />
-            </div>
+            <>
+              <section className="mt-7 rounded-lg border border-titan-gold/15 bg-black/24 p-5 sm:p-6">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-sm font-bold uppercase text-titan-muted">
+                      Titan Visibility Evolution Engine
+                    </p>
+                    <h3 className="text-anywhere mt-2 text-3xl font-black text-titan-ivory">
+                      Movement intelligence.
+                    </h3>
+                    <p className="text-anywhere mt-3 max-w-3xl text-sm leading-6 text-titan-ivory/60">
+                      Titan now reads not just what the account is, but how its
+                      hooks, conversion behavior, identity, and momentum are
+                      changing over time.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-titan-gold/10 px-4 py-2 text-xs font-black uppercase text-titan-bright">
+                    {evolutionReport.auditCount} history point{evolutionReport.auditCount === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {evolutionReport.movementScores.map((metric) => (
+                    <MovementMetricCard key={metric.label} metric={metric} />
+                  ))}
+                </div>
+
+                <div className="mt-6 grid gap-5 xl:grid-cols-2">
+                  <MemoryCard
+                    eyebrow="Improvements"
+                    items={evolutionReport.improvements}
+                    title="What is moving up"
+                  />
+                  <MemoryCard
+                    eyebrow="Regressions"
+                    items={evolutionReport.regressions}
+                    title="What softened"
+                  />
+                  <MemoryCard
+                    eyebrow="Strengthening signals"
+                    items={evolutionReport.strengtheningSignals}
+                    title="Becoming reliable"
+                  />
+                  <MemoryCard
+                    eyebrow="Unstable patterns"
+                    items={evolutionReport.unstablePatterns}
+                    title="Still uneven"
+                  />
+                  <MemoryCard
+                    eyebrow="Identity evolution"
+                    items={evolutionReport.identityEvolution}
+                    title="How the brand is changing"
+                  />
+                  <MemoryCard
+                    eyebrow="Momentum analysis"
+                    items={evolutionReport.momentumAnalysis}
+                    title="Current direction"
+                  />
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-sm font-bold uppercase text-titan-muted">
+                    Audit history timeline
+                  </p>
+                  <div className="mt-4 grid gap-3">
+                    {evolutionReport.timeline.map((item) => (
+                      <div
+                        className="grid gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[auto_minmax(0,1fr)_auto]"
+                        key={item.id}
+                      >
+                        <div className="flex size-12 items-center justify-center rounded-full bg-titan-gold text-sm font-black text-black">
+                          {item.score}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-black uppercase text-titan-muted">
+                            {new Date(item.createdAt).toLocaleString()}
+                          </p>
+                          <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/70">
+                            {item.summary}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {item.strengths.map((strength) => (
+                              <span
+                                className="rounded-full bg-titan-gold/10 px-3 py-1 text-[11px] font-black uppercase text-titan-bright"
+                                key={strength}
+                              >
+                                {strength}
+                              </span>
+                            ))}
+                            {item.weaknesses.map((weakness) => (
+                              <span
+                                className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-titan-ivory/55"
+                                key={weakness}
+                              >
+                                {weakness}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <span className="h-fit rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase text-titan-ivory/70">
+                          Grade {item.grade}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <div className="mt-7 grid min-w-0 gap-5 xl:grid-cols-2">
+                <MemoryCard
+                  eyebrow="Compared to last audit"
+                  items={memoryReport.comparedToLastAudit}
+                  title="Movement"
+                />
+                <MemoryCard
+                  eyebrow="Persistent weaknesses"
+                  items={memoryReport.persistentWeaknesses}
+                  title="Patterns that keep returning"
+                />
+                <MemoryCard
+                  eyebrow="Evolving strengths"
+                  items={memoryReport.evolvingStrengths}
+                  title="What is getting more reliable"
+                />
+                <MemoryCard
+                  eyebrow="Repeated mistakes"
+                  items={memoryReport.repeatedMistakes}
+                  title="Habits to break"
+                />
+                <MemoryCard
+                  eyebrow="Repeated wins"
+                  items={memoryReport.repeatedWins}
+                  title="What keeps working"
+                />
+                <MemoryCard
+                  eyebrow="Emotional patterns"
+                  items={memoryReport.emotionalPatterns}
+                  title="Tone and triggers"
+                />
+                <MemoryCard
+                  eyebrow="Creative identity"
+                  items={memoryReport.identityAnalysis}
+                  title="Brand fingerprints"
+                />
+                <MemoryCard
+                  eyebrow="Pacing and CTA habits"
+                  items={memoryReport.pacingHabits}
+                  title="Behavioral rhythm"
+                />
+                <MemoryCard
+                  eyebrow="Creator presence"
+                  items={memoryReport.creatorPresenceTrends}
+                  title="How the account feels"
+                />
+                <MemoryCard
+                  eyebrow="Predictive strategy"
+                  items={memoryReport.predictiveSignals}
+                  title="Likely next winners"
+                />
+              </div>
+            </>
           )}
         </article>
       </div>
     </section>
+  );
+}
+
+const movementStyles: Record<EvolutionMovementStatus, string> = {
+  improving: "bg-emerald-400/15 text-emerald-100 border-emerald-300/20",
+  declining: "bg-red-400/15 text-red-100 border-red-300/20",
+  stable: "bg-white/10 text-titan-ivory/70 border-white/10",
+  inconsistent: "bg-amber-400/15 text-amber-100 border-amber-300/20",
+  emerging: "bg-titan-gold/10 text-titan-bright border-titan-gold/20"
+};
+
+const movementLabels: Record<EvolutionMovementStatus, string> = {
+  improving: "Up",
+  declining: "Down",
+  stable: "Stable",
+  inconsistent: "Uneven",
+  emerging: "Emerging"
+};
+
+function MovementMetricCard({ metric }: { metric: VisibilityEvolutionMetric }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
+        <span
+          className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${movementStyles[metric.status]}`}
+        >
+          {movementLabels[metric.status]}
+        </span>
+      </div>
+      <div className="mt-4 flex items-end gap-2">
+        <span className="text-3xl font-black text-titan-bright">
+          {Math.round(metric.currentScore)}
+        </span>
+        {metric.previousScore !== undefined ? (
+          <span className="pb-1 text-xs font-bold uppercase text-titan-ivory/45">
+            {metric.delta >= 0 ? "+" : ""}
+            {metric.delta} since last
+          </span>
+        ) : null}
+      </div>
+      <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
+        {metric.summary}
+      </p>
+    </div>
   );
 }
 
