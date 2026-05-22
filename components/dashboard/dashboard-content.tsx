@@ -341,7 +341,7 @@ function ModulePlaceholder({
             to the shared audit intelligence layer. The current active workflow
             is Visibility Audit to Titan Studio to Reports.
           </p>
-          <div className="mt-7 grid gap-3 lg:grid-cols-3">
+          <div className="titan-readable-grid mt-7">
             {weakAreas.map((area) => (
               <div
                 className="titan-signal-card rounded-lg p-4"
@@ -357,7 +357,7 @@ function ModulePlaceholder({
             ))}
           </div>
           {module === "content-planner" ? (
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="titan-compact-grid mt-5">
               {["Audit signal", "Studio concept", "Posting window", "Report handoff"].map(
                 (step, index) => (
                   <div className="titan-panel rounded-lg p-4" key={step}>
@@ -575,7 +575,7 @@ function DashboardHome({
                 {isUsingFallback ? "Baseline" : "Live workspace"}
               </span>
             </div>
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="titan-metric-grid mt-6">
               {strategicMetrics.map((metric) => (
                 <CommandMetricCard
                   isActive={activeSignal.id === metric.label}
@@ -607,7 +607,7 @@ function DashboardHome({
           <MovementVisualization metrics={strategicMetrics} />
         </div>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-3">
+        <div className="titan-readable-grid mt-5">
           <CommandListCard
             eyebrow="Behavioral warnings"
             items={warnings}
@@ -677,7 +677,7 @@ function DashboardHome({
                 {identitySignals.length > 2 ? "Stabilizing" : "Emerging"}
               </span>
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="titan-readable-grid mt-5">
               {identitySignals.map((signal) => (
                 <div
                   className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
@@ -1666,7 +1666,7 @@ function DrillDownIntelligencePanel({ signal }: { signal: DrillDownSignal }) {
           <p className="text-anywhere mt-4 text-sm leading-7 text-titan-ivory/68 sm:text-base">
             {signal.summary}
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="titan-compact-grid mt-6">
             <SignalReadout
               label="Movement"
               value={`${movementArrow(signal.movement)} ${signal.movement}`}
@@ -1740,7 +1740,7 @@ function StrategicBreakdown({ signal }: { signal: DrillDownSignal }) {
       <p className="text-xs font-black uppercase text-titan-muted">
         Strategic breakdown
       </p>
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <div className="titan-readable-grid mt-4">
         {sections.map(([title, items]) => (
           <div className="rounded-lg border border-white/10 bg-black/20 p-4" key={title}>
             <p className="text-xs font-black uppercase text-titan-bright">
@@ -1771,7 +1771,7 @@ function ShowMeIntelligence({ signal }: { signal: DrillDownSignal }) {
       <p className="text-xs font-black uppercase text-titan-muted">
         Show me
       </p>
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="titan-readable-grid mt-4">
         <div className="rounded-lg border border-red-300/20 bg-red-500/10 p-4">
           <p className="text-xs font-black uppercase text-red-100">
             Weak pattern
@@ -1925,7 +1925,7 @@ function PrimaryBlockerCard({ blocker }: { blocker: StrategicBlocker }) {
         <p className="text-anywhere mt-4 max-w-4xl text-sm leading-7 text-titan-ivory/68 sm:text-base">
           {blocker.description}
         </p>
-        <div className="mt-7 grid gap-3 md:grid-cols-3">
+        <div className="titan-compact-grid mt-7">
           <div className="rounded-lg border border-white/10 bg-black/24 p-4">
             <p className="text-xs font-black uppercase text-titan-muted">
               Movement
@@ -1986,7 +1986,7 @@ function StrategicPriorityRanking({
                 <p className="text-xs font-black uppercase text-titan-muted">
                   {index + 1}. {priority.label}
                 </p>
-                <h3 className="text-anywhere mt-1 font-black text-titan-ivory">
+                <h3 className="titan-card-title mt-1 font-black text-titan-ivory">
                   {priority.title}
                 </h3>
               </div>
@@ -2047,7 +2047,7 @@ function TitanPulseFeed({ items }: { items: TitanPulseItem[] }) {
               </div>
               <div className="min-w-0">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                  <p className="text-anywhere text-sm font-black text-titan-ivory">
+                  <p className="titan-card-title text-sm font-black text-titan-ivory">
                     {item.label}
                   </p>
                   <SeverityBadge severity={item.severity} />
@@ -2174,7 +2174,7 @@ function StrategicFocusMode({ focus }: { focus: StrategicFocus }) {
           Prioritized by severity
         </span>
       </div>
-      <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="titan-readable-grid mt-6">
         {focusCards.map((card) => (
           <div
             className={`min-w-0 rounded-lg p-4 ${severityVisual(card.severity).panelClass}`}
@@ -2255,12 +2255,12 @@ function CommandMetricCard({
     <button
       className={`min-w-0 rounded-lg p-4 text-left transition hover:-translate-y-0.5 ${
         isActive ? "ring-2 ring-titan-bright/45" : ""
-      } ${visual.panelClass}`}
+      } ${visual.panelClass} w-full`}
       onClick={onSelect}
       type="button"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
+      <p className="titan-card-title font-black text-titan-ivory">{metric.label}</p>
         <SeverityBadge severity={severity} />
       </div>
       <div className="mt-4 flex items-end gap-2">

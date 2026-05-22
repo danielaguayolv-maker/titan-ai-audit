@@ -436,7 +436,7 @@ function CompetitorReport({
         </div>
       </article>
 
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="titan-readable-grid">
         <InsightCard
           eyebrow="What They Do Better"
           items={report.whatTheyDoBetter}
@@ -625,7 +625,7 @@ function DimensionCard({
           <p className="text-xs font-black uppercase text-titan-muted">
             Competitive signal
           </p>
-          <h3 className="text-anywhere mt-2 text-2xl font-black text-titan-bright">
+          <h3 className="titan-card-title mt-2 text-2xl font-black text-titan-bright">
             {dimension.label}
           </h3>
         </div>
@@ -637,7 +637,7 @@ function DimensionCard({
               : "Close signal"}
         </span>
       </div>
-      <div className="mt-5 grid gap-3 xl:grid-cols-2">
+      <div className="titan-readable-grid mt-5">
         <SignalBlock label="Your signal" text={dimension.yourSignal} />
         <SignalBlock label="Competitor signal" text={dimension.competitorSignal} />
       </div>

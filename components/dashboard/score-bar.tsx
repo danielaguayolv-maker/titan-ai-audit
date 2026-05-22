@@ -15,7 +15,7 @@ export function ScoreBar({ label, score, benchmark, insight }: ScoreBarProps) {
     <article className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-5 sm:p-6">
       <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <h3 className="text-anywhere text-xl font-black text-titan-ivory">{label}</h3>
+          <h3 className="titan-card-title text-xl font-black text-titan-ivory">{label}</h3>
           <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
             {insight}
           </p>

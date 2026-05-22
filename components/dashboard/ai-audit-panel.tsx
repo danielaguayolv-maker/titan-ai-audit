@@ -604,7 +604,7 @@ export function AiAuditPanel({
               </div>
             </div>
 
-            <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="titan-compact-grid mt-4">
               <div className="titan-signal-card min-w-0 rounded-lg p-4">
                 <p className="text-xs font-bold uppercase text-titan-muted">
                   Platform detection

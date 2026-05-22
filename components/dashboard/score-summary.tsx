@@ -38,7 +38,7 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
         </p>
       </div>
 
-      <div className="fade-up relative grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-1 [animation-delay:120ms]">
+      <div className="fade-up titan-compact-grid relative max-w-full xl:grid-cols-1 [animation-delay:120ms]">
         <div className="luxury-border min-w-0 max-w-full rounded-lg bg-titan-gold p-6 text-black shadow-gold">
           <p className="text-sm font-black uppercase">Overall score</p>
           <div className="mt-5 flex min-w-0 items-end gap-3">

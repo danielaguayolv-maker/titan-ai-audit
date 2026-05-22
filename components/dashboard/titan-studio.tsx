@@ -405,7 +405,7 @@ export function TitanStudio({
                 ))}
               </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="titan-readable-grid">
               <AdaptivePreview
                 title="Adaptive hooks"
                 items={adaptiveIntelligence.adaptiveHooks}
@@ -448,7 +448,7 @@ export function TitanStudio({
             <p className="text-sm font-bold uppercase text-titan-muted">
               Visibility intelligence map
             </p>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="titan-readable-grid mt-5">
               {plan.visibilitySignals.map((signal) => (
                 <div
                   className="titan-signal-card rounded-lg p-4"
@@ -497,7 +497,7 @@ export function TitanStudio({
                 </p>
               ))}
             </div>
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
+            <div className="titan-readable-grid mt-6">
               {plan.recommendedMix.map((item) => (
                 <div
                   className="titan-signal-card rounded-lg p-4"
@@ -628,7 +628,7 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-3">
+      <div className="titan-readable-grid mt-5">
         <MiniList title="Video/script concepts" items={week.videoScriptConcepts} />
         <MiniList title="Caption ideas" items={week.captionIdeas} />
         <MiniList title="Engagement tasks" items={week.engagementTasks} />

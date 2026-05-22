@@ -13,7 +13,7 @@ export function QuickWins({ quickWins }: QuickWinsProps) {
           Three moves that can sharpen lead capture fast.
         </h2>
 
-        <div className="mt-9 grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="titan-readable-grid mt-9">
           {quickWins.map((win) => (
             <article
               className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7"

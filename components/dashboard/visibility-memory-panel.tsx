@@ -204,7 +204,7 @@ export function VisibilityMemoryPanel({
                   </span>
                 </div>
 
-                <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+                <div className="titan-readable-grid mt-6">
                   {evolutionReport.movementScores.map((metric) => (
                     <MovementMetricCard key={metric.label} metric={metric} />
                   ))}
@@ -371,7 +371,7 @@ function MovementMetricCard({ metric }: { metric: VisibilityEvolutionMetric }) {
   return (
     <div className="titan-signal-card min-w-0 rounded-lg p-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
+        <p className="titan-card-title font-black text-titan-ivory">{metric.label}</p>
         <span
           className={`titan-chip text-[10px] font-black uppercase ${movementStyles[metric.status]}`}
         >
