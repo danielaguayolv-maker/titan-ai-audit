@@ -614,6 +614,19 @@ function DashboardHome({
     experiments,
     evolutionReport
   );
+  const signalVisualizations = buildSignalVisualizations(strategicMetrics);
+  const executiveNarration = buildStrategicNarration(
+    momentum.label,
+    signalVisualizations,
+    primaryBlocker,
+    experiments
+  );
+  const cycleChanges = buildCycleChanges(
+    evolutionReport,
+    signalVisualizations,
+    experimentTimeline,
+    opportunities
+  );
   const showDeepIntelligence = uxMode === "deep";
   const showStrategistContent = uxMode === "strategist" || uxMode === "deep";
   const showSimplified = uxMode === "simplified";
@@ -696,6 +709,23 @@ function DashboardHome({
             </div>
           </div>
         </article>
+
+        <ExecutiveIntelligenceLayer
+          blocker={primaryBlocker}
+          cycleChanges={cycleChanges}
+          experiments={experiments}
+          momentum={momentum}
+          narration={executiveNarration}
+          signals={signalVisualizations}
+        />
+
+        <SignalVisualizationLayer
+          onSelectSignal={setActiveExploration}
+          selectedSignalId={activeSignal.id}
+          signals={signalVisualizations}
+        />
+
+        <WhatChangedSinceLastCycle changes={cycleChanges} />
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.88fr)]">
           <PrimaryBlockerCard
@@ -1165,6 +1195,26 @@ type ExperimentTimelineItem = {
   title: string;
   summary: string;
   timestamp: string;
+  severity: StrategicSeverity;
+  movement: EvolutionMovementStatus;
+};
+
+type SignalVisualization = {
+  id: string;
+  label: string;
+  score: number;
+  confidence: number;
+  movement: EvolutionMovementStatus;
+  severity: StrategicSeverity;
+  oneSentence: string;
+  visualRead: string;
+  curve: number[];
+};
+
+type CycleChange = {
+  label: string;
+  title: string;
+  summary: string;
   severity: StrategicSeverity;
   movement: EvolutionMovementStatus;
 };
@@ -2366,6 +2416,475 @@ function buildExperimentCorrelationInsights(
       ? `${volatileSignals[0].label} remains unstable, so correlation confidence is still developing.`
       : "No major volatility is dominating the current experiment read."
   ];
+}
+
+function buildSignalVisualizations(metrics: CommandMetric[]): SignalVisualization[] {
+  const sentenceByLabel: Record<string, string> = {
+    "Audience Pull": "Audience attention needs a stronger emotional reason to stay.",
+    "Audience Tension": "The payoff needs more tension before it lands.",
+    "Conversion Friction": "CTA friction is interrupting otherwise useful momentum.",
+    "CTA Efficiency": "The action moment needs to land while interest is still warm.",
+    "Emotional Identity": "The audience can see the content, but the emotional identity needs sharper repetition.",
+    "Hook Stability": "The opening needs to create curiosity before explanation appears.",
+    "Identity Consistency": "Identity consistency is the difference between a good post and a remembered account.",
+    Memorability: "The account needs one image or feeling to survive the scroll.",
+    "Search Momentum": "Search visibility improves when profile and caption language match audience intent."
+  };
+
+  return metrics
+    .filter((metric) =>
+      [
+        "Hook Stability",
+        "Audience Pull",
+        "Conversion Friction",
+        "CTA Efficiency",
+        "Emotional Identity",
+        "Memorability",
+        "Search Momentum",
+        "Identity Consistency",
+        "Audience Tension"
+      ].includes(metric.label)
+    )
+    .map((metric, index) => {
+      const severity = severityFromMovement(metric.direction, metric.score);
+
+      return {
+        id: metric.label,
+        label: metric.label,
+        score: Math.round(metric.score),
+        confidence: metric.confidence,
+        movement: metric.direction,
+        severity,
+        oneSentence:
+          sentenceByLabel[metric.label] ??
+          "This signal needs cleaner repetition before Titan can call the movement stable.",
+        visualRead: compressedSignalRead(metric),
+        curve: buildMiniTrend(metric, index)
+      };
+    });
+}
+
+function compressedSignalRead(metric: CommandMetric) {
+  if (metric.direction === "declining") {
+    return "danger";
+  }
+
+  if (metric.direction === "inconsistent") {
+    return "unstable";
+  }
+
+  if (metric.direction === "improving") {
+    return "improving";
+  }
+
+  if (metric.direction === "stable") {
+    return "stabilizing";
+  }
+
+  return "forming";
+}
+
+function buildStrategicNarration(
+  momentumLabel: string,
+  signals: SignalVisualization[],
+  blocker: StrategicBlocker,
+  experiments: TitanExperiment[]
+) {
+  const improving = signals.find((signal) => signal.movement === "improving");
+  const volatile = signals.find((signal) => signal.movement === "inconsistent");
+  const declining = signals.find((signal) => signal.movement === "declining");
+  const activeExperiment = experiments.find(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  );
+
+  if (declining && improving) {
+    return `${improving.label} is improving, but ${declining.label.toLowerCase()} is still interrupting momentum.`;
+  }
+
+  if (volatile) {
+    return `${volatile.label} is still volatile, so Titan is watching whether the account repeats the winning behavior cleanly.`;
+  }
+
+  if (activeExperiment) {
+    return `${activeExperiment.title} is now part of the strategic read; Titan is watching the next audit for movement.`;
+  }
+
+  if (momentumLabel === "Strengthening") {
+    return "The account is gaining strategic shape. Repeat the strongest signal before widening the content mix.";
+  }
+
+  if (momentumLabel === "Weakening") {
+    return `Momentum is weakening because ${blocker.title.toLowerCase()}`;
+  }
+
+  return "The account is forming a baseline. The next movement read will become sharper after another audit or experiment.";
+}
+
+function buildCycleChanges(
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
+  signals: SignalVisualization[],
+  timeline: ExperimentTimelineItem[],
+  opportunities: string[]
+): CycleChange[] {
+  const improvement =
+    evolutionReport.improvements[0] ??
+    signals.find((signal) => signal.movement === "improving")?.oneSentence;
+  const regression =
+    evolutionReport.regressions[0] ??
+    signals.find((signal) => signal.movement === "declining")?.oneSentence;
+  const opportunity =
+    evolutionReport.emergingPatterns[0] ??
+    opportunities[0] ??
+    signals.find((signal) => signal.severity === "Opportunity")?.oneSentence;
+  const experimentImpact = timeline.find((item) =>
+    item.title.toLowerCase().includes("introduced")
+  );
+  const identityMovement =
+    evolutionReport.identityEvolution[0] ??
+    signals.find((signal) => signal.label.includes("Identity"))?.oneSentence;
+
+  return [
+    {
+      label: "Strongest improvement",
+      title: improvement ? "Movement is opening up" : "Improvement baseline forming",
+      summary:
+        improvement ??
+        "Titan needs another audit cycle before it can name a strongest improvement.",
+      severity: improvement ? "Opportunity" : "Emerging",
+      movement: improvement ? "improving" : "emerging"
+    },
+    {
+      label: "Largest regression",
+      title: regression ? "Friction needs attention" : "No major regression confirmed",
+      summary:
+        regression ??
+        "No clear regression has repeated enough to dominate the cycle read.",
+      severity: regression ? "Warning" : "Stable",
+      movement: regression ? "declining" : "stable"
+    },
+    {
+      label: "New opportunity",
+      title: "Next visible lift",
+      summary:
+        opportunity ??
+        "The strongest opportunity will sharpen as more movement history accumulates.",
+      severity: "Opportunity",
+      movement: "improving"
+    },
+    {
+      label: "Experimental impact",
+      title: experimentImpact ? "Action entered the timeline" : "No experiment impact yet",
+      summary:
+        experimentImpact?.summary ??
+        "Start a strategic experiment so Titan can compare action against movement.",
+      severity: experimentImpact ? experimentImpact.severity : "Emerging",
+      movement: experimentImpact?.movement ?? "emerging"
+    },
+    {
+      label: "Identity movement",
+      title: "Recognition read",
+      summary:
+        identityMovement ??
+        "Titan is watching emotional texture, aesthetic repetition, and audience identity language.",
+      severity: identityMovement ? "High Confidence" : "Emerging",
+      movement: identityMovement ? "stable" : "emerging"
+    }
+  ];
+}
+
+function ExecutiveIntelligenceLayer({
+  blocker,
+  cycleChanges,
+  experiments,
+  momentum,
+  narration,
+  signals
+}: {
+  blocker: StrategicBlocker;
+  cycleChanges: CycleChange[];
+  experiments: TitanExperiment[];
+  momentum: ReturnType<typeof commandMomentum>;
+  narration: string;
+  signals: SignalVisualization[];
+}) {
+  const dangerSignal =
+    signals.find((signal) => signal.severity === "Critical") ??
+    signals.find((signal) => signal.severity === "High Priority") ??
+    signals.find((signal) => signal.movement === "declining");
+  const improvingSignal = signals.find((signal) => signal.movement === "improving");
+  const activeExperiments = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  );
+  const averageScore = Math.round(
+    signals.reduce((total, signal) => total + signal.score, 0) /
+      Math.max(1, signals.length)
+  );
+
+  return (
+    <article className="premium-surface mt-5 overflow-hidden rounded-lg p-6 shadow-gold sm:p-8">
+      <div className="titan-pulse-line mb-6" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.45fr)]">
+        <div className="min-w-0">
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-titan-muted">
+            Executive Intelligence
+          </p>
+          <h2 className="mt-3 max-w-5xl text-3xl font-black leading-tight text-titan-ivory sm:text-5xl">
+            {narration}
+          </h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <ExecutiveReadout
+              label="What matters first"
+              severity={blocker.severity}
+              value={blocker.title}
+            />
+            <ExecutiveReadout
+              label="Momentum"
+              severity={momentum.severity}
+              value={momentum.summary}
+            />
+            <ExecutiveReadout
+              label="Improving"
+              severity="Opportunity"
+              value={improvingSignal?.oneSentence ?? cycleChanges[0]?.summary}
+            />
+            <ExecutiveReadout
+              label="Danger"
+              severity={dangerSignal?.severity ?? "Stable"}
+              value={
+                dangerSignal?.oneSentence ??
+                "No confirmed danger signal is dominating the current read."
+              }
+            />
+          </div>
+        </div>
+        <div className="rounded-lg border border-titan-gold/15 bg-black/24 p-5">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Strategic snapshot
+          </p>
+          <div className="mt-5 grid gap-4">
+            <SignalStrengthRing label="Signal strength" score={averageScore} />
+            <div className="grid gap-3">
+              <PulseItem label="Active experiments" value={`${activeExperiments.length}`} />
+              <PulseItem label="Signals visualized" value={`${signals.length}`} />
+              <PulseItem label="Cycle changes" value={`${cycleChanges.length}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ExecutiveReadout({
+  label,
+  severity,
+  value
+}: {
+  label: string;
+  severity: StrategicSeverity;
+  value: string;
+}) {
+  return (
+    <div className={`rounded-lg p-4 ${severityVisual(severity).panelClass}`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-black uppercase text-titan-muted">{label}</p>
+        <SeverityBadge severity={severity} />
+      </div>
+      <p className="titan-copy mt-3 text-sm font-bold text-titan-ivory/72">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SignalVisualizationLayer({
+  onSelectSignal,
+  selectedSignalId,
+  signals
+}: {
+  onSelectSignal: (signalId: string) => void;
+  selectedSignalId: string;
+  signals: SignalVisualization[];
+}) {
+  return (
+    <article className="premium-surface mt-5 rounded-lg p-6 sm:p-8">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Signal Visualization Layer
+          </p>
+          <h2 className="mt-2 text-3xl font-black text-titan-ivory">
+            Movement-first strategic read.
+          </h2>
+        </div>
+        <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+          Tap a signal to open drill-down
+        </span>
+      </div>
+      <div className="titan-metric-grid mt-6">
+        {signals.map((signal) => (
+          <SignalVisualizationCard
+            isActive={selectedSignalId === signal.id}
+            key={signal.id}
+            onSelect={() => onSelectSignal(signal.id)}
+            signal={signal}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function SignalVisualizationCard({
+  isActive,
+  onSelect,
+  signal
+}: {
+  isActive: boolean;
+  onSelect: () => void;
+  signal: SignalVisualization;
+}) {
+  const visual = severityVisual(signal.severity);
+
+  return (
+    <button
+      className={`rounded-lg p-4 text-left transition hover:-translate-y-0.5 ${
+        isActive ? "ring-2 ring-titan-bright/45" : ""
+      } ${visual.panelClass}`}
+      onClick={onSelect}
+      type="button"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="titan-card-title text-lg font-black text-titan-ivory">
+            {signal.label}
+          </p>
+          <p className="mt-1 text-xs font-black uppercase text-titan-muted">
+            {movementArrow(signal.movement)} {signal.visualRead}
+          </p>
+        </div>
+        <SeverityBadge severity={signal.severity} />
+      </div>
+      <p className="titan-copy mt-4 text-sm font-bold text-titan-ivory/70">
+        {signal.oneSentence}
+      </p>
+      <div className="mt-5 flex h-14 items-end gap-1.5">
+        {signal.curve.map((height, index) => (
+          <span
+            className="flex-1 rounded-full bg-gradient-to-t from-titan-gold/15 via-titan-gold/55 to-titan-bright"
+            key={`${signal.id}-${height}-${index}`}
+            style={{ height: `${height}%` }}
+          />
+        ))}
+      </div>
+      <div className="mt-4 grid gap-2">
+        <SignalMeter label="Strength" value={signal.score} />
+        <SignalMeter label="Confidence" value={signal.confidence} />
+      </div>
+    </button>
+  );
+}
+
+function SignalMeter({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-black uppercase text-titan-muted">
+          {label}
+        </p>
+        <p className="text-xs font-black uppercase text-titan-bright">
+          {Math.round(value)}%
+        </p>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-titan-gold transition-all duration-700"
+          style={{ width: `${Math.max(8, Math.min(100, value))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SignalStrengthRing({
+  label,
+  score
+}: {
+  label: string;
+  score: number;
+}) {
+  const clampedScore = Math.max(0, Math.min(100, score));
+
+  return (
+    <div className="flex items-center gap-4 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+      <div
+        className="flex size-24 shrink-0 items-center justify-center rounded-full border border-titan-gold/25 text-2xl font-black text-titan-bright shadow-gold"
+        style={{
+          background: `conic-gradient(rgba(244,211,123,0.9) ${clampedScore * 3.6}deg, rgba(255,255,255,0.08) 0deg)`
+        }}
+      >
+        <div className="flex size-16 items-center justify-center rounded-full bg-black text-titan-bright">
+          {clampedScore}
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-black uppercase text-titan-muted">{label}</p>
+        <p className="titan-copy mt-2 text-sm text-titan-ivory/64">
+          Compressed from the current strategic signal set.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WhatChangedSinceLastCycle({
+  changes
+}: {
+  changes: CycleChange[];
+}) {
+  return (
+    <article className="premium-surface mt-5 rounded-lg p-6 sm:p-8">
+      <p className="text-sm font-bold uppercase text-titan-muted">
+        What Changed Since Last Cycle
+      </p>
+      <h2 className="mt-2 text-3xl font-black text-titan-ivory">
+        Movement progression, compressed.
+      </h2>
+      <div className="mt-6 grid gap-4">
+        {changes.map((change, index) => {
+          const visual = severityVisual(change.severity);
+
+          return (
+            <div
+              className={`grid gap-4 rounded-lg p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${visual.panelClass}`}
+              key={change.label}
+            >
+              <div className="flex size-11 items-center justify-center rounded-full border border-titan-gold/20 bg-black/24 text-sm font-black text-titan-bright">
+                {index + 1}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase text-titan-muted">
+                  {change.label}
+                </p>
+                <h3 className="titan-card-title mt-1 text-lg font-black text-titan-ivory">
+                  {change.title}
+                </h3>
+                <p className="titan-copy mt-2 text-sm text-titan-ivory/64">
+                  {change.summary}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <SeverityBadge severity={change.severity} />
+                <span className="titan-chip bg-white/10 text-xs font-black uppercase text-titan-ivory/64">
+                  {movementArrow(change.movement)} {change.movement}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
 }
 
 function StrategicExperimentDashboard({
