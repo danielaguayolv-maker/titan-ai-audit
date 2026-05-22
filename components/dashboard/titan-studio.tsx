@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AiAuditResult, AuditPlatform } from "@/lib/audit-ai";
 import {
   createVisibilityContentPlan,
+  type VisibilityContentPlan,
   type VisibilityPlanContext,
   type WeeklyVisibilityPlan
 } from "@/lib/content-plan";
+import {
+  createVisibilityEvolutionReport,
+  createVisibilityMemoryReport,
+  normalizeAccountKey,
+  readVisibilityMemoryEntries,
+  type VisibilityMemoryEntry
+} from "@/lib/visibility-memory";
 import {
   makeAuditWorkspaceKey,
   titanStudioPlanStorageKey,
@@ -20,19 +28,215 @@ type TitanStudioProps = {
   platform: AuditPlatform;
   isUsingFallback: boolean;
   onClearResults: () => void;
+  memoryAccountKey: string;
+  memoryEntriesSnapshot: VisibilityMemoryEntry[];
 };
+
+type AdaptiveStudioIntelligence = {
+  confidenceLabel: "High confidence" | "Moderate confidence" | "Emerging pattern" | "Weak pattern";
+  confidenceSummary: string;
+  generationReasons: string[];
+  adaptiveHooks: string[];
+  adaptiveScripts: string[];
+  adaptiveCtas: string[];
+  adaptiveCaptions: string[];
+  adaptivePriorities: string[];
+};
+
+function firstUseful(items: string[], fallback: string) {
+  return items.find(Boolean) ?? fallback;
+}
+
+function createAdaptiveStudioIntelligence(
+  plan: VisibilityContentPlan,
+  memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>
+): AdaptiveStudioIntelligence {
+  const hasHistory = memoryReport.auditCount > 0;
+  const hasPattern = memoryReport.auditCount >= 2;
+  const confidenceLabel =
+    memoryReport.auditCount >= 3
+      ? "High confidence"
+      : memoryReport.auditCount === 2
+        ? "Moderate confidence"
+        : memoryReport.auditCount === 1
+          ? "Emerging pattern"
+          : "Weak pattern";
+  const triggerRead = firstUseful(
+    memoryReport.emotionalPatterns,
+    `Audience psychology is currently anchored in ${plan.niche.emotionalTriggers[0]}.`
+  );
+  const winningStructure = firstUseful(
+    memoryReport.predictiveSignals,
+    "Likely winning structure: put the most human or sensory moment first."
+  );
+  const repeatedWin = firstUseful(
+    memoryReport.repeatedWins,
+    "The account wins when the opening feels specific instead of generic."
+  );
+  const repeatedWeakness = firstUseful(
+    memoryReport.persistentWeaknesses,
+    firstUseful(plan.weakAreas, "The account needs a sharper repeated signal.")
+  );
+  const identityRead = firstUseful(
+    evolutionReport.identityEvolution,
+    firstUseful(memoryReport.identityAnalysis, "The account is still developing a recognizable identity.")
+  );
+  const momentumRead = firstUseful(
+    evolutionReport.momentumAnalysis,
+    "Momentum is still being established."
+  );
+  const ctaRead = firstUseful(
+    memoryReport.pacingHabits,
+    "CTA timing should land while the strongest emotional moment is still active."
+  );
+  const audience = plan.niche.audienceContexts[0] ?? plan.niche.audience;
+  const primaryTrigger = plan.niche.emotionalTriggers[0] ?? "belonging";
+  const secondaryTrigger = plan.niche.emotionalTriggers[1] ?? "aspiration";
+
+  return {
+    confidenceLabel,
+    confidenceSummary: hasHistory
+      ? `${confidenceLabel}: Titan Studio is adapting this plan from ${memoryReport.auditCount} remembered audit${memoryReport.auditCount === 1 ? "" : "s"}, movement signals, and account-specific behavior.`
+      : "Weak pattern: no saved account memory yet, so Titan Studio is using the current audit as the starting intelligence layer.",
+    generationReasons: [
+      hasPattern
+        ? "Generated from recurring audience response patterns."
+        : "Generated from the latest audit while memory history is still forming.",
+      `This structure matches the account read: ${triggerRead}`,
+      `Predictive strategy input: ${winningStructure}`,
+      `Momentum read: ${momentumRead}`
+    ],
+    adaptiveHooks: [
+      `${confidenceLabel}: ${repeatedWin}`,
+      `Open with the ${primaryTrigger} moment before the explanation shows up.`,
+      `${audience} should feel the scene before they understand the offer.`,
+      `Pattern interrupt: show the reaction first, then let the context catch up.`
+    ],
+    adaptiveScripts: [
+      `Open with ${winningStructure.replace(/^Likely winning structure:\s*/i, "")}`,
+      `Delay explanation until after emotional tension forms around ${primaryTrigger}.`,
+      `${identityRead} Build the script around that fingerprint instead of starting from a blank template.`,
+      `Use the first beat for atmosphere, the second beat for proof, and the final beat for the next step.`
+    ],
+    adaptiveCtas: [
+      `Act while the ${primaryTrigger} moment is still fresh.`,
+      `Tag the person who would feel this first.`,
+      `Save this before the decision moment passes.`,
+      `Message us when you are ready for the next step.`
+    ],
+    adaptiveCaptions: [
+      `The audience does not need more information first. They need to feel why it matters.`,
+      `${repeatedWeakness}`,
+      `This post is built around ${secondaryTrigger}, not another generic content prompt.`,
+      `Make the strongest emotional cue easy to name, save, and share.`
+    ],
+    adaptivePriorities: [
+      repeatedWeakness,
+      `Protect the recurring win: ${repeatedWin}`,
+      `Use the current identity read: ${identityRead}`,
+      `Build from predictive strategy: ${winningStructure}`
+    ]
+  };
+}
+
+function mergeTop(baseItems: string[], adaptiveItems: string[], limit = 5) {
+  return [...new Set([...adaptiveItems, ...baseItems])].slice(0, limit);
+}
+
+function adaptVisibilityPlan(
+  plan: VisibilityContentPlan,
+  intelligence: AdaptiveStudioIntelligence
+): VisibilityContentPlan {
+  return {
+    ...plan,
+    hookTaxonomy: plan.hookTaxonomy.map((group, index) => ({
+      ...group,
+      hooks:
+        index === 0
+          ? mergeTop(group.hooks, intelligence.adaptiveHooks, 6)
+          : group.hooks
+    })),
+    contentPriorities: mergeTop(
+      plan.contentPriorities,
+      intelligence.adaptivePriorities,
+      6
+    ),
+    weeklySchedule: plan.weeklySchedule.map((week, index) => ({
+      ...week,
+      strategy:
+        index === 0
+          ? `${week.strategy} ${intelligence.generationReasons[0]}`
+          : week.strategy,
+      hookIdeas: mergeTop(week.hookIdeas, [intelligence.adaptiveHooks[index % intelligence.adaptiveHooks.length]], 4),
+      videoScriptConcepts: mergeTop(
+        week.videoScriptConcepts,
+        [intelligence.adaptiveScripts[index % intelligence.adaptiveScripts.length]],
+        4
+      ),
+      captionIdeas: mergeTop(
+        week.captionIdeas,
+        [intelligence.adaptiveCaptions[index % intelligence.adaptiveCaptions.length]],
+        4
+      ),
+      ctaSuggestions: mergeTop(
+        week.ctaSuggestions,
+        [intelligence.adaptiveCtas[index % intelligence.adaptiveCtas.length]],
+        4
+      ),
+      visibilityPriorities: mergeTop(
+        week.visibilityPriorities,
+        [intelligence.adaptivePriorities[index % intelligence.adaptivePriorities.length]],
+        4
+      )
+    }))
+  };
+}
 
 export function TitanStudio({
   auditResult,
   context,
   platform,
   isUsingFallback,
-  onClearResults
+  onClearResults,
+  memoryAccountKey,
+  memoryEntriesSnapshot
 }: TitanStudioProps) {
-  const plan = useMemo(
+  const [storedMemoryEntries, setStoredMemoryEntries] = useState<
+    VisibilityMemoryEntry[]
+  >([]);
+  const memoryEntries =
+    memoryEntriesSnapshot.length > 0 ? memoryEntriesSnapshot : storedMemoryEntries;
+  const accountKey =
+    memoryAccountKey ||
+    normalizeAccountKey(
+      context?.formData?.profileUrl ?? context?.profileData?.profileUrl ?? "",
+      auditResult.businessName
+    );
+  const basePlan = useMemo(
     () => createVisibilityContentPlan(auditResult, platform, context),
     [auditResult, context, platform]
   );
+  const memoryReport = useMemo(
+    () => createVisibilityMemoryReport(memoryEntries, accountKey),
+    [accountKey, memoryEntries]
+  );
+  const evolutionReport = useMemo(
+    () => createVisibilityEvolutionReport(memoryEntries, accountKey),
+    [accountKey, memoryEntries]
+  );
+  const adaptiveIntelligence = useMemo(
+    () => createAdaptiveStudioIntelligence(basePlan, memoryReport, evolutionReport),
+    [basePlan, evolutionReport, memoryReport]
+  );
+  const plan = useMemo(
+    () => adaptVisibilityPlan(basePlan, adaptiveIntelligence),
+    [adaptiveIntelligence, basePlan]
+  );
+
+  useEffect(() => {
+    setStoredMemoryEntries(readVisibilityMemoryEntries());
+  }, []);
 
   useEffect(() => {
     if (isUsingFallback) {
@@ -105,6 +309,66 @@ export function TitanStudio({
             </div>
           </div>
         </div>
+
+        <article className="premium-surface mt-5 min-w-0 rounded-lg p-6 sm:p-7">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-bold uppercase text-titan-muted">
+                Adaptive Titan Studio
+              </p>
+              <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
+                Generated from Visibility Intelligence.
+              </h2>
+              <p className="text-anywhere mt-4 max-w-3xl text-sm leading-6 text-titan-ivory/62">
+                Titan Studio is reading account memory, evolution movement,
+                emotional patterns, recurring wins, recurring losses, and
+                predictive strategy before shaping hooks, scripts, CTAs, captions,
+                and the 30-day roadmap.
+              </p>
+            </div>
+            <span className="h-fit rounded-full border border-titan-gold/20 bg-titan-gold/10 px-4 py-2 text-xs font-black uppercase text-titan-bright">
+              {adaptiveIntelligence.confidenceLabel}
+            </span>
+          </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+              <p className="text-xs font-black uppercase text-titan-muted">
+                Strategic confidence
+              </p>
+              <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/68">
+                {adaptiveIntelligence.confidenceSummary}
+              </p>
+              <div className="mt-4 grid gap-2">
+                {adaptiveIntelligence.generationReasons.map((reason) => (
+                  <p
+                    className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/62"
+                    key={reason}
+                  >
+                    {reason}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AdaptivePreview
+                title="Adaptive hooks"
+                items={adaptiveIntelligence.adaptiveHooks}
+              />
+              <AdaptivePreview
+                title="Adaptive CTAs"
+                items={adaptiveIntelligence.adaptiveCtas}
+              />
+              <AdaptivePreview
+                title="Script direction"
+                items={adaptiveIntelligence.adaptiveScripts}
+              />
+              <AdaptivePreview
+                title="Caption logic"
+                items={adaptiveIntelligence.adaptiveCaptions}
+              />
+            </div>
+          </div>
+        </article>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
@@ -311,6 +575,24 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
         <MiniList title="Video/script concepts" items={week.videoScriptConcepts} />
         <MiniList title="Caption ideas" items={week.captionIdeas} />
         <MiniList title="Engagement tasks" items={week.engagementTasks} />
+      </div>
+    </div>
+  );
+}
+
+function AdaptivePreview({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+      <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
+      <div className="mt-3 grid gap-2">
+        {items.slice(0, 3).map((item) => (
+          <p
+            className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/66"
+            key={item}
+          >
+            {item}
+          </p>
+        ))}
       </div>
     </div>
   );

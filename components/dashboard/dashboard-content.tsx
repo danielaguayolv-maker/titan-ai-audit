@@ -255,6 +255,8 @@ export function DashboardContent() {
           auditResult={auditResult}
           context={planContext}
           isUsingFallback={isUsingFallback}
+          memoryAccountKey={memoryAccountKey}
+          memoryEntriesSnapshot={memoryEntriesSnapshot}
           onClearResults={clearCurrentResults}
           platform={platform}
         />
