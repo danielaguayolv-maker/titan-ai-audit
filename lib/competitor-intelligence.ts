@@ -493,28 +493,69 @@ function strengthContext(score: number, label: "your" | "competitor") {
   }
 
   if (score >= 68) {
-    return `${owner} is ahead, but the post can still hit harder with tighter timing, proof, and conversion.`;
+    return `${owner} has the better read here. Tighten the timing, proof, and conversion moment.`;
   }
 
   if (score >= 52) {
     return `${owner} wins this comparison, but attention or action is still leaking.`;
   }
 
-  return `${owner} is only ahead because the other side is weaker here; this still needs a cleaner creative sequence.`;
+  return `${owner} has the cleaner read by comparison, not by dominance. The creative sequence still needs work.`;
+}
+
+function accountName(snapshot: CompetitorSnapshot, fallback: string) {
+  return snapshot.result.businessName || snapshot.profileData?.displayName || fallback;
 }
 
 function currentPattern(
-  owner: "Your" | "Competitor",
+  snapshot: CompetitorSnapshot,
+  role: "your" | "competitor",
   dimension: string,
   signal: string,
   confidence: "appears to" | "likely" | "shows"
 ) {
-  const opener = owner === "Your" ? "Your side" : "The competitor";
-  if (confidence === "shows") {
-    return `${opener} leans on ${dimension.toLowerCase()} this way: ${signal}`;
+  const name = role === "your" ? "Your account" : accountName(snapshot, "The competitor");
+  const subject = confidence === "shows" ? name : `${name} ${confidence}`;
+
+  if (dimension === "Hook strength") {
+    return role === "your"
+      ? `${subject} opens through explanation and positioning: ${signal}`
+      : `${subject} gets the viewer into the point faster: ${signal}`;
   }
 
-  return `${opener} ${confidence} leaning on ${dimension.toLowerCase()} this way: ${signal}`;
+  if (dimension === "CTA strength") {
+    return role === "your"
+      ? `${subject} has a clearer ask than the competitor, but the ask still needs to land closer to the proof: ${signal}`
+      : `${subject} uses the warmer moment more directly: ${signal}`;
+  }
+
+  if (dimension === "Emotional brand atmosphere") {
+    return role === "your"
+      ? `${subject} shows the offer more than the feeling around it: ${signal}`
+      : `${subject} sells more of the room, mood, and social energy: ${signal}`;
+  }
+
+  if (dimension === "Memorability") {
+    return role === "your"
+      ? `${subject} has useful content, but the memory cue is still faint: ${signal}`
+      : `${subject} leaves a more repeatable image or feeling behind: ${signal}`;
+  }
+
+  if (dimension === "Creator / brand presence") {
+    return role === "your"
+      ? `${subject} keeps personality slightly behind the product: ${signal}`
+      : `${subject} feels more inhabited by a person, staff, or point of view: ${signal}`;
+  }
+
+  if (dimension === "Cultural / social identity") {
+    return role === "your"
+      ? `${subject} could make the local or social world more visible: ${signal}`
+      : `${subject} feels easier to place inside a community: ${signal}`;
+  }
+
+  return role === "your"
+    ? `${subject} carries this signal: ${signal}`
+    : `${subject} pushes this signal differently: ${signal}`;
 }
 
 function differenceRead(
@@ -522,13 +563,64 @@ function differenceRead(
   scoreDelta: number,
   confidence: "appears to" | "likely" | "shows"
 ) {
+  const competitorSubject =
+    confidence === "shows" ? "The competitor" : `The competitor ${confidence}`;
+
+  if (dimension === "Emotional brand atmosphere") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} sells the feeling of being there. Your side still feels more informational.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your atmosphere is doing more work. Keep that mood consistent enough to become recognizable.`;
+    }
+
+    return "Both accounts are clear enough. Neither fully owns the mood yet.";
+  }
+
+  if (dimension === "Memorability") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} leaves a stronger afterimage. Yours needs a recurring visual cue.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your account is more memorable here. Now make the signature impossible to miss.`;
+    }
+
+    return "The memory hook is still light on both sides.";
+  }
+
+  if (dimension === "Creator / brand presence") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} feels more present. Yours still reads like content about the brand more than content from the brand.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your presence is stronger. Use it with more confidence and less hiding behind polish.`;
+    }
+
+    return "Both accounts could use more human voltage.";
+  }
+
+  if (dimension === "Cultural / social identity") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} feels more socially alive. Yours could happen in more places than it should.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your world feels more specific. Lean into the local cues and shared rituals.`;
+    }
+
+    return "Neither account feels culturally sticky enough yet.";
+  }
+
   if (scoreDelta > 4) {
     const opener =
       confidence === "shows"
-        ? `The competitor is ahead on ${dimension.toLowerCase()}.`
+        ? `The competitor has the stronger ${dimension.toLowerCase()} read.`
         : `The competitor ${confidence} ahead on ${dimension.toLowerCase()}.`;
 
-    return `${opener} Their content is creating the useful moment earlier, so the viewer feels the point before the explanation arrives.`;
+    return `${opener} The point lands before the explanation starts doing too much work.`;
   }
 
   if (scoreDelta < -4) {
@@ -613,9 +705,16 @@ function createDimensionComparison(
     label: blueprint.label,
     yourSignal,
     competitorSignal,
-    yourPattern: currentPattern("Your", blueprint.label, yourSignal, scanConfidenceLanguage(yours)),
+    yourPattern: currentPattern(
+      yours,
+      "your",
+      blueprint.label,
+      yourSignal,
+      scanConfidenceLanguage(yours)
+    ),
     competitorPattern: currentPattern(
-      "Competitor",
+      competitor,
+      "competitor",
       blueprint.label,
       competitorSignal,
       scanConfidenceLanguage(competitor)
@@ -700,14 +799,14 @@ export function createCompetitorIntelligenceReport(
     dimensions,
     whatTheyDoBetter: competitorEdges.map(toActionSentence),
     whatYouDoBetter: yourEdges.map(toActionSentence),
-    biggestOpportunityGap: `${largestGap.label}: ${largestGap.whyItMatters} ${largestGap.sequenceFix} The fix is not to copy the competitor's look; it is to rebuild the moment where attention, proof, and intent connect.`,
+    biggestOpportunityGap: `${largestGap.label}: ${largestGap.sharpRead} ${largestGap.sequenceFix}`,
     strategicStrengths: [
       ...yourEdges.map((dimension) => `${dimension.label}: ${dimension.adaptation}`),
       `Niche lock: your plan is reading as ${yourPlan.niche.label}, so keep the language native to that audience.`
     ].slice(0, 4),
     strategicWeaknesses: [
       ...competitorEdges.map(diagnosticOpportunity),
-      "Do not answer the competitor by copying their format. Answer with earlier proof, clearer identity, tighter pacing, and cleaner CTA timing."
+      "Do not copy the format. Change what the viewer feels first."
     ].slice(0, 4),
     visibilityGaps: dimensions
       .filter((dimension) => dimension.scoreDelta > 2)
