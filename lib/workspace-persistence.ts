@@ -10,6 +10,54 @@ import type { VisibilityContentPlan } from "@/lib/content-plan";
 export const titanWorkspaceStorageKey = "titan-visibility-workspace-v1";
 export const titanStudioPlanStorageKey = "titan-visibility-studio-plan-v1";
 export const titanCompetitorStorageKey = "titan-visibility-competitor-v1";
+export const titanWorkspaceFoundationStorageKey =
+  "titan-workspace-foundation-v1";
+
+export type TitanWorkspaceRecord = {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  mode: "local" | "supabase";
+  currentStrategicMission: string;
+  pinnedPriorities: string[];
+  savedAccountIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TitanAuditedAccountRecord = {
+  id: string;
+  workspaceId: string;
+  profileUrl: string;
+  platform: AuditPlatform;
+  displayName: string;
+  lastAuditScore?: number;
+  lastAuditAt?: string;
+};
+
+export type TitanStrategicTimelineRecord = {
+  id: string;
+  workspaceId: string;
+  accountId?: string;
+  title: string;
+  summary: string;
+  createdAt: string;
+  source:
+    | "audit"
+    | "memory"
+    | "evolution"
+    | "experiment"
+    | "studio"
+    | "competitor"
+    | "note";
+};
+
+export type TitanWorkspacePersistenceEnvelope = {
+  activeWorkspaceId: string;
+  auditedAccounts: TitanAuditedAccountRecord[];
+  strategicTimeline: TitanStrategicTimelineRecord[];
+  workspaces: TitanWorkspaceRecord[];
+};
 
 export type PersistedAuditWorkspace = {
   savedAt: string;
@@ -28,6 +76,49 @@ export type PersistedTitanStudioPlan = {
   auditKey: string;
   plan: VisibilityContentPlan;
 };
+
+export function createDefaultTitanWorkspace(
+  userId: string,
+  userEmail: string,
+  mode: "local" | "supabase"
+): TitanWorkspacePersistenceEnvelope {
+  const now = new Date().toISOString();
+  const workspaceId = `workspace-${userId}`;
+
+  return {
+    activeWorkspaceId: workspaceId,
+    auditedAccounts: [],
+    strategicTimeline: [
+      {
+        createdAt: now,
+        id: `timeline-${Date.now()}`,
+        source: "note",
+        summary:
+          "Workspace created. Titan can now preserve audits, experiments, notes, plans, and strategic movement under one account.",
+        title: "Titan workspace initialized",
+        workspaceId
+      }
+    ],
+    workspaces: [
+      {
+        createdAt: now,
+        currentStrategicMission:
+          "Build a durable visibility system and track movement over time.",
+        id: workspaceId,
+        mode,
+        name: `${userEmail.split("@")[0] || "Titan"} Workspace`,
+        ownerUserId: userId,
+        pinnedPriorities: [
+          "Run first audit",
+          "Identify primary blocker",
+          "Start first strategic experiment"
+        ],
+        savedAccountIds: [],
+        updatedAt: now
+      }
+    ]
+  };
+}
 
 export function makeAuditWorkspaceKey(auditResult: AiAuditResult, profileUrl: string) {
   return `${auditResult.businessName}-${profileUrl}-${Math.round(auditResult.overallScore)}`;

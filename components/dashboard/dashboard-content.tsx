@@ -15,8 +15,10 @@ import {
   titanStudioPlanStorageKey,
   titanWorkspaceStorageKey,
   writeJsonStorage,
-  type PersistedAuditWorkspace
+  type PersistedAuditWorkspace,
+  type TitanWorkspacePersistenceEnvelope
 } from "@/lib/workspace-persistence";
+import type { TitanAuthSession } from "@/lib/titan-auth";
 import {
   createVisibilityEvolutionReport,
   createVisibilityMemoryReport,
@@ -31,6 +33,7 @@ import {
 } from "@/lib/visibility-memory";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
+import { TitanAuthWorkspaceGate } from "./auth-workspace-foundation";
 import { CategoryScores } from "./category-scores";
 import { CompetitorIntelligence } from "./competitor-intelligence";
 import { DashboardStates } from "./dashboard-states";
@@ -42,6 +45,36 @@ import { TitanStudio } from "./titan-studio";
 import { VisibilityMemoryPanel } from "./visibility-memory-panel";
 
 export function DashboardContent() {
+  return (
+    <TitanAuthWorkspaceGate>
+      {({
+        onLogout,
+        onWorkspaceEnvelopeChange,
+        session,
+        workspaceEnvelope
+      }) => (
+        <DashboardWorkspaceContent
+          onLogout={onLogout}
+          onWorkspaceEnvelopeChange={onWorkspaceEnvelopeChange}
+          session={session}
+          workspaceEnvelope={workspaceEnvelope}
+        />
+      )}
+    </TitanAuthWorkspaceGate>
+  );
+}
+
+function DashboardWorkspaceContent({
+  onLogout,
+  onWorkspaceEnvelopeChange,
+  session,
+  workspaceEnvelope
+}: {
+  onLogout: () => void;
+  onWorkspaceEnvelopeChange: (envelope: TitanWorkspacePersistenceEnvelope) => void;
+  session: TitanAuthSession;
+  workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
+}) {
   const initialPlatform: AuditPlatform = "instagram";
   const [activeModule, setActiveModule] = useState<TitanOsModule>("home");
   const [showGuidedOnboarding, setShowGuidedOnboarding] = useState(false);
@@ -168,9 +201,23 @@ export function DashboardContent() {
 
     setMemoryDebug(memorySaveResult.debug);
     setMemoryEntriesSnapshot(memorySaveResult.entries);
+    onWorkspaceEnvelopeChange(
+      addWorkspaceAuditSnapshot(workspaceEnvelope, {
+        auditResult: pendingMemorySave.result,
+        platform: pendingMemorySave.context.formData.platform,
+        profileUrl: pendingMemorySave.context.formData.profileUrl
+      })
+    );
     setMemoryRevision((currentRevision) => currentRevision + 1);
     setPendingMemorySave(null);
-  }, [auditResult, isUsingFallback, pendingMemorySave, planContext]);
+  }, [
+    auditResult,
+    isUsingFallback,
+    onWorkspaceEnvelopeChange,
+    pendingMemorySave,
+    planContext,
+    workspaceEnvelope
+  ]);
 
   function handleAuditGenerated(
     result: AiAuditResult,
@@ -274,7 +321,10 @@ export function DashboardContent() {
   return (
     <DashboardShell
       activeModule={activeModule}
+      onLogout={onLogout}
       onModuleChange={setActiveModule}
+      session={session}
+      workspaceEnvelope={workspaceEnvelope}
     >
       {showGuidedOnboarding ? (
         <GuidedOnboardingFlow
@@ -340,7 +390,9 @@ export function DashboardContent() {
           onOpenStudio={() => setActiveModule("titan-studio")}
           onOpenReports={() => setActiveModule("reports")}
           onUxModeChange={handleUxModeChange}
+          session={session}
           uxMode={uxMode}
+          workspaceEnvelope={workspaceEnvelope}
         />
       ) : null}
 
@@ -480,6 +532,78 @@ function ModulePlaceholder({
   );
 }
 
+function addWorkspaceAuditSnapshot(
+  envelope: TitanWorkspacePersistenceEnvelope,
+  snapshot: {
+    auditResult: AiAuditResult;
+    platform: AuditPlatform;
+    profileUrl: string;
+  }
+): TitanWorkspacePersistenceEnvelope {
+  const now = new Date().toISOString();
+  const activeWorkspace =
+    envelope.workspaces.find(
+      (workspace) => workspace.id === envelope.activeWorkspaceId
+    ) ?? envelope.workspaces[0];
+
+  if (!activeWorkspace) {
+    return envelope;
+  }
+
+  const accountId = normalizeAccountKey(
+    snapshot.profileUrl,
+    snapshot.auditResult.businessName
+  );
+  const existingAccount = envelope.auditedAccounts.find(
+    (account) => account.id === accountId
+  );
+  const nextAccount = {
+    displayName: snapshot.auditResult.businessName,
+    id: accountId,
+    lastAuditAt: now,
+    lastAuditScore: Math.round(snapshot.auditResult.overallScore),
+    platform: snapshot.platform,
+    profileUrl: snapshot.profileUrl,
+    workspaceId: activeWorkspace.id
+  };
+  const auditedAccounts = existingAccount
+    ? envelope.auditedAccounts.map((account) =>
+        account.id === accountId ? nextAccount : account
+      )
+    : [nextAccount, ...envelope.auditedAccounts];
+  const savedAccountIds = activeWorkspace.savedAccountIds.includes(accountId)
+    ? activeWorkspace.savedAccountIds
+    : [accountId, ...activeWorkspace.savedAccountIds];
+
+  return {
+    ...envelope,
+    auditedAccounts,
+    strategicTimeline: [
+      {
+        accountId,
+        createdAt: now,
+        id: `audit-${Date.now()}`,
+        source: "audit" as const,
+        summary: `${snapshot.auditResult.businessName} scored ${Math.round(
+          snapshot.auditResult.overallScore
+        )}/100. Titan saved this audit into the workspace history.`,
+        title: "Visibility audit saved",
+        workspaceId: activeWorkspace.id
+      },
+      ...envelope.strategicTimeline
+    ].slice(0, 80),
+    workspaces: envelope.workspaces.map((workspace) =>
+      workspace.id === activeWorkspace.id
+        ? {
+            ...workspace,
+            savedAccountIds,
+            updatedAt: now
+          }
+        : workspace
+    )
+  };
+}
+
 function DashboardHome({
   auditResult,
   experiments,
@@ -493,7 +617,9 @@ function DashboardHome({
   onOpenStudio,
   onStartExperiment,
   onUxModeChange,
-  uxMode
+  session,
+  uxMode,
+  workspaceEnvelope
 }: {
   auditResult: AiAuditResult;
   experiments: TitanExperiment[];
@@ -510,7 +636,9 @@ function DashboardHome({
   onOpenStudio: () => void;
   onStartExperiment: (input: TitanExperimentInput) => void;
   onUxModeChange: (mode: TitanUxMode) => void;
+  session: TitanAuthSession;
   uxMode: TitanUxMode;
+  workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
 }) {
   const [activeExploration, setActiveExploration] = useState("Hook Stability");
   const weakestCategories = [...auditResult.categoryScores]
@@ -637,6 +765,12 @@ function DashboardHome({
         <IntelligenceModeSelector
           mode={uxMode}
           onModeChange={onUxModeChange}
+        />
+
+        <WorkspacePersistenceOverview
+          experiments={experiments}
+          session={session}
+          workspaceEnvelope={workspaceEnvelope}
         />
 
         <article className="premium-surface min-w-0 overflow-hidden rounded-lg p-6 shadow-gold sm:p-8 lg:p-10">
@@ -3327,6 +3461,111 @@ function IntelligenceModeSelector({
               </button>
             );
           })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function WorkspacePersistenceOverview({
+  experiments,
+  session,
+  workspaceEnvelope
+}: {
+  experiments: TitanExperiment[];
+  session: TitanAuthSession;
+  workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
+}) {
+  const activeWorkspace =
+    workspaceEnvelope.workspaces.find(
+      (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
+    ) ?? workspaceEnvelope.workspaces[0];
+  const activeExperiments = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  );
+
+  return (
+    <article className="premium-surface mb-5 rounded-lg p-5 sm:p-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-titan-muted">
+            Workspace Persistence Foundation
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-titan-ivory">
+            {activeWorkspace?.name ?? "Titan Workspace"}
+          </h2>
+          <p className="titan-copy mt-2 text-sm text-titan-ivory/58">
+            Signed in as {session.user.email}. Titan is structured to preserve
+            audits, accounts, experiments, notes, plans, comparisons, and
+            strategic timelines under a durable workspace.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+            {session.mode === "supabase" ? "Cloud-ready" : "Local dev mode"}
+          </span>
+          <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/62">
+            {workspaceEnvelope.auditedAccounts.length} saved accounts
+          </span>
+          <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/62">
+            {activeExperiments.length} active experiments
+          </span>
+        </div>
+      </div>
+      <div className="titan-readable-grid mt-5">
+        <div className="titan-signal-card rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Current strategic mission
+          </p>
+          <p className="titan-copy mt-3 text-sm text-titan-ivory/68">
+            {activeWorkspace?.currentStrategicMission ??
+              "Track visibility movement over time."}
+          </p>
+        </div>
+        <div className="titan-signal-card rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Recent audits
+          </p>
+          <div className="mt-3 grid gap-2">
+            {(workspaceEnvelope.auditedAccounts.length
+              ? workspaceEnvelope.auditedAccounts.slice(0, 3)
+              : [
+                  {
+                    displayName: "No saved audits yet",
+                    id: "empty",
+                    lastAuditScore: undefined,
+                    platform: "instagram" as AuditPlatform,
+                    profileUrl: "Run an audit to create the first workspace record.",
+                    workspaceId: activeWorkspace?.id ?? "workspace"
+                  }
+                ]
+            ).map((account) => (
+              <p
+                className="rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-xs leading-5 text-titan-ivory/62"
+                key={account.id}
+              >
+                {account.displayName}
+                {account.lastAuditScore !== undefined
+                  ? ` · ${account.lastAuditScore}/100`
+                  : ""}
+              </p>
+            ))}
+          </div>
+        </div>
+        <div className="titan-signal-card rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Pinned priorities
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(activeWorkspace?.pinnedPriorities ?? []).map((priority) => (
+              <span
+                className="titan-chip bg-titan-gold/10 text-[11px] font-black uppercase text-titan-bright"
+                key={priority}
+              >
+                {priority}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </article>

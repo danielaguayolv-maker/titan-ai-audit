@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { TitanLogo } from "@/components/shared/titan-logo";
+import type { TitanAuthSession } from "@/lib/titan-auth";
+import type { TitanWorkspacePersistenceEnvelope } from "@/lib/workspace-persistence";
 
 export type TitanOsModule =
   | "home"
@@ -17,6 +19,9 @@ type DashboardShellProps = {
   children: ReactNode;
   activeModule: TitanOsModule;
   onModuleChange: (module: TitanOsModule) => void;
+  onLogout: () => void;
+  workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
+  session: TitanAuthSession;
 };
 
 const modules: Array<{
@@ -79,7 +84,10 @@ const modules: Array<{
 export function DashboardShell({
   children,
   activeModule,
-  onModuleChange
+  onLogout,
+  onModuleChange,
+  session,
+  workspaceEnvelope
 }: DashboardShellProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const previousModuleRef = useRef<TitanOsModule>(activeModule);
@@ -120,6 +128,13 @@ export function DashboardShell({
           >
             Landing
           </Link>
+          <button
+            className="luxury-border inline-flex min-h-11 items-center rounded-full bg-white/5 px-5 text-sm font-bold uppercase text-titan-ivory transition hover:border-titan-bright hover:bg-white/10"
+            onClick={onLogout}
+            type="button"
+          >
+            Logout
+          </button>
         </div>
       </div>
       <div className="mx-auto grid w-full max-w-[92rem] grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -136,6 +151,11 @@ export function DashboardShell({
               creators and businesses.
             </p>
           </div>
+
+          <WorkspaceStatusPanel
+            session={session}
+            workspaceEnvelope={workspaceEnvelope}
+          />
 
           <nav className="mt-4 grid gap-2" aria-label="Titan Visibility OS modules">
             {modules.map((module) => {
@@ -187,5 +207,59 @@ export function DashboardShell({
         </div>
       </div>
     </main>
+  );
+}
+
+function WorkspaceStatusPanel({
+  session,
+  workspaceEnvelope
+}: {
+  session: TitanAuthSession;
+  workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
+}) {
+  const activeWorkspace =
+    workspaceEnvelope.workspaces.find(
+      (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
+    ) ?? workspaceEnvelope.workspaces[0];
+
+  return (
+    <section className="premium-surface mt-4 rounded-lg p-4">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Workspace
+      </p>
+      <h2 className="text-anywhere mt-2 text-lg font-black text-titan-ivory">
+        {activeWorkspace?.name ?? "Titan Workspace"}
+      </h2>
+      <p className="mt-2 text-xs leading-5 text-titan-ivory/54">
+        {session.user.email}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span className="titan-chip bg-titan-gold/10 text-[10px] font-black uppercase text-titan-bright">
+          {session.mode === "supabase" ? "Supabase Auth" : "Local mode"}
+        </span>
+        <span className="titan-chip bg-white/10 text-[10px] font-bold uppercase text-titan-ivory/60">
+          {workspaceEnvelope.auditedAccounts.length} accounts
+        </span>
+      </div>
+      <div className="mt-4 rounded-lg border border-titan-gold/10 bg-black/24 p-3">
+        <p className="text-[10px] font-black uppercase text-titan-muted">
+          Current strategic mission
+        </p>
+        <p className="mt-2 text-xs leading-5 text-titan-ivory/64">
+          {activeWorkspace?.currentStrategicMission ??
+            "Track visibility movement over time."}
+        </p>
+      </div>
+      <div className="mt-4 grid gap-2">
+        {(activeWorkspace?.pinnedPriorities ?? []).slice(0, 3).map((priority) => (
+          <p
+            className="rounded-lg border border-titan-gold/10 bg-black/20 p-2 text-xs leading-5 text-titan-ivory/58"
+            key={priority}
+          >
+            {priority}
+          </p>
+        ))}
+      </div>
+    </section>
   );
 }
