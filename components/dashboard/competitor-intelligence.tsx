@@ -457,6 +457,16 @@ function CompetitorReport({
           items={report.culturalIdentityDifferences}
           title="Community and belonging"
         />
+        <InsightCard
+          eyebrow="Aesthetic identity"
+          items={report.aestheticIdentityDifferences}
+          title="Taste and visual personality"
+        />
+        <InsightCard
+          eyebrow="Emotional contrast"
+          items={report.emotionalContrastDifferences}
+          title="Spikes, tension, and payoff"
+        />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">

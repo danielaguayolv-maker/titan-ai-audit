@@ -52,6 +52,8 @@ export type CompetitorIntelligenceReport = {
   memorabilityDifferences: string[];
   presenceDifferences: string[];
   culturalIdentityDifferences: string[];
+  aestheticIdentityDifferences: string[];
+  emotionalContrastDifferences: string[];
 };
 
 type ComparisonBlueprint = {
@@ -434,6 +436,58 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Belonging is the lever here. People share what makes them feel part of something.",
     direction:
       "Compare local cues, cultural relevance, community feeling, social proof, aspirational identity, and whether the account feels emotionally contagious."
+  },
+  {
+    label: "Aesthetic identity",
+    keys: ["content", "profile", "visual", "brand", "style"],
+    strongerCompetitor:
+      "The competitor has a clearer aesthetic personality. The content feels more owned before the caption explains anything.",
+    strongerYou:
+      "Your aesthetic reads more intentional. It needs a sharper signature, not more polish.",
+    closeRead:
+      "Both accounts look presentable. Neither has a visual world that feels unmistakable yet.",
+    sharpRead:
+      "The content is clean, but not lived-in.",
+    visualTaste:
+      "This is the taste read: chaotic vs polished, sensory vs informational, raw vs commercial, cinematic vs transactional, intimate vs loud.",
+    tacticalMove:
+      "Choose a visual lane and let a few fingerprints stay in the frame.",
+    whyItMatters:
+      "Aesthetic identity makes the account recognizable before the viewer reads the name.",
+    retentionRead:
+      "If every post carries a different visual mood, the brand never settles in memory.",
+    sequenceFix:
+      "Repeat one aesthetic cue: lighting, camera distance, texture, edit rhythm, color, or social scene.",
+    emotionalRead:
+      "The account needs a look that feels owned, not assembled.",
+    direction:
+      "Compare whether each account feels chaotic or polished, sensory or informational, raw or commercial, cinematic or transactional, intimate or loud, social or product-focused."
+  },
+  {
+    label: "Emotional contrast",
+    keys: ["hook", "retention", "engagement", "content"],
+    strongerCompetitor:
+      "The competitor creates more emotional lift. The energy changes instead of staying flat.",
+    strongerYou:
+      "Your emotional contrast is stronger. Use the spike with more restraint so it feels intentional.",
+    closeRead:
+      "Both accounts stay too level in places. The reveal needs a bigger temperature change.",
+    sharpRead:
+      "Everything stays emotionally level. Nothing spikes.",
+    visualTaste:
+      "Good edits have temperature changes: calm, tension, release, noise, quiet, payoff.",
+    tacticalMove:
+      "Build one post around a spike: surprise, reaction, crowd sound, before/after, reveal.",
+    whyItMatters:
+      "Without contrast, even good content feels smaller than it should.",
+    retentionRead:
+      "The energy should rise or shift before the viewer gets comfortable.",
+    sequenceFix:
+      "Set the calm frame, break it, then pay it off.",
+    emotionalRead:
+      "The audience needs a small jolt, not just a clear message.",
+    direction:
+      "Compare emotional spikes, tension and release, escalation, surprise, payoff contrast, and whether the reveal feels bigger than the setup."
   }
 ];
 
@@ -489,18 +543,18 @@ function strengthContext(score: number, label: "your" | "competitor") {
   const owner = label === "your" ? "Your account" : "The competitor";
 
   if (score >= 82) {
-    return `${owner} has a real edge here; keep it sharp and put it earlier in the post.`;
+    return `${owner} has the sharper read here. Leave it lean and bring it forward.`;
   }
 
   if (score >= 68) {
-    return `${owner} has the better read here. Tighten the timing, proof, and conversion moment.`;
+    return `${owner} is stronger, but the idea still needs a more memorable shape.`;
   }
 
   if (score >= 52) {
-    return `${owner} wins this comparison, but attention or action is still leaking.`;
+    return `${owner} wins the comparison, not the room. There is still energy left on the table.`;
   }
 
-  return `${owner} has the cleaner read by comparison, not by dominance. The creative sequence still needs work.`;
+  return `${owner} only looks cleaner because the other side is softer. Not dominant yet.`;
 }
 
 function accountName(snapshot: CompetitorSnapshot, fallback: string) {
@@ -553,16 +607,29 @@ function currentPattern(
       : `${subject} feels easier to place inside a community: ${signal}`;
   }
 
+  if (dimension === "Aesthetic identity") {
+    return role === "your"
+      ? `${subject} reads more functional than distinctive: ${signal}`
+      : `${subject} has a more specific visual personality: ${signal}`;
+  }
+
+  if (dimension === "Emotional contrast") {
+    return role === "your"
+      ? `${subject} keeps the emotional temperature too even: ${signal}`
+      : `${subject} creates more lift, surprise, or release: ${signal}`;
+  }
+
   return role === "your"
     ? `${subject} carries this signal: ${signal}`
     : `${subject} pushes this signal differently: ${signal}`;
 }
 
 function differenceRead(
-  dimension: string,
+  blueprint: ComparisonBlueprint,
   scoreDelta: number,
   confidence: "appears to" | "likely" | "shows"
 ) {
+  const dimension = blueprint.label;
   const competitorSubject =
     confidence === "shows" ? "The competitor" : `The competitor ${confidence}`;
 
@@ -614,13 +681,37 @@ function differenceRead(
     return "Neither account feels culturally sticky enough yet.";
   }
 
+  if (dimension === "Aesthetic identity") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} has the more legible aesthetic. Your side feels cleaner than it feels owned.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your aesthetic has more character. Do not smooth out the parts people would remember.`;
+    }
+
+    return "Both accounts look fine. Fine is the problem.";
+  }
+
+  if (dimension === "Emotional contrast") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} creates more emotional change. Yours stays too even, so the reveal lands smaller.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your content has more emotional lift. Let the quiet beat make the spike feel bigger.`;
+    }
+
+    return "The energy stays level on both sides. Nothing really jumps out yet.";
+  }
+
   if (scoreDelta > 4) {
     const opener =
       confidence === "shows"
         ? `The competitor has the stronger ${dimension.toLowerCase()} read.`
         : `The competitor ${confidence} ahead on ${dimension.toLowerCase()}.`;
 
-    return `${opener} The point lands before the explanation starts doing too much work.`;
+    return `${opener} ${blueprint.sharpRead}`;
   }
 
   if (scoreDelta < -4) {
@@ -629,22 +720,22 @@ function differenceRead(
         ? `Your account is ahead on ${dimension.toLowerCase()}.`
         : `Your account ${confidence} ahead on ${dimension.toLowerCase()}.`;
 
-    return `${opener} That is a real advantage, but it still needs a cleaner first frame, tighter proof, or a stronger ask to fully convert.`;
+    return `${opener} Keep the advantage. Do not overexplain it.`;
   }
 
-  return `Both accounts are close on ${dimension.toLowerCase()}. The advantage will come from the details: first frame, pacing, payoff timing, and whether the CTA lands while attention is still warm.`;
+  return `Both accounts are close on ${dimension.toLowerCase()}. The difference is taste now: what feels alive, specific, and worth remembering.`;
 }
 
 function adaptationRead(blueprint: ComparisonBlueprint, scoreDelta: number) {
   if (scoreDelta > 4) {
-    return `${blueprint.tacticalMove} ${blueprint.sequenceFix}`;
+    return blueprint.tacticalMove;
   }
 
   if (scoreDelta < -4) {
-    return `${blueprint.sharpRead} ${blueprint.retentionRead}`;
+    return blueprint.retentionRead;
   }
 
-  return `${blueprint.visualTaste} ${blueprint.tacticalMove}`;
+  return blueprint.visualTaste;
 }
 
 function buildPlan(snapshot: CompetitorSnapshot) {
@@ -719,7 +810,7 @@ function createDimensionComparison(
       competitorSignal,
       scanConfidenceLanguage(competitor)
     ),
-    difference: differenceRead(blueprint.label, scoreDelta, confidenceLanguage),
+    difference: differenceRead(blueprint, scoreDelta, confidenceLanguage),
     adaptation: adaptationRead(blueprint, scoreDelta),
     strategicRead,
     sharpRead: blueprint.sharpRead,
@@ -789,6 +880,8 @@ export function createCompetitorIntelligenceReport(
   const memorabilityDimension = dimensionByLabel(dimensions, "Memorability");
   const presenceDimension = dimensionByLabel(dimensions, "Creator / brand presence");
   const culturalDimension = dimensionByLabel(dimensions, "Cultural / social identity");
+  const aestheticDimension = dimensionByLabel(dimensions, "Aesthetic identity");
+  const contrastDimension = dimensionByLabel(dimensions, "Emotional contrast");
   const yourVisualCue = yourPlan.contentPriorities[0] ?? "Make the opening frame clearer.";
   const competitorVisualCue =
     competitorPlan.contentPriorities[0] ?? "Competitor opens with a clearer visual promise.";
@@ -813,9 +906,9 @@ export function createCompetitorIntelligenceReport(
       .slice(0, 4)
       .map((dimension) => `${dimension.label}: ${dimension.sharpRead ?? dimension.contentDirection}`),
     contentOpportunities: [
-      `Create one post built around atmosphere instead of information: the room, the faces, the sound, the movement, the feeling.`,
-      `Give the account a recurring memory cue: one visual anchor, phrase, ritual, or edit that can become recognizable over time.`,
-      `Put more human presence near the front of the content so the viewer feels who is behind the brand, not just what is being sold.`
+      `Create one post that sells the atmosphere before the offer. Let the room, hands, faces, texture, or screen movement carry the first beat.`,
+      `Give the account one recurring cue people can recognize without reading the handle.`,
+      `Put a stronger point of view near the front. Less content about the brand; more content from the brand.`
     ],
     hookStyleDifferences: [
       `Your feed reads this way: ${yourVisualCue}`,
@@ -840,22 +933,32 @@ export function createCompetitorIntelligenceReport(
     emotionalBrandDifferences: [
       observationLine(emotionalBrandDimension),
       emotionalBrandDimension.visualTaste,
-      "If the audience understands the offer but not the atmosphere, the brand stays useful but not sticky."
+      "The audience can understand the offer and still feel nothing about the place."
     ],
     memorabilityDifferences: [
       observationLine(memorabilityDimension),
       memorabilityDimension.visualTaste,
-      "The goal is one image, phrase, ritual, or feeling people remember after the scroll."
+      "One image should survive the scroll."
     ],
     presenceDifferences: [
       observationLine(presenceDimension),
       presenceDimension.visualTaste,
-      "The account should feel like it comes from someone, somewhere, with a point of view."
+      "The account needs a pulse, not just a posting schedule."
     ],
     culturalIdentityDifferences: [
       observationLine(culturalDimension),
       culturalDimension.visualTaste,
-      "Local and social identity make content feel claimable. People share what says something about them."
+      "People share what says something about them."
+    ],
+    aestheticIdentityDifferences: [
+      observationLine(aestheticDimension),
+      aestheticDimension.visualTaste,
+      "The content can be polished and still feel unowned. Give it fingerprints."
+    ],
+    emotionalContrastDifferences: [
+      observationLine(contrastDimension),
+      contrastDimension.visualTaste,
+      "The reveal feels bigger when the energy changes first."
     ]
   };
 }
