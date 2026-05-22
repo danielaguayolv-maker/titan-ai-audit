@@ -21,6 +21,7 @@ export type CompetitorComparisonDimension = {
   difference: string;
   adaptation: string;
   strategicRead: string;
+  sharpRead: string;
   whyItMatters: string;
   retentionRead: string;
   sequenceFix: string;
@@ -54,6 +55,9 @@ type ComparisonBlueprint = {
   strongerCompetitor: string;
   strongerYou: string;
   closeRead: string;
+  sharpRead: string;
+  visualTaste: string;
+  tacticalMove: string;
   whyItMatters: string;
   retentionRead: string;
   sequenceFix: string;
@@ -71,10 +75,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your first impression is cleaner. Now make that clarity hit in the first frame, before the scroll decision happens.",
     closeRead:
       "The hook battle is close. The feed that opens with more motion, tension, or payoff will feel stronger.",
+    sharpRead:
+      "The payoff arrives after the viewer has already decided whether to stay.",
+    visualTaste:
+      "The stronger feed feels sensory before it feels informational: motion first, context second.",
+    tacticalMove:
+      "Cut the setup. Open on the moment the viewer would replay.",
     whyItMatters:
-      "Weak hooks hurt because attention is lost before the audience understands the payoff. If context appears before intrigue, the viewer has to work too hard and scrolls before the emotional contrast arrives.",
+      "The payoff arrives after the scroll decision, so the post starts at a disadvantage.",
     retentionRead:
-      "Check whether movement starts in the first frame, whether the payoff appears before second three, and whether tension is visible before explanation begins.",
+      "Movement, payoff, and tension all need to show up before the explanation starts carrying the post.",
     sequenceFix:
       "Open on movement, contrast, or the reaction shot. Let context arrive after the viewer already wants the answer.",
     emotionalRead:
@@ -91,10 +101,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your content rhythm has the stronger foundation; tighten the series formats so the audience knows what to expect next.",
     closeRead:
       "Posting rhythm is not the separator yet; stronger recurring formats will matter more than raw volume.",
+    sharpRead:
+      "The feed needs a recognizable pulse, not just more posts.",
+    visualTaste:
+      "A good rhythm feels like a series the audience can enter midstream and still understand.",
+    tacticalMove:
+      "Repeat one visual series twice before inventing another format.",
     whyItMatters:
       "Inconsistent rhythm makes every post feel like a reset. The audience never learns what kind of value to expect, so recognition and habit do not compound.",
     retentionRead:
-      "Look for whether the account repeats visual formats, recurring topics, and familiar opening structures without making the feed feel copied.",
+      "The rhythm should repeat visually without making the feed feel copied.",
     sequenceFix:
       "Create two repeatable series: one proof-led, one education-led. Keep the first visual consistent, but rotate the story, example, and CTA.",
     emotionalRead:
@@ -111,10 +127,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your authority cues are stronger; turn them into more on-camera proof, process, and outcome moments.",
     closeRead:
       "Both accounts have authority potential, but the clearer proof sequence will feel safer to the audience.",
+    sharpRead:
+      "Proof has to arrive before the claim.",
+    visualTaste:
+      "The best authority posts feel witnessed, not announced.",
+    tacticalMove:
+      "Put the receipt on screen first, then explain why it matters.",
     whyItMatters:
       "Authority falls flat when the account claims expertise before showing evidence. Viewers need proof they can see, not credentials they have to trust on faith.",
     retentionRead:
-      "Study whether proof appears early enough: process footage, before/after contrast, client/customer reactions, results, or visible expertise before the pitch.",
+      "Proof should appear early: process footage, before/after contrast, customer reactions, results, or visible expertise before the pitch.",
     sequenceFix:
       "Open with the proof frame, add one line of context, then explain the mechanism that created the result.",
     emotionalRead:
@@ -131,10 +153,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your CTA structure is stronger; keep making the next step feel like a natural continuation of the post.",
     closeRead:
       "CTA clarity is close, so placement matters: the ask should appear on the strongest proof frame, not at the dead end.",
+    sharpRead:
+      "The ask is strongest while the viewer still feels the payoff.",
+    visualTaste:
+      "A clean CTA feels like the natural next shot, not a sales line pasted onto the end.",
+    tacticalMove:
+      "Drop the CTA while the proof frame is still alive.",
     whyItMatters:
       "CTA weakness hurts when the viewer emotionally understands the value but does not know what to do next. If the ask only lives in the bio or appears after the energy drops, intent leaks out.",
     retentionRead:
-      "Check whether the CTA is spoken, captioned, shown as on-screen text, reinforced in the caption, and timed while the viewer still feels the payoff.",
+      "The CTA should be spoken, shown, captioned, and timed while the viewer still feels the payoff.",
     sequenceFix:
       "Place the CTA on the strongest proof or reveal frame. Use a low-friction action for warm viewers and a direct action for high-intent viewers.",
     emotionalRead:
@@ -151,6 +179,12 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your engagement signals are stronger; build more prompts around identity, preference, and lived experience.",
     closeRead:
       "Engagement quality is close, which means the sharper audience question can create the advantage.",
+    sharpRead:
+      "The comment prompt needs a moment worth reacting to.",
+    visualTaste:
+      "Good engagement feels like the viewer is being invited into the scene, not asked to help the algorithm.",
+    tacticalMove:
+      "Ask the question after recognition lands, not before.",
     whyItMatters:
       "Engagement stays shallow when prompts ask for generic opinions instead of giving people a reason to reveal identity, preference, frustration, or intent.",
     retentionRead:
@@ -171,10 +205,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your search and local intent signals are stronger; make those phrases feel native inside the first line and visual context.",
     closeRead:
       "Local/search signals are close, so natural phrasing beats keyword stuffing.",
+    sharpRead:
+      "The search phrase should feel like how a real person would ask for this.",
+    visualTaste:
+      "Local content works best when the place, problem, or craving is visible before the keyword appears.",
+    tacticalMove:
+      "Put the location or buyer-intent phrase in the first caption line and back it with a recognizable scene.",
     whyItMatters:
       "Search intent is weak when the account uses broad captions that do not match how buyers actually look for help, places, creators, or solutions.",
     retentionRead:
-      "Look for whether the search phrase appears near the beginning and is supported by a visual that proves the account belongs in that query.",
+      "The search phrase belongs near the beginning, backed by a visual that proves the account fits the query.",
     sequenceFix:
       "Start with the recognizable local or category scene, use the search phrase naturally in the first sentence, then show proof tied to that exact intent.",
     emotionalRead:
@@ -191,10 +231,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your emotional positioning is stronger. Put it on screen through reactions, tension, payoff, and identity language.",
     closeRead:
       "Both accounts can push harder on emotion; the sharper identity cue will feel more memorable.",
+    sharpRead:
+      "The viewer understands the offer before they feel why it matters.",
+    visualTaste:
+      "Emotion lands through faces, friction, relief, status, and the moment something changes.",
+    tacticalMove:
+      "Show the feeling first, then let the offer explain it.",
     whyItMatters:
       "Emotion is the difference between information and movement. If the post explains the offer but never creates aspiration, relief, status, belonging, or urgency, viewers understand it without feeling pulled toward it.",
     retentionRead:
-      "Check whether the emotional payoff arrives before the explanation gets heavy. If the viewer has to wait too long to feel something, retention softens.",
+      "The emotional payoff has to arrive before the explanation gets heavy.",
     sequenceFix:
       "Open with the emotion, prove it with a real scene, then explain the offer after the viewer already feels the stakes.",
     emotionalRead:
@@ -211,6 +257,12 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your visual strategy has stronger raw material; the next step is sequencing those moments with more cinematic pacing.",
     closeRead:
       "Visual strategy is close, so the account that opens with more motion, emotion, or contrast will feel stronger.",
+    sharpRead:
+      "The edit explains too early instead of letting curiosity breathe.",
+    visualTaste:
+      "The best frame is not always the prettiest frame. It is the one with motion, tension, or proof.",
+    tacticalMove:
+      "Hold the reveal one beat longer and cut out the dead air before it.",
     whyItMatters:
       "Visual strategy controls whether the viewer feels momentum. Static openings, late payoff, and slow context make the post feel like work instead of a scene worth watching.",
     retentionRead:
@@ -231,10 +283,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your content rhythm is more strategically balanced; keep building repeatable series so it compounds.",
     closeRead:
       "Content rhythm is close; the advantage will come from repeating winning formats without sounding copied.",
+    sharpRead:
+      "The feed needs fewer isolated posts and more recognizable arcs.",
+    visualTaste:
+      "Strong rhythm feels like proof, lesson, texture, offer. Not chaos, not repetition.",
+    tacticalMove:
+      "Build the week around one recurring proof format and one recurring audience moment.",
     whyItMatters:
       "A weak content rhythm makes the account feel reactive. A strong rhythm teaches the audience how to consume the brand: proof, lesson, emotion, offer, repeat.",
     retentionRead:
-      "Look for whether each week has a repeatable arc or if every post asks the audience to recalibrate from scratch.",
+      "Each week should have a repeatable arc; otherwise every post asks the audience to recalibrate.",
     sequenceFix:
       "Build a weekly loop: hook-heavy proof, audience identity post, authority breakdown, then CTA-led conversion post.",
     emotionalRead:
@@ -251,10 +309,16 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "Your audience language is stronger; keep making the viewer feel recognized in the first sentence.",
     closeRead:
       "Audience identity language is close, so specificity will decide which profile feels more personally relevant.",
+    sharpRead:
+      "Recognition has to land before the pitch.",
+    visualTaste:
+      "Identity shows up in the small details: who is in the room, what they are deciding, what they are afraid to waste.",
+    tacticalMove:
+      "Name the viewer's situation before naming the offer.",
     whyItMatters:
       "Audience language is weak when people can understand the offer but cannot recognize themselves in it. Specific identity cues make the content feel personal before it becomes persuasive.",
     retentionRead:
-      "Check whether the post names the viewer's situation before pitching the solution. Identity should arrive before the offer.",
+      "Name the viewer's situation before pitching the solution. Identity comes before the offer.",
     sequenceFix:
       "Lead with the audience's lived moment, show the tension they already feel, then introduce the brand as the bridge.",
     emotionalRead:
@@ -372,14 +436,14 @@ function differenceRead(
 
 function adaptationRead(blueprint: ComparisonBlueprint, scoreDelta: number) {
   if (scoreDelta > 4) {
-    return `Use the timing, not the costume: what hits first, where proof appears, and when the viewer gets the payoff. ${blueprint.sequenceFix}`;
+    return `${blueprint.tacticalMove} ${blueprint.sequenceFix}`;
   }
 
   if (scoreDelta < -4) {
-    return `You are ahead here. Now make it harder to catch. ${blueprint.retentionRead}`;
+    return `${blueprint.sharpRead} ${blueprint.retentionRead}`;
   }
 
-  return `Run a small creative test around the sequence rather than changing everything at once. ${blueprint.sequenceFix}`;
+  return `${blueprint.visualTaste} ${blueprint.tacticalMove}`;
 }
 
 function buildPlan(snapshot: CompetitorSnapshot) {
@@ -450,6 +514,7 @@ function createDimensionComparison(
     difference: differenceRead(blueprint.label, scoreDelta, confidenceLanguage),
     adaptation: adaptationRead(blueprint, scoreDelta),
     strategicRead,
+    sharpRead: blueprint.sharpRead,
     whyItMatters: blueprint.whyItMatters,
     retentionRead: blueprint.retentionRead,
     sequenceFix: blueprint.sequenceFix,
@@ -478,10 +543,18 @@ function toActionSentence(dimension: CompetitorComparisonDimension) {
 }
 
 function diagnosticOpportunity(dimension: CompetitorComparisonDimension) {
-  return `${dimension.label}: ${dimension.relativeContext} ${dimension.adaptation}`;
+  if (dimension.scoreDelta > 4) {
+    return `${dimension.label}: ${dimension.difference} ${dimension.adaptation}`;
+  }
+
+  return `${dimension.label}: ${dimension.adaptation}`;
 }
 
 function observationLine(dimension: CompetitorComparisonDimension) {
+  if (Math.abs(dimension.scoreDelta) <= 4) {
+    return `${dimension.adaptation}`;
+  }
+
   return `${dimension.difference} ${dimension.adaptation}`;
 }
 
@@ -509,7 +582,7 @@ export function createCompetitorIntelligenceReport(
     whatYouDoBetter: yourEdges.map(toActionSentence),
     biggestOpportunityGap: `${largestGap.label}: ${largestGap.whyItMatters} ${largestGap.sequenceFix} The fix is not to copy the competitor's look; it is to rebuild the moment where attention, proof, and intent connect.`,
     strategicStrengths: [
-      ...yourEdges.map((dimension) => `${dimension.label}: ${dimension.relativeContext} Move that strength closer to the opening, while viewers are still deciding whether to stay.`),
+      ...yourEdges.map((dimension) => `${dimension.label}: ${dimension.adaptation}`),
       `Niche lock: your plan is reading as ${yourPlan.niche.label}, so keep the language native to that audience.`
     ].slice(0, 4),
     strategicWeaknesses: [
@@ -519,7 +592,7 @@ export function createCompetitorIntelligenceReport(
     visibilityGaps: dimensions
       .filter((dimension) => dimension.scoreDelta > 2)
       .slice(0, 4)
-      .map((dimension) => `${dimension.label}: ${dimension.contentDirection}`),
+      .map((dimension) => `${dimension.label}: ${dimension.sharpRead ?? dimension.contentDirection}`),
     contentOpportunities: [
       `Create a comparison-style post that shows your strongest ${yourPlan.niche.searchPhrases[0]} angle with movement in the first frame, proof by second three, and the CTA on the payoff shot.`,
       `Build one proof-led series around ${yourPlan.niche.audienceContexts[0]} so the audience sees a consistent reason to trust you before they are asked to act.`,
