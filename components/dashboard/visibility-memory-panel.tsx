@@ -17,6 +17,7 @@ type VisibilityMemoryPanelProps = {
   auditResult: AiAuditResult;
   context: { formData?: BusinessAuditFormData; profileData?: ProfileData | null };
   isUsingFallback: boolean;
+  memoryAccountKey: string;
   memoryRevision: number;
   profileUrl: string;
 };
@@ -25,14 +26,17 @@ export function VisibilityMemoryPanel({
   auditResult,
   context,
   isUsingFallback,
+  memoryAccountKey,
   memoryRevision,
   profileUrl
 }: VisibilityMemoryPanelProps) {
   const [entries, setEntries] = useState<VisibilityMemoryEntry[]>([]);
-  const accountKey = normalizeAccountKey(
-    profileUrl || context.formData?.profileUrl || context.profileData?.profileUrl || "",
-    auditResult.businessName
-  );
+  const accountKey =
+    memoryAccountKey ||
+    normalizeAccountKey(
+      profileUrl || context.formData?.profileUrl || context.profileData?.profileUrl || "",
+      auditResult.businessName
+    );
 
   useEffect(() => {
     setEntries(readVisibilityMemoryEntries());

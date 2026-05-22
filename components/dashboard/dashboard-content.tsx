@@ -19,6 +19,7 @@ import {
 } from "@/lib/workspace-persistence";
 import {
   createVisibilityMemoryEntry,
+  normalizeAccountKey,
   saveVisibilityMemoryEntry
 } from "@/lib/visibility-memory";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
@@ -43,6 +44,7 @@ export function DashboardContent() {
   const [requestStatus, setRequestStatus] = useState<RequestStatus>("idle");
   const [platform, setPlatform] = useState<AuditPlatform>(initialPlatform);
   const [profileUrl, setProfileUrl] = useState("");
+  const [memoryAccountKey, setMemoryAccountKey] = useState("");
   const [memoryRevision, setMemoryRevision] = useState(0);
   const [planContext, setPlanContext] = useState<{
     formData?: BusinessAuditFormData;
@@ -70,6 +72,15 @@ export function DashboardContent() {
     setAuditResult(savedWorkspace.auditResult);
     setPlatform(savedWorkspace.platform);
     setProfileUrl(savedWorkspace.profileUrl);
+    setMemoryAccountKey(
+      normalizeAccountKey(
+        savedWorkspace.profileUrl ||
+          savedWorkspace.planContext.formData?.profileUrl ||
+          savedWorkspace.planContext.profileData?.profileUrl ||
+          "",
+        savedWorkspace.auditResult.businessName
+      )
+    );
     setLiveScan(savedWorkspace.liveScan);
     setPlanContext(savedWorkspace.planContext);
     setIsUsingFallback(false);
@@ -101,6 +112,7 @@ export function DashboardContent() {
       context
     );
     saveVisibilityMemoryEntry(memoryEntry);
+    setMemoryAccountKey(memoryEntry.accountKey);
     setMemoryRevision((currentRevision) => currentRevision + 1);
     setAuditResult(result);
     setPlanContext(context);
@@ -132,6 +144,7 @@ export function DashboardContent() {
     setAuditResult(createFallbackAuditResult(platform));
     setPlanContext({});
     setProfileUrl("");
+    setMemoryAccountKey("");
     setIsUsingFallback(true);
     setRequestStatus("idle");
     setLiveScan({
@@ -172,6 +185,7 @@ export function DashboardContent() {
             auditResult={auditResult}
             context={planContext}
             isUsingFallback={isUsingFallback}
+            memoryAccountKey={memoryAccountKey}
             memoryRevision={memoryRevision}
             profileUrl={profileUrl}
           />

@@ -59,10 +59,20 @@ export function normalizeAccountKey(profileUrl: string, businessName: string) {
   if (profileUrl.trim()) {
     try {
       const parsedUrl = new URL(profileUrl);
-      return `${parsedUrl.hostname}${parsedUrl.pathname}`
-        .toLowerCase()
-        .replace(/\/+$/, "")
-        .replace(/^www\./, "");
+      const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, "");
+      const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+
+      if (hostname.includes("tiktok.com")) {
+        const username = pathSegments.find((segment) => segment.startsWith("@"));
+        return username ? `${hostname}/${username.toLowerCase()}` : hostname;
+      }
+
+      if (hostname.includes("instagram.com")) {
+        const username = pathSegments[0];
+        return username ? `${hostname}/${username.toLowerCase()}` : hostname;
+      }
+
+      return `${hostname}/${pathSegments.join("/")}`.toLowerCase().replace(/\/+$/, "");
     } catch {
       return normalizeText(profileUrl).replace(/\/+$/, "");
     }
