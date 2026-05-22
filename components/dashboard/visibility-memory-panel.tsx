@@ -95,6 +95,10 @@ export function VisibilityMemoryPanel({
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <DebugItem label="Normalized account key" value={accountKey || "Not set"} />
               <DebugItem
+                label="Active save function version"
+                value={memoryDebug.activeSaveFunctionVersion || "Not active yet"}
+              />
+              <DebugItem
                 label="Saved account key"
                 value={memoryDebug.normalizedAccountKey || "No save attempted"}
               />

@@ -50,6 +50,7 @@ export type VisibilityMemoryReport = {
 };
 
 export type VisibilityMemoryDebugState = {
+  activeSaveFunctionVersion: string;
   normalizedAccountKey: string;
   storageWriteKey: string;
   storageReadKey: string;
@@ -71,6 +72,7 @@ export type VisibilityMemoryDebugState = {
 const memoryLimitPerAccount = 8;
 
 export const emptyVisibilityMemoryDebug: VisibilityMemoryDebugState = {
+  activeSaveFunctionVersion: "",
   normalizedAccountKey: "",
   storageWriteKey: visibilityMemoryStorageKey,
   storageReadKey: visibilityMemoryStorageKey,
@@ -558,6 +560,7 @@ export function saveMemoryAudit(
   const auditObjectPassedValidation = validateVisibilityMemoryAudit(auditResult);
   const baseDebug: VisibilityMemoryDebugState = {
     ...emptyVisibilityMemoryDebug,
+    activeSaveFunctionVersion: "append-fix-v2",
     normalizedAccountKey,
     storageWriteKey: visibilityMemoryStorageKey,
     storageReadKey: visibilityMemoryStorageKey,
@@ -599,15 +602,7 @@ export function saveMemoryAudit(
   try {
     const entry = createVisibilityMemoryEntry(auditResult, platform, context);
     const existingEntries = Array.isArray(readResult.entries) ? readResult.entries : [];
-    const appendedEntries = [...existingEntries, entry];
-    const currentAccountEntries = appendedEntries
-      .filter((storedEntry) => storedEntry.accountKey === entry.accountKey)
-      .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))
-      .slice(memoryLimitPerAccount);
-    const otherAccountEntries = appendedEntries.filter(
-      (storedEntry) => storedEntry.accountKey !== entry.accountKey
-    );
-    const updatedEntries = [...otherAccountEntries, ...currentAccountEntries].slice(-80);
+    const updatedEntries = [...existingEntries, entry].slice(-80);
     const serializedMemory = JSON.stringify(updatedEntries);
 
     window.localStorage.setItem(visibilityMemoryStorageKey, serializedMemory);
