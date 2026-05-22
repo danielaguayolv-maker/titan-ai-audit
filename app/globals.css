@@ -101,7 +101,7 @@ canvas {
   background: rgba(0, 0, 0, 0.24);
   border: 1px solid rgba(215, 173, 79, 0.12);
   max-width: 100%;
-  min-width: min(100%, 20rem);
+  min-width: 0;
   overflow-wrap: break-word;
   transition:
     transform 220ms ease,
@@ -181,21 +181,21 @@ canvas {
 
 @media (min-width: 56rem) {
   .titan-readable-grid {
-    grid-template-columns: repeat(2, minmax(20rem, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .titan-metric-grid {
-    grid-template-columns: repeat(2, minmax(20rem, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 86rem) {
   .titan-readable-grid {
-    grid-template-columns: repeat(3, minmax(20rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .titan-metric-grid {
-    grid-template-columns: repeat(3, minmax(20rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
