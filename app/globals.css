@@ -85,7 +85,8 @@ canvas {
 .premium-surface p,
 .premium-surface li,
 .premium-surface summary {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .titan-panel {
@@ -100,7 +101,7 @@ canvas {
   background: rgba(0, 0, 0, 0.24);
   border: 1px solid rgba(215, 173, 79, 0.12);
   max-width: 100%;
-  min-width: min(100%, 18rem);
+  min-width: min(100%, 20rem);
   overflow-wrap: break-word;
   transition:
     transform 220ms ease,
@@ -146,29 +147,64 @@ canvas {
 .titan-readable-grid {
   display: grid;
   gap: 1.25rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  grid-template-columns: 1fr;
   min-width: 0;
 }
 
 .titan-metric-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  gap: 1.125rem;
+  grid-template-columns: 1fr;
   min-width: 0;
 }
 
 .titan-compact-grid {
   display: grid;
   gap: 0.875rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  grid-template-columns: 1fr;
   min-width: 0;
 }
 
 .titan-card-title {
-  max-width: 22ch;
+  line-height: 1.18;
+  max-width: 26ch;
   overflow-wrap: normal;
   text-wrap: balance;
   word-break: normal;
+}
+
+@media (min-width: 48rem) {
+  .titan-compact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 56rem) {
+  .titan-readable-grid {
+    grid-template-columns: repeat(2, minmax(20rem, 1fr));
+  }
+
+  .titan-metric-grid {
+    grid-template-columns: repeat(2, minmax(20rem, 1fr));
+  }
+}
+
+@media (min-width: 86rem) {
+  .titan-readable-grid {
+    grid-template-columns: repeat(3, minmax(20rem, 1fr));
+  }
+
+  .titan-metric-grid {
+    grid-template-columns: repeat(3, minmax(20rem, 1fr));
+  }
+}
+
+@media (max-width: 30rem) {
+  .titan-chip {
+    font-size: 0.625rem;
+    min-height: 1.625rem;
+    padding: 0.3125rem 0.625rem;
+  }
 }
 
 .titan-pulse-line {

@@ -2998,7 +2998,9 @@ function CommandMetricCard({
       type="button"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <p className="titan-card-title font-black text-titan-ivory">{metric.label}</p>
+        <p className="titan-card-title text-lg font-black text-titan-ivory">
+          {metric.label}
+        </p>
         <SeverityBadge severity={severity} />
       </div>
       <div className="mt-4 flex items-end gap-2">
@@ -3013,7 +3015,7 @@ function CommandMetricCard({
           style={{ width: `${metric.confidence}%` }}
         />
       </div>
-      <p className="text-anywhere mt-3 text-xs leading-5 text-titan-ivory/58">
+      <p className="titan-copy mt-3 text-sm text-titan-ivory/58">
         {metric.interpretation}
       </p>
     </button>
