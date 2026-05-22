@@ -16,6 +16,9 @@ export type RequestStatus = "idle" | "loading" | "success" | "error";
 type AiAuditPanelProps = {
   auditResult: AiAuditResult;
   isUsingFallback: boolean;
+  onClearResults: () => void;
+  restoredFormData?: BusinessAuditFormData;
+  restoredLiveScan: LiveScanResult;
   onAuditGenerated: (
     result: AiAuditResult,
     context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
@@ -106,6 +109,9 @@ const platformFocus: Record<AuditPlatform, string[]> = {
 export function AiAuditPanel({
   auditResult,
   isUsingFallback,
+  onClearResults,
+  restoredFormData,
+  restoredLiveScan,
   onAuditGenerated,
   onLiveScanChange,
   onPlatformChange,
@@ -140,6 +146,23 @@ export function AiAuditPanel({
       // Local persistence is optional and should never block an audit.
     }
   }, []);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    if (isUsingFallback) {
+      setLiveScan(initialLiveScan);
+      return;
+    }
+
+    setLiveScan(restoredLiveScan);
+
+    if (restoredFormData) {
+      setFormData(restoredFormData);
+    }
+  }, [isUsingFallback, restoredFormData, restoredLiveScan, status]);
 
   function inferPlatformFromUrl(url: string): AuditPlatform | null {
     const normalizedUrl = url.toLowerCase();
@@ -387,6 +410,15 @@ export function AiAuditPanel({
               >
                 {status === "loading" ? "Running Visibility Audit..." : "Run Visibility Audit"}
               </button>
+              {!isUsingFallback ? (
+                <button
+                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-5 text-xs font-black uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:bg-white/10 hover:text-titan-bright"
+                  onClick={onClearResults}
+                  type="button"
+                >
+                  Clear Current Results
+                </button>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {platformFocus[formData.platform].slice(0, 6).map((item) => (

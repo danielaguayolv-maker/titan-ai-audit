@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFallbackAuditResult } from "@/lib/audit-fallback";
 import type {
   AiAuditResult,
@@ -9,6 +9,14 @@ import type {
   LiveScanResult,
   ProfileData
 } from "@/lib/audit-ai";
+import {
+  clearJsonStorage,
+  readJsonStorage,
+  titanStudioPlanStorageKey,
+  titanWorkspaceStorageKey,
+  writeJsonStorage,
+  type PersistedAuditWorkspace
+} from "@/lib/workspace-persistence";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
 import { CategoryScores } from "./category-scores";
@@ -45,12 +53,47 @@ export function DashboardContent() {
     metricsStatus: "limited"
   });
 
+  useEffect(() => {
+    const savedWorkspace = readJsonStorage<PersistedAuditWorkspace>(
+      titanWorkspaceStorageKey
+    );
+
+    if (!savedWorkspace) {
+      return;
+    }
+
+    setAuditResult(savedWorkspace.auditResult);
+    setPlatform(savedWorkspace.platform);
+    setProfileUrl(savedWorkspace.profileUrl);
+    setLiveScan(savedWorkspace.liveScan);
+    setPlanContext(savedWorkspace.planContext);
+    setIsUsingFallback(false);
+    setRequestStatus("success");
+  }, []);
+
+  useEffect(() => {
+    if (isUsingFallback) {
+      return;
+    }
+
+    writeJsonStorage<PersistedAuditWorkspace>(titanWorkspaceStorageKey, {
+      savedAt: new Date().toISOString(),
+      auditResult,
+      platform,
+      profileUrl,
+      liveScan,
+      planContext
+    });
+  }, [auditResult, isUsingFallback, liveScan, planContext, platform, profileUrl]);
+
   function handleAuditGenerated(
     result: AiAuditResult,
     context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
   ) {
     setAuditResult(result);
     setPlanContext(context);
+    setProfileUrl(context.formData.profileUrl);
+    setPlatform(context.formData.platform);
     setIsUsingFallback(false);
   }
 
@@ -72,6 +115,24 @@ export function DashboardContent() {
     setRequestStatus(status);
   }
 
+  function clearCurrentResults() {
+    clearJsonStorage(titanWorkspaceStorageKey, titanStudioPlanStorageKey);
+    setAuditResult(createFallbackAuditResult(platform));
+    setPlanContext({});
+    setProfileUrl("");
+    setIsUsingFallback(true);
+    setRequestStatus("idle");
+    setLiveScan({
+      status: "skipped",
+      message: "Live Scan: Ready",
+      dataPointsFound: [],
+      missingDataPoints: [],
+      scanCompleteness: 0,
+      confidenceScore: 0,
+      metricsStatus: "limited"
+    });
+  }
+
   return (
     <DashboardShell
       activeModule={activeModule}
@@ -81,7 +142,10 @@ export function DashboardContent() {
         <>
           <AiAuditPanel
             auditResult={auditResult}
+            onClearResults={clearCurrentResults}
             isUsingFallback={isUsingFallback}
+            restoredFormData={planContext.formData}
+            restoredLiveScan={liveScan}
             onAuditGenerated={handleAuditGenerated}
             onLiveScanChange={setLiveScan}
             onPlatformChange={handlePlatformChange}
@@ -114,6 +178,7 @@ export function DashboardContent() {
       {activeModule === "home" ? (
         <DashboardHome
           auditResult={auditResult}
+          onClearResults={clearCurrentResults}
           isUsingFallback={isUsingFallback}
           onOpenAudit={() => setActiveModule("audit")}
           onOpenStudio={() => setActiveModule("titan-studio")}
@@ -126,6 +191,7 @@ export function DashboardContent() {
           auditResult={auditResult}
           context={planContext}
           isUsingFallback={isUsingFallback}
+          onClearResults={clearCurrentResults}
           platform={platform}
         />
       ) : null}
@@ -241,12 +307,14 @@ function ModulePlaceholder({
 function DashboardHome({
   auditResult,
   isUsingFallback,
+  onClearResults,
   onOpenAudit,
   onOpenReports,
   onOpenStudio
 }: {
   auditResult: AiAuditResult;
   isUsingFallback: boolean;
+  onClearResults: () => void;
   onOpenAudit: () => void;
   onOpenReports: () => void;
   onOpenStudio: () => void;
@@ -286,6 +354,15 @@ function DashboardHome({
             >
               Open Titan Studio
             </button>
+            {!isUsingFallback ? (
+              <button
+                className="luxury-border inline-flex min-h-12 items-center justify-center rounded-full bg-black/20 px-6 text-sm font-bold uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:text-titan-bright"
+                onClick={onClearResults}
+                type="button"
+              >
+                Clear Current Results
+              </button>
+            ) : null}
           </div>
         </article>
 

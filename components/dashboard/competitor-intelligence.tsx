@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type {
   AiAuditResult,
   AuditApiResponse,
@@ -15,6 +15,12 @@ import {
   type CompetitorIntelligenceReport,
   type CompetitorSnapshot
 } from "@/lib/competitor-intelligence";
+import {
+  clearJsonStorage,
+  readJsonStorage,
+  titanCompetitorStorageKey,
+  writeJsonStorage
+} from "@/lib/workspace-persistence";
 
 type CompetitorIntelligenceProps = {
   platform: AuditPlatform;
@@ -28,6 +34,14 @@ type AuditSnapshotState = {
   liveScan: LiveScanResult;
   profileUrl: string;
   platform: AuditPlatform;
+};
+
+type PersistedCompetitorComparison = {
+  savedAt: string;
+  yourProfileUrl: string;
+  competitorProfileUrl: string;
+  yourAudit: AuditSnapshotState;
+  competitorAudit: AuditSnapshotState;
 };
 
 const fieldClass =
@@ -157,6 +171,23 @@ export function CompetitorIntelligence({
   const [competitorAudit, setCompetitorAudit] =
     useState<AuditSnapshotState | null>(null);
 
+  useEffect(() => {
+    const savedComparison = readJsonStorage<PersistedCompetitorComparison>(
+      titanCompetitorStorageKey
+    );
+
+    if (!savedComparison) {
+      return;
+    }
+
+    setYourProfileUrl(savedComparison.yourProfileUrl);
+    setCompetitorProfileUrl(savedComparison.competitorProfileUrl);
+    setYourAudit(savedComparison.yourAudit);
+    setCompetitorAudit(savedComparison.competitorAudit);
+    setStatus("success");
+    setActiveStage(4);
+  }, []);
+
   const report = useMemo<CompetitorIntelligenceReport | null>(() => {
     if (!yourAudit || !competitorAudit) {
       return null;
@@ -191,6 +222,13 @@ export function CompetitorIntelligence({
         "competitor"
       );
       setCompetitorAudit(competitorResult);
+      writeJsonStorage<PersistedCompetitorComparison>(titanCompetitorStorageKey, {
+        savedAt: new Date().toISOString(),
+        yourProfileUrl: yourProfileUrl.trim(),
+        competitorProfileUrl: competitorProfileUrl.trim(),
+        yourAudit: yourResult,
+        competitorAudit: competitorResult
+      });
       setActiveStage(4);
       setStatus("success");
     } catch (caughtError) {
@@ -201,6 +239,17 @@ export function CompetitorIntelligence({
           : "Competitor intelligence could not be generated right now."
       );
     }
+  }
+
+  function clearComparisonResults() {
+    clearJsonStorage(titanCompetitorStorageKey);
+    setYourProfileUrl("");
+    setCompetitorProfileUrl("");
+    setYourAudit(null);
+    setCompetitorAudit(null);
+    setStatus("idle");
+    setError("");
+    setActiveStage(-1);
   }
 
   return (
@@ -258,6 +307,15 @@ export function CompetitorIntelligence({
               >
                 {status === "loading" ? "Building Intelligence..." : "Compare Profiles"}
               </button>
+              {report ? (
+                <button
+                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-5 text-xs font-black uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:bg-white/10 hover:text-titan-bright"
+                  onClick={clearComparisonResults}
+                  type="button"
+                >
+                  Clear Current Comparison
+                </button>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {["Hooks", "Visual strategy", "CTA clarity", "Audience psychology"].map((item) => (

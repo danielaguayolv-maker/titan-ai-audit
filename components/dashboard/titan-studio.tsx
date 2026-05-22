@@ -1,30 +1,53 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { AiAuditResult, AuditPlatform } from "@/lib/audit-ai";
 import {
   createVisibilityContentPlan,
   type VisibilityPlanContext,
   type WeeklyVisibilityPlan
 } from "@/lib/content-plan";
+import {
+  makeAuditWorkspaceKey,
+  titanStudioPlanStorageKey,
+  writeJsonStorage,
+  type PersistedTitanStudioPlan
+} from "@/lib/workspace-persistence";
 
 type TitanStudioProps = {
   auditResult: AiAuditResult;
   context?: VisibilityPlanContext;
   platform: AuditPlatform;
   isUsingFallback: boolean;
+  onClearResults: () => void;
 };
 
 export function TitanStudio({
   auditResult,
   context,
   platform,
-  isUsingFallback
+  isUsingFallback,
+  onClearResults
 }: TitanStudioProps) {
   const plan = useMemo(
     () => createVisibilityContentPlan(auditResult, platform, context),
     [auditResult, context, platform]
   );
+
+  useEffect(() => {
+    if (isUsingFallback) {
+      return;
+    }
+
+    writeJsonStorage<PersistedTitanStudioPlan>(titanStudioPlanStorageKey, {
+      savedAt: new Date().toISOString(),
+      auditKey: makeAuditWorkspaceKey(
+        auditResult,
+        context?.formData?.profileUrl ?? context?.profileData?.profileUrl ?? ""
+      ),
+      plan
+    });
+  }, [auditResult, context, isUsingFallback, plan]);
 
   return (
     <section className="px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
@@ -70,6 +93,15 @@ export function TitanStudio({
                   {plan.niche.confidence}% confidence
                 </p>
               </div>
+              {!isUsingFallback ? (
+                <button
+                  className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-4 text-[11px] font-black uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:text-titan-bright"
+                  onClick={onClearResults}
+                  type="button"
+                >
+                  Clear Current Results
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
