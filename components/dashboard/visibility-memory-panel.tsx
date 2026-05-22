@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   AiAuditResult,
-  AuditPlatform,
   BusinessAuditFormData,
   ProfileData
 } from "@/lib/audit-ai";
 import {
-  createVisibilityMemoryEntry,
   createVisibilityMemoryReport,
   normalizeAccountKey,
-  upsertVisibilityMemoryEntry,
-  visibilityMemoryStorageKey,
+  readVisibilityMemoryEntries,
   type VisibilityMemoryEntry
 } from "@/lib/visibility-memory";
 
@@ -20,74 +17,26 @@ type VisibilityMemoryPanelProps = {
   auditResult: AiAuditResult;
   context: { formData?: BusinessAuditFormData; profileData?: ProfileData | null };
   isUsingFallback: boolean;
-  platform: AuditPlatform;
+  memoryRevision: number;
   profileUrl: string;
 };
-
-function readStoredMemory() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const stored = window.localStorage.getItem(visibilityMemoryStorageKey);
-    return stored ? (JSON.parse(stored) as VisibilityMemoryEntry[]) : [];
-  } catch (error) {
-    console.error("Titan Visibility Memory read failed", error);
-    return [];
-  }
-}
-
-function writeStoredMemory(entries: VisibilityMemoryEntry[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(visibilityMemoryStorageKey, JSON.stringify(entries));
-  } catch (error) {
-    console.error("Titan Visibility Memory write failed", error);
-  }
-}
 
 export function VisibilityMemoryPanel({
   auditResult,
   context,
   isUsingFallback,
-  platform,
+  memoryRevision,
   profileUrl
 }: VisibilityMemoryPanelProps) {
   const [entries, setEntries] = useState<VisibilityMemoryEntry[]>([]);
-  const [hasHydratedMemory, setHasHydratedMemory] = useState(false);
-  const lastSavedSignature = useRef("");
   const accountKey = normalizeAccountKey(
     profileUrl || context.formData?.profileUrl || context.profileData?.profileUrl || "",
     auditResult.businessName
   );
 
   useEffect(() => {
-    setEntries(readStoredMemory());
-    setHasHydratedMemory(true);
-  }, []);
-
-  useEffect(() => {
-    if (isUsingFallback || !hasHydratedMemory) {
-      return;
-    }
-
-    const signature = `${accountKey}-${auditResult.businessName}-${auditResult.overallScore}-${auditResult.grade}`;
-    if (lastSavedSignature.current === signature) {
-      return;
-    }
-
-    const nextEntry = createVisibilityMemoryEntry(auditResult, platform, context);
-    setEntries((currentEntries) => {
-      const updatedEntries = upsertVisibilityMemoryEntry(currentEntries, nextEntry);
-      writeStoredMemory(updatedEntries);
-      return updatedEntries;
-    });
-    lastSavedSignature.current = signature;
-  }, [accountKey, auditResult, context, hasHydratedMemory, isUsingFallback, platform]);
+    setEntries(readVisibilityMemoryEntries());
+  }, [memoryRevision]);
 
   const memoryReport = useMemo(
     () => createVisibilityMemoryReport(entries, accountKey),

@@ -403,20 +403,37 @@ export function createVisibilityMemoryReport(
   };
 }
 
+export function readVisibilityMemoryEntries() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored = window.localStorage.getItem(visibilityMemoryStorageKey);
+    return stored ? (JSON.parse(stored) as VisibilityMemoryEntry[]) : [];
+  } catch (error) {
+    console.error("Titan Visibility Memory read failed", error);
+    return [];
+  }
+}
+
+export function writeVisibilityMemoryEntries(entries: VisibilityMemoryEntry[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(visibilityMemoryStorageKey, JSON.stringify(entries));
+  } catch (error) {
+    console.error("Titan Visibility Memory write failed", error);
+  }
+}
+
 export function upsertVisibilityMemoryEntry(
   entries: VisibilityMemoryEntry[],
   entry: VisibilityMemoryEntry
 ) {
-  const nextEntries = entries.filter(
-    (existing) =>
-      !(
-        existing.accountKey === entry.accountKey &&
-        existing.score === entry.score &&
-        existing.businessName === entry.businessName &&
-        Date.parse(entry.createdAt) - Date.parse(existing.createdAt) < 3000
-      )
-  );
-  const merged = [...nextEntries, entry];
+  const merged = [...entries, entry];
   const accountEntries = merged
     .filter((item) => item.accountKey === entry.accountKey)
     .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))
@@ -424,4 +441,11 @@ export function upsertVisibilityMemoryEntry(
   const otherEntries = merged.filter((item) => item.accountKey !== entry.accountKey);
 
   return [...otherEntries, ...accountEntries].slice(-80);
+}
+
+export function saveVisibilityMemoryEntry(entry: VisibilityMemoryEntry) {
+  const currentEntries = readVisibilityMemoryEntries();
+  const updatedEntries = upsertVisibilityMemoryEntry(currentEntries, entry);
+  writeVisibilityMemoryEntries(updatedEntries);
+  return updatedEntries;
 }

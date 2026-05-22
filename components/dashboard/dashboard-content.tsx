@@ -17,6 +17,10 @@ import {
   writeJsonStorage,
   type PersistedAuditWorkspace
 } from "@/lib/workspace-persistence";
+import {
+  createVisibilityMemoryEntry,
+  saveVisibilityMemoryEntry
+} from "@/lib/visibility-memory";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
 import { CategoryScores } from "./category-scores";
@@ -39,6 +43,7 @@ export function DashboardContent() {
   const [requestStatus, setRequestStatus] = useState<RequestStatus>("idle");
   const [platform, setPlatform] = useState<AuditPlatform>(initialPlatform);
   const [profileUrl, setProfileUrl] = useState("");
+  const [memoryRevision, setMemoryRevision] = useState(0);
   const [planContext, setPlanContext] = useState<{
     formData?: BusinessAuditFormData;
     profileData?: ProfileData | null;
@@ -90,6 +95,13 @@ export function DashboardContent() {
     result: AiAuditResult,
     context: { formData: BusinessAuditFormData; profileData: ProfileData | null }
   ) {
+    const memoryEntry = createVisibilityMemoryEntry(
+      result,
+      context.formData.platform,
+      context
+    );
+    saveVisibilityMemoryEntry(memoryEntry);
+    setMemoryRevision((currentRevision) => currentRevision + 1);
     setAuditResult(result);
     setPlanContext(context);
     setProfileUrl(context.formData.profileUrl);
@@ -160,7 +172,7 @@ export function DashboardContent() {
             auditResult={auditResult}
             context={planContext}
             isUsingFallback={isUsingFallback}
-            platform={platform}
+            memoryRevision={memoryRevision}
             profileUrl={profileUrl}
           />
           {!isUsingFallback && requestStatus === "success" ? (
