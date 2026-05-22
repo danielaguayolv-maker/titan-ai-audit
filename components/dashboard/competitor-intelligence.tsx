@@ -467,6 +467,16 @@ function CompetitorReport({
           items={report.emotionalContrastDifferences}
           title="Spikes, tension, and payoff"
         />
+        <InsightCard
+          eyebrow="Creative risk"
+          items={report.creativeRiskDifferences}
+          title="Safe vs contagious"
+        />
+        <InsightCard
+          eyebrow="Social proof energy"
+          items={report.socialProofEnergyDifferences}
+          title="Claimed rooms and visible demand"
+        />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">

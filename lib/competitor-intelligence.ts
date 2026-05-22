@@ -54,6 +54,8 @@ export type CompetitorIntelligenceReport = {
   culturalIdentityDifferences: string[];
   aestheticIdentityDifferences: string[];
   emotionalContrastDifferences: string[];
+  creativeRiskDifferences: string[];
+  socialProofEnergyDifferences: string[];
 };
 
 type ComparisonBlueprint = {
@@ -488,6 +490,58 @@ const comparisonBlueprints: ComparisonBlueprint[] = [
       "The audience needs a small jolt, not just a clear message.",
     direction:
       "Compare emotional spikes, tension and release, escalation, surprise, payoff contrast, and whether the reveal feels bigger than the setup."
+  },
+  {
+    label: "Creative risk",
+    keys: ["hook", "content", "engagement", "retention"],
+    strongerCompetitor:
+      "The competitor takes more creative risk. The feed interrupts behavior instead of politely asking for attention.",
+    strongerYou:
+      "Your account has the bolder read. Keep the risk. Do not sand it down.",
+    closeRead:
+      "Both accounts feel a little too safe.",
+    sharpRead:
+      "Nothing in the feed feels dangerous enough to interrupt behavior.",
+    visualTaste:
+      "Safe content explains. Risky content makes the viewer react before they can name why.",
+    tacticalMove:
+      "Let one idea feel slightly too sharp, too close, too fast, too honest.",
+    whyItMatters:
+      "Predictable content can be useful and still disappear.",
+    retentionRead:
+      "The viewer gets the answer before they want it.",
+    sequenceFix:
+      "Delay the answer. Leave the tension open for one more beat.",
+    emotionalRead:
+      "Curiosity needs a little risk around it.",
+    direction:
+      "Compare whether the content interrupts behavior, feels safe or bold, resolves too quickly, and creates enough tension to become contagious."
+  },
+  {
+    label: "Social proof energy",
+    keys: ["trust", "authority", "engagement", "content"],
+    strongerCompetitor:
+      "The competitor makes popularity feel more visible. The audience can sense other people caring.",
+    strongerYou:
+      "Your proof is stronger. Make the social energy around it feel more claimed.",
+    closeRead:
+      "Both accounts show proof, but the energy around the proof is still quiet.",
+    sharpRead:
+      "The food looks popular. The room does not feel claimed.",
+    visualTaste:
+      "Proof has texture: bodies in the room, replies, reactions, hands reaching, faces changing, people choosing it together.",
+    tacticalMove:
+      "Show the audience around the offer, not only the offer.",
+    whyItMatters:
+      "Social proof gets stronger when popularity feels visible instead of implied.",
+    retentionRead:
+      "The crowd is visible, but the energy has to transfer.",
+    sequenceFix:
+      "Put the claimed moment on screen: reaction, table, comment, line, DM, tagged post, shared ritual.",
+    emotionalRead:
+      "Belonging has to look real.",
+    direction:
+      "Compare whether the room feels claimed, the audience feels emotionally involved, popularity is visible, and belonging feels earned."
   }
 ];
 
@@ -543,15 +597,15 @@ function strengthContext(score: number, label: "your" | "competitor") {
   const owner = label === "your" ? "Your account" : "The competitor";
 
   if (score >= 82) {
-    return `${owner} has the sharper read here. Leave it lean and bring it forward.`;
+    return `${owner} has the sharper read here. Leave it lean.`;
   }
 
   if (score >= 68) {
-    return `${owner} is stronger, but the idea still needs a more memorable shape.`;
+    return `${owner} is stronger. The idea still needs a shape people remember.`;
   }
 
   if (score >= 52) {
-    return `${owner} wins the comparison, not the room. There is still energy left on the table.`;
+    return `${owner} wins the comparison, not the room.`;
   }
 
   return `${owner} only looks cleaner because the other side is softer. Not dominant yet.`;
@@ -617,6 +671,18 @@ function currentPattern(
     return role === "your"
       ? `${subject} keeps the emotional temperature too even: ${signal}`
       : `${subject} creates more lift, surprise, or release: ${signal}`;
+  }
+
+  if (dimension === "Creative risk") {
+    return role === "your"
+      ? `${subject} plays safer than the platform rewards: ${signal}`
+      : `${subject} lets the content feel less predictable: ${signal}`;
+  }
+
+  if (dimension === "Social proof energy") {
+    return role === "your"
+      ? `${subject} shows proof without enough social charge: ${signal}`
+      : `${subject} makes the audience energy easier to feel: ${signal}`;
   }
 
   return role === "your"
@@ -705,6 +771,30 @@ function differenceRead(
     return "The energy stays level on both sides. Nothing really jumps out yet.";
   }
 
+  if (dimension === "Creative risk") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} takes the bigger swing. Yours feels more controlled, and more forgettable because of it.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your account has the braver instinct. Let the tension stay unresolved a little longer.`;
+    }
+
+    return "Both accounts are behaving. That is the read.";
+  }
+
+  if (dimension === "Social proof energy") {
+    if (scoreDelta > 4) {
+      return `${competitorSubject} makes people feel present around the offer. Your proof is visible, but the room is quieter.`;
+    }
+
+    if (scoreDelta < -4) {
+      return `Your social proof carries more heat. Keep showing people choosing it.`;
+    }
+
+    return "The proof exists. The charge around it is still low.";
+  }
+
   if (scoreDelta > 4) {
     const opener =
       confidence === "shows"
@@ -720,10 +810,10 @@ function differenceRead(
         ? `Your account is ahead on ${dimension.toLowerCase()}.`
         : `Your account ${confidence} ahead on ${dimension.toLowerCase()}.`;
 
-    return `${opener} Keep the advantage. Do not overexplain it.`;
+    return `${opener} Do less with it.`;
   }
 
-  return `Both accounts are close on ${dimension.toLowerCase()}. The difference is taste now: what feels alive, specific, and worth remembering.`;
+  return `Both accounts are close on ${dimension.toLowerCase()}. Taste decides it now.`;
 }
 
 function adaptationRead(blueprint: ComparisonBlueprint, scoreDelta: number) {
@@ -790,7 +880,7 @@ function createDimensionComparison(
       ? strengthContext(competitorScore, "competitor")
       : scoreDelta < -4
         ? strengthContext(yourScore, "your")
-        : "No clear winner yet. The feed with the sharper first frame, cleaner proof beat, and better-timed ask will pull ahead.";
+        : "No clear winner yet. The more specific feed will start to feel inevitable.";
 
   return {
     label: blueprint.label,
@@ -858,6 +948,14 @@ function observationLine(dimension: CompetitorComparisonDimension) {
   return `${dimension.difference} ${dimension.adaptation}`;
 }
 
+function restrainedObservation(dimension: CompetitorComparisonDimension) {
+  if (Math.abs(dimension.scoreDelta) <= 4) {
+    return dimension.adaptation;
+  }
+
+  return dimension.difference;
+}
+
 function dimensionByLabel(dimensions: CompetitorComparisonDimension[], label: string) {
   return dimensions.find((dimension) => dimension.label === label) ?? dimensions[0];
 }
@@ -882,6 +980,8 @@ export function createCompetitorIntelligenceReport(
   const culturalDimension = dimensionByLabel(dimensions, "Cultural / social identity");
   const aestheticDimension = dimensionByLabel(dimensions, "Aesthetic identity");
   const contrastDimension = dimensionByLabel(dimensions, "Emotional contrast");
+  const creativeRiskDimension = dimensionByLabel(dimensions, "Creative risk");
+  const socialProofDimension = dimensionByLabel(dimensions, "Social proof energy");
   const yourVisualCue = yourPlan.contentPriorities[0] ?? "Make the opening frame clearer.";
   const competitorVisualCue =
     competitorPlan.contentPriorities[0] ?? "Competitor opens with a clearer visual promise.";
@@ -892,7 +992,7 @@ export function createCompetitorIntelligenceReport(
     dimensions,
     whatTheyDoBetter: competitorEdges.map(toActionSentence),
     whatYouDoBetter: yourEdges.map(toActionSentence),
-    biggestOpportunityGap: `${largestGap.label}: ${largestGap.sharpRead} ${largestGap.sequenceFix}`,
+    biggestOpportunityGap: `${largestGap.label}: ${largestGap.sharpRead}`,
     strategicStrengths: [
       ...yourEdges.map((dimension) => `${dimension.label}: ${dimension.adaptation}`),
       `Niche lock: your plan is reading as ${yourPlan.niche.label}, so keep the language native to that audience.`
@@ -906,14 +1006,15 @@ export function createCompetitorIntelligenceReport(
       .slice(0, 4)
       .map((dimension) => `${dimension.label}: ${dimension.sharpRead ?? dimension.contentDirection}`),
     contentOpportunities: [
-      `Create one post that sells the atmosphere before the offer. Let the room, hands, faces, texture, or screen movement carry the first beat.`,
+      `Create one post that sells the atmosphere before the offer.`,
       `Give the account one recurring cue people can recognize without reading the handle.`,
-      `Put a stronger point of view near the front. Less content about the brand; more content from the brand.`
+      `Let one post take a bigger swing. Not messy. Just less obedient.`
     ],
     hookStyleDifferences: [
-      `Your feed reads this way: ${yourVisualCue}`,
-      `The competitor reads this way: ${competitorVisualCue}`,
-      observationLine(hookDimension)
+      `Your visual philosophy: ${yourVisualCue}`,
+      `Competitor visual philosophy: ${competitorVisualCue}`,
+      restrainedObservation(hookDimension),
+      restrainedObservation(aestheticDimension)
     ],
     ctaDifferences: [
       `Your CTA behavior: ${dimensionSignal(yours.result, ["cta", "conversion", "offer"], "Your CTA signal is developing.")}`,
@@ -921,9 +1022,9 @@ export function createCompetitorIntelligenceReport(
       observationLine(ctaDimension)
     ],
     visualExecutionDifferences: [
-      "Look at what hits first: movement, face, food pull, screen reveal, reaction, or explanation. The first frame tells you who understands the platform better.",
-      "Cut before the viewer fully processes the frame. Let the second beat explain what the first beat made them feel.",
-      "Drop the CTA while the proof is still alive on screen, not after the emotional peak has passed."
+      "Look at what hits first: movement, face, food pull, screen reveal, reaction, or explanation.",
+      "The viewer gets the answer before they want it.",
+      restrainedObservation(contrastDimension)
     ],
     audiencePsychologyDifferences: [
       `Your audience identity: ${yourPlan.niche.audience}`,
@@ -931,34 +1032,44 @@ export function createCompetitorIntelligenceReport(
       "The stronger account makes the viewer feel like the content belongs to their life, not just their feed."
     ],
     emotionalBrandDifferences: [
-      observationLine(emotionalBrandDimension),
+      restrainedObservation(emotionalBrandDimension),
       emotionalBrandDimension.visualTaste,
       "The audience can understand the offer and still feel nothing about the place."
     ],
     memorabilityDifferences: [
-      observationLine(memorabilityDimension),
+      restrainedObservation(memorabilityDimension),
       memorabilityDimension.visualTaste,
       "One image should survive the scroll."
     ],
     presenceDifferences: [
-      observationLine(presenceDimension),
+      restrainedObservation(presenceDimension),
       presenceDimension.visualTaste,
       "The account needs a pulse, not just a posting schedule."
     ],
     culturalIdentityDifferences: [
-      observationLine(culturalDimension),
+      restrainedObservation(culturalDimension),
       culturalDimension.visualTaste,
       "People share what says something about them."
     ],
     aestheticIdentityDifferences: [
-      observationLine(aestheticDimension),
+      restrainedObservation(aestheticDimension),
       aestheticDimension.visualTaste,
-      "The content can be polished and still feel unowned. Give it fingerprints."
+      "The content can be polished and still feel unowned."
     ],
     emotionalContrastDifferences: [
-      observationLine(contrastDimension),
+      restrainedObservation(contrastDimension),
       contrastDimension.visualTaste,
       "The reveal feels bigger when the energy changes first."
+    ],
+    creativeRiskDifferences: [
+      restrainedObservation(creativeRiskDimension),
+      creativeRiskDimension.visualTaste,
+      "Everything resolves too quickly."
+    ],
+    socialProofEnergyDifferences: [
+      restrainedObservation(socialProofDimension),
+      socialProofDimension.visualTaste,
+      "The crowd can be visible and still not transfer."
     ]
   };
 }
