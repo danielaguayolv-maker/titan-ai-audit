@@ -46,6 +46,7 @@ export function DashboardContent() {
   const [activeModule, setActiveModule] = useState<TitanOsModule>("home");
   const [showGuidedOnboarding, setShowGuidedOnboarding] = useState(false);
   const [uxMode, setUxMode] = useState<TitanUxMode>("strategist");
+  const [experiments, setExperiments] = useState<TitanExperiment[]>([]);
   const [auditResult, setAuditResult] = useState<AiAuditResult>(() =>
     createFallbackAuditResult(initialPlatform)
   );
@@ -87,6 +88,14 @@ export function DashboardContent() {
 
     if (isTitanUxMode(savedMode)) {
       setUxMode(savedMode);
+    }
+
+    const savedExperiments = readJsonStorage<TitanExperiment[]>(
+      titanExperimentStorageKey
+    );
+
+    if (Array.isArray(savedExperiments)) {
+      setExperiments(savedExperiments);
     }
   }, []);
 
@@ -224,6 +233,44 @@ export function DashboardContent() {
     setUxMode(mode);
   }
 
+  function updateExperiments(nextExperiments: TitanExperiment[]) {
+    setExperiments(nextExperiments);
+    writeJsonStorage<TitanExperiment[]>(
+      titanExperimentStorageKey,
+      nextExperiments
+    );
+  }
+
+  function startExperiment(input: TitanExperimentInput) {
+    const experiment = createTitanExperiment(input, {
+      accountKey: memoryAccountKey || normalizeAccountKey(profileUrl, auditResult.businessName),
+      businessName: auditResult.businessName,
+      scoreAtStart: Math.round(auditResult.overallScore)
+    });
+
+    updateExperiments([experiment, ...experiments]);
+  }
+
+  function updateExperimentStatus(
+    experimentId: string,
+    status: TitanExperimentStatus
+  ) {
+    const updatedExperiments = experiments.map((experiment) =>
+      experiment.id === experimentId
+        ? {
+            ...experiment,
+            status,
+            completedAt:
+              status === "completed" || status === "archived"
+                ? new Date().toISOString()
+                : experiment.completedAt
+          }
+        : experiment
+    );
+
+    updateExperiments(updatedExperiments);
+  }
+
   return (
     <DashboardShell
       activeModule={activeModule}
@@ -286,6 +333,9 @@ export function DashboardContent() {
           isUsingFallback={isUsingFallback}
           memoryAccountKey={memoryAccountKey}
           memoryEntriesSnapshot={memoryEntriesSnapshot}
+          experiments={experiments}
+          onExperimentStatusChange={updateExperimentStatus}
+          onStartExperiment={startExperiment}
           onOpenAudit={() => setActiveModule("audit")}
           onOpenStudio={() => setActiveModule("titan-studio")}
           onOpenReports={() => setActiveModule("reports")}
@@ -432,24 +482,33 @@ function ModulePlaceholder({
 
 function DashboardHome({
   auditResult,
+  experiments,
   isUsingFallback,
   memoryAccountKey,
   memoryEntriesSnapshot,
   onClearResults,
+  onExperimentStatusChange,
   onOpenAudit,
   onOpenReports,
   onOpenStudio,
+  onStartExperiment,
   onUxModeChange,
   uxMode
 }: {
   auditResult: AiAuditResult;
+  experiments: TitanExperiment[];
   isUsingFallback: boolean;
   memoryAccountKey: string;
   memoryEntriesSnapshot: VisibilityMemoryEntry[];
   onClearResults: () => void;
+  onExperimentStatusChange: (
+    experimentId: string,
+    status: TitanExperimentStatus
+  ) => void;
   onOpenAudit: () => void;
   onOpenReports: () => void;
   onOpenStudio: () => void;
+  onStartExperiment: (input: TitanExperimentInput) => void;
   onUxModeChange: (mode: TitanUxMode) => void;
   uxMode: TitanUxMode;
 }) {
@@ -539,6 +598,22 @@ function DashboardHome({
     opportunities,
     isUsingFallback
   );
+  const experimentRecommendations = buildRecommendedExperiments(
+    primaryBlocker,
+    strategicMetrics,
+    opportunities,
+    recommendations
+  );
+  const experimentTimeline = buildStrategicExperimentTimeline(
+    experiments,
+    evolutionReport,
+    warnings,
+    opportunities
+  );
+  const experimentCorrelation = buildExperimentCorrelationInsights(
+    experiments,
+    evolutionReport
+  );
   const showDeepIntelligence = uxMode === "deep";
   const showStrategistContent = uxMode === "strategist" || uxMode === "deep";
   const showSimplified = uxMode === "simplified";
@@ -623,7 +698,20 @@ function DashboardHome({
         </article>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.88fr)]">
-          <PrimaryBlockerCard blocker={primaryBlocker} />
+          <PrimaryBlockerCard
+            blocker={primaryBlocker}
+            onStartExperiment={() =>
+              onStartExperiment({
+                source: "Primary Blocker",
+                title: primaryBlocker.recommendedFocus,
+                description: primaryBlocker.title,
+                hypothesis: primaryBlocker.description,
+                predictedImpact: primaryBlocker.recommendedFocus,
+                confidence: primaryBlocker.confidence,
+                severity: primaryBlocker.severity
+              })
+            }
+          />
           <StrategicPriorityRanking priorities={strategicPriorities} />
         </div>
 
@@ -631,6 +719,15 @@ function DashboardHome({
           <DailyReturnLayer signals={dailyReturnSignals} />
           <AdaptiveNextStepPanel steps={adaptiveNextSteps} />
         </div>
+
+        <StrategicExperimentDashboard
+          correlations={experimentCorrelation}
+          experiments={experiments}
+          onStatusChange={onExperimentStatusChange}
+          onStartExperiment={onStartExperiment}
+          recommendations={experimentRecommendations}
+          timeline={experimentTimeline}
+        />
 
         {isUsingFallback ? (
           <FirstAuditGuidance
@@ -679,7 +776,22 @@ function DashboardHome({
           </article>
         </div>
 
-        {!showSimplified ? <DrillDownIntelligencePanel signal={activeSignal} /> : null}
+        {!showSimplified ? (
+          <DrillDownIntelligencePanel
+            onStartExperiment={() =>
+              onStartExperiment({
+                source: activeSignal.label,
+                title: activeSignal.improveFirst,
+                description: activeSignal.summary,
+                hypothesis: activeSignal.prediction,
+                predictedImpact: activeSignal.impact,
+                confidence: activeSignal.confidence,
+                severity: activeSignal.severity
+              })
+            }
+            signal={activeSignal}
+          />
+        ) : null}
 
         {showStrategistContent ? (
           <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -694,6 +806,17 @@ function DashboardHome({
               eyebrow="Behavioral warnings"
               items={warnings}
               onItemSelect={(item) => setActiveExploration(`warning-${item}`)}
+              onStartExperiment={(item) =>
+                onStartExperiment({
+                  source: "Behavioral Warning",
+                  title: item,
+                  description: "Track this warning as a strategic adjustment.",
+                  hypothesis: "Reducing this behavior should stabilize the related visibility signal.",
+                  predictedImpact: "Lower volatility and clearer movement after the next audit.",
+                  confidence: 62,
+                  severity: "Warning"
+                })
+              }
               tone="warning"
               title="What could quietly weaken performance"
             />
@@ -701,6 +824,17 @@ function DashboardHome({
               eyebrow="Opportunity signals"
               items={opportunities}
               onItemSelect={(item) => setActiveExploration(`opportunity-${item}`)}
+              onStartExperiment={(item) =>
+                onStartExperiment({
+                  source: "Opportunity Signal",
+                  title: item,
+                  description: "Test this opportunity across the next content cycle.",
+                  hypothesis: "Repeating this behavior should create a stronger positive movement signal.",
+                  predictedImpact: "Higher audience pull or stronger identity consistency.",
+                  confidence: 72,
+                  severity: "Opportunity"
+                })
+              }
               tone="positive"
               title="Where momentum can be created"
             />
@@ -708,6 +842,17 @@ function DashboardHome({
               eyebrow="Strategic recommendations"
               items={recommendations}
               onItemSelect={(item) => setActiveExploration(`recommendation-${item}`)}
+              onStartExperiment={(item) =>
+                onStartExperiment({
+                  source: "Strategic Recommendation",
+                  title: item,
+                  description: "Mark this recommendation as a live strategic test.",
+                  hypothesis: "Applying this recommendation should improve the next movement read.",
+                  predictedImpact: "Clearer strategic momentum after the next audit.",
+                  confidence: 68,
+                  severity: "High Confidence"
+                })
+              }
               tone="neutral"
               title="What to do this week"
             />
@@ -875,6 +1020,12 @@ type TitanUxMode =
   | "deep"
   | "simplified";
 
+type TitanExperimentStatus =
+  | "testing"
+  | "applied"
+  | "completed"
+  | "archived";
+
 type StrategicSeverity =
   | "Critical"
   | "High Priority"
@@ -973,8 +1124,54 @@ type AdaptiveNextStep = {
   severity: StrategicSeverity;
 };
 
+type TitanExperiment = {
+  id: string;
+  accountKey: string;
+  businessName: string;
+  title: string;
+  description: string;
+  source: string;
+  hypothesis: string;
+  predictedImpact: string;
+  confidence: number;
+  severity: StrategicSeverity;
+  status: TitanExperimentStatus;
+  observationStatus: ExperimentObservationStatus;
+  scoreAtStart: number;
+  createdAt: string;
+  completedAt?: string;
+};
+
+type TitanExperimentInput = {
+  title: string;
+  description: string;
+  source: string;
+  hypothesis: string;
+  predictedImpact: string;
+  confidence: number;
+  severity: StrategicSeverity;
+};
+
+type ExperimentObservationStatus =
+  | "Early Positive Signal"
+  | "Strengthening"
+  | "Unclear"
+  | "Volatile"
+  | "Weakening"
+  | "Stabilizing";
+
+type ExperimentTimelineItem = {
+  id: string;
+  title: string;
+  summary: string;
+  timestamp: string;
+  severity: StrategicSeverity;
+  movement: EvolutionMovementStatus;
+};
+
 const titanGuidedOnboardingStorageKey = "titan-guided-onboarding-complete";
 const titanUxModeStorageKey = "titan-ux-mode";
+const titanExperimentStorageKey = "titan-strategic-experiments";
 
 function isTitanUxMode(value: string | null): value is TitanUxMode {
   return (
@@ -1959,6 +2156,486 @@ function buildAdaptiveNextSteps(
   ];
 }
 
+function createTitanExperiment(
+  input: TitanExperimentInput,
+  context: { accountKey: string; businessName: string; scoreAtStart: number }
+): TitanExperiment {
+  return {
+    ...input,
+    accountKey: context.accountKey || normalizeAccountKey("", context.businessName),
+    businessName: context.businessName,
+    completedAt: undefined,
+    createdAt: new Date().toISOString(),
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    observationStatus: observationStatusFromSeverity(input.severity),
+    scoreAtStart: context.scoreAtStart,
+    status: "testing"
+  };
+}
+
+function observationStatusFromSeverity(
+  severity: StrategicSeverity
+): ExperimentObservationStatus {
+  if (severity === "Critical" || severity === "High Priority") {
+    return "Unclear";
+  }
+
+  if (severity === "Volatile") {
+    return "Volatile";
+  }
+
+  if (severity === "Opportunity" || severity === "High Confidence") {
+    return "Early Positive Signal";
+  }
+
+  return "Stabilizing";
+}
+
+function experimentStatusLabel(status: TitanExperimentStatus) {
+  const labels: Record<TitanExperimentStatus, string> = {
+    applied: "Applied",
+    archived: "Archived",
+    completed: "Completed",
+    testing: "Testing"
+  };
+
+  return labels[status];
+}
+
+function buildRecommendedExperiments(
+  blocker: StrategicBlocker,
+  metrics: CommandMetric[],
+  opportunities: string[],
+  recommendations: string[]
+): TitanExperimentInput[] {
+  const hookMetric = metrics.find((metric) =>
+    metric.label.toLowerCase().includes("hook")
+  );
+  const ctaMetric = metrics.find((metric) =>
+    metric.label.toLowerCase().includes("cta")
+  );
+  const identityMetric = metrics.find((metric) =>
+    metric.label.toLowerCase().includes("identity")
+  );
+
+  return [
+    {
+      title: "Test reaction-first openings over the next 5 posts.",
+      description:
+        "Start content with people, movement, reaction, or emotional proof before explaining the offer.",
+      source: "Recommended Next Experiment",
+      hypothesis:
+        "Reaction-first openings should create more audience pull than informational openings.",
+      predictedImpact:
+        "Hook stability and audience pull should strengthen after the next audit.",
+      confidence: hookMetric?.confidence ?? 72,
+      severity: hookMetric
+        ? severityFromMovement(hookMetric.direction, hookMetric.score)
+        : "Opportunity"
+    },
+    {
+      title: "Move the CTA closer to the strongest proof moment.",
+      description:
+        "Place the next step while the visual or emotional peak is still active.",
+      source: "Recommended Next Experiment",
+      hypothesis:
+        "Earlier CTA timing should reduce conversion friction and clarify the action path.",
+      predictedImpact:
+        "CTA efficiency should stabilize before broader visibility movement changes.",
+      confidence: ctaMetric?.confidence ?? 68,
+      severity: ctaMetric
+        ? severityFromMovement(ctaMetric.direction, ctaMetric.score)
+        : "High Priority"
+    },
+    {
+      title: opportunities[0] ?? recommendations[0] ?? blocker.recommendedFocus,
+      description:
+        "Turn the strongest current signal into a focused content experiment.",
+      source: "Recommended Next Experiment",
+      hypothesis:
+        "Repeating one strategic behavior should make movement easier to detect.",
+      predictedImpact:
+        "Titan should see clearer correlation between action and account movement.",
+      confidence: blocker.confidence,
+      severity: identityMetric
+        ? severityFromMovement(identityMetric.direction, identityMetric.score)
+        : blocker.severity
+    }
+  ];
+}
+
+function buildStrategicExperimentTimeline(
+  experiments: TitanExperiment[],
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
+  warnings: string[],
+  opportunities: string[]
+): ExperimentTimelineItem[] {
+  const experimentItems = experiments.slice(0, 8).map((experiment) => ({
+    id: experiment.id,
+    title:
+      experiment.status === "completed"
+        ? `${experiment.title} completed`
+        : `${experiment.title} introduced`,
+    summary:
+      experiment.status === "testing"
+        ? "Titan is watching the next movement read for signs of correlation."
+        : experiment.predictedImpact,
+    timestamp: experiment.completedAt ?? experiment.createdAt,
+    severity: experiment.severity,
+    movement:
+      experiment.status === "completed"
+        ? ("improving" as EvolutionMovementStatus)
+        : ("emerging" as EvolutionMovementStatus)
+  }));
+  const movementItems = [
+    ...evolutionReport.improvements.map((item, index) => ({
+      id: `improvement-${index}-${item}`,
+      title: "Movement strengthened",
+      summary: item,
+      timestamp: new Date().toISOString(),
+      severity: "Opportunity" as StrategicSeverity,
+      movement: "improving" as EvolutionMovementStatus
+    })),
+    ...evolutionReport.regressions.map((item, index) => ({
+      id: `regression-${index}-${item}`,
+      title: "Strategic friction detected",
+      summary: item,
+      timestamp: new Date().toISOString(),
+      severity: "Warning" as StrategicSeverity,
+      movement: "declining" as EvolutionMovementStatus
+    }))
+  ];
+  const fallbackItems =
+    experimentItems.length === 0 && movementItems.length === 0
+      ? [
+          {
+            id: "timeline-baseline",
+            title: warnings[0] ? "Primary signal detected" : "Strategic baseline forming",
+            summary:
+              warnings[0] ??
+              opportunities[0] ??
+              "Start an experiment to turn Titan intelligence into a tracked strategic action.",
+            timestamp: new Date().toISOString(),
+            severity: warnings[0]
+              ? ("Warning" as StrategicSeverity)
+              : ("Emerging" as StrategicSeverity),
+            movement: "emerging" as EvolutionMovementStatus
+          }
+        ]
+      : [];
+
+  return [...experimentItems, ...movementItems, ...fallbackItems]
+    .sort(
+      (first, second) =>
+        new Date(second.timestamp).getTime() - new Date(first.timestamp).getTime()
+    )
+    .slice(0, 8);
+}
+
+function buildExperimentCorrelationInsights(
+  experiments: TitanExperiment[],
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>
+) {
+  const activeCount = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  ).length;
+  const completedCount = experiments.filter(
+    (experiment) => experiment.status === "completed"
+  ).length;
+  const improvingSignals = evolutionReport.movementScores.filter(
+    (metric) => metric.status === "improving"
+  );
+  const volatileSignals = evolutionReport.movementScores.filter(
+    (metric) => metric.status === "inconsistent" || metric.status === "declining"
+  );
+
+  return [
+    activeCount > 0
+      ? `${activeCount} active strategic experiment${activeCount === 1 ? "" : "s"} now being watched for movement changes.`
+      : "No active experiment yet. Start one from a blocker, warning, or opportunity signal.",
+    completedCount > 0
+      ? `${completedCount} completed experiment${completedCount === 1 ? "" : "s"} can now be compared against movement history.`
+      : "Complete experiments after a content cycle so Titan can narrate what changed.",
+    improvingSignals[0]
+      ? `${improvingSignals[0].label} improved after recent strategy shifts.`
+      : "Titan needs another audit after implementation to confirm correlation.",
+    volatileSignals[0]
+      ? `${volatileSignals[0].label} remains unstable, so correlation confidence is still developing.`
+      : "No major volatility is dominating the current experiment read."
+  ];
+}
+
+function StrategicExperimentDashboard({
+  correlations,
+  experiments,
+  onStartExperiment,
+  onStatusChange,
+  recommendations,
+  timeline
+}: {
+  correlations: string[];
+  experiments: TitanExperiment[];
+  onStartExperiment: (input: TitanExperimentInput) => void;
+  onStatusChange: (
+    experimentId: string,
+    status: TitanExperimentStatus
+  ) => void;
+  recommendations: TitanExperimentInput[];
+  timeline: ExperimentTimelineItem[];
+}) {
+  const activeExperiments = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  );
+  const completedExperiments = experiments.filter(
+    (experiment) => experiment.status === "completed"
+  );
+
+  return (
+    <article className="premium-surface mt-5 min-w-0 rounded-lg p-6 shadow-gold sm:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Strategic Action Loop
+          </p>
+          <h2 className="mt-2 text-3xl font-black text-titan-ivory">
+            Experiments turn insight into movement.
+          </h2>
+          <p className="titan-copy mt-3 text-sm text-titan-ivory/62">
+            Start a strategic test, apply it to content, then use future audits
+            to watch whether audience behavior, momentum, and confidence shift.
+          </p>
+        </div>
+        <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+          {activeExperiments.length} active / {completedExperiments.length} completed
+        </span>
+      </div>
+
+      <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div className="grid gap-5">
+          <ExperimentRecommendationPanel
+            onStartExperiment={onStartExperiment}
+            recommendations={recommendations}
+          />
+          <ExperimentListPanel
+            experiments={activeExperiments}
+            onStatusChange={onStatusChange}
+            title="Active Experiments"
+          />
+          <ExperimentListPanel
+            experiments={completedExperiments}
+            onStatusChange={onStatusChange}
+            title="Recently Completed"
+          />
+        </div>
+
+        <div className="grid gap-5">
+          <CorrelationPanel correlations={correlations} />
+          <StrategicExperimentTimeline timeline={timeline} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ExperimentRecommendationPanel({
+  onStartExperiment,
+  recommendations
+}: {
+  onStartExperiment: (input: TitanExperimentInput) => void;
+  recommendations: TitanExperimentInput[];
+}) {
+  return (
+    <section className="titan-panel rounded-lg p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Recommended next experiment
+      </p>
+      <div className="mt-4 grid gap-3">
+        {recommendations.map((recommendation) => (
+          <div
+            className={`rounded-lg p-4 ${severityVisual(recommendation.severity).panelClass}`}
+            key={recommendation.title}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <h3 className="titan-card-title text-lg font-black text-titan-ivory">
+                {recommendation.title}
+              </h3>
+              <SeverityBadge severity={recommendation.severity} />
+            </div>
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/66">
+              {recommendation.description}
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <p className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs leading-5 text-titan-ivory/60">
+                Hypothesis: {recommendation.hypothesis}
+              </p>
+              <p className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs leading-5 text-titan-ivory/60">
+                Predicted impact: {recommendation.predictedImpact}
+              </p>
+            </div>
+            <button
+              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-titan-gold px-5 text-xs font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+              onClick={() => onStartExperiment(recommendation)}
+              type="button"
+            >
+              Start Experiment
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExperimentListPanel({
+  experiments,
+  onStatusChange,
+  title
+}: {
+  experiments: TitanExperiment[];
+  onStatusChange: (
+    experimentId: string,
+    status: TitanExperimentStatus
+  ) => void;
+  title: string;
+}) {
+  return (
+    <section className="titan-panel rounded-lg p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
+      <div className="mt-4 grid gap-3">
+        {experiments.length > 0 ? (
+          experiments.map((experiment) => (
+            <div className="titan-signal-card rounded-lg p-4" key={experiment.id}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <h3 className="titan-card-title font-black text-titan-ivory">
+                  {experiment.title}
+                </h3>
+                <span className="titan-chip bg-white/10 text-xs font-black uppercase text-titan-ivory/70">
+                  {experimentStatusLabel(experiment.status)}
+                </span>
+              </div>
+              <p className="titan-copy mt-3 text-sm text-titan-ivory/62">
+                {experiment.hypothesis}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <SeverityBadge severity={experiment.severity} />
+                <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
+                  {experiment.confidence}% confidence
+                </span>
+                <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/60">
+                  {experiment.observationStatus}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {experiment.status === "testing" ? (
+                  <button
+                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-4 text-[11px] font-black uppercase text-titan-bright transition hover:border-titan-bright hover:bg-titan-gold hover:text-black"
+                    onClick={() => onStatusChange(experiment.id, "applied")}
+                    type="button"
+                  >
+                    Mark As Applied
+                  </button>
+                ) : null}
+                {experiment.status !== "completed" ? (
+                  <button
+                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.03] px-4 text-[11px] font-black uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:text-titan-bright"
+                    onClick={() => onStatusChange(experiment.id, "completed")}
+                    type="button"
+                  >
+                    Complete
+                  </button>
+                ) : null}
+                <button
+                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-white/10 bg-black/20 px-4 text-[11px] font-black uppercase text-titan-ivory/48 transition hover:border-titan-bright/50 hover:text-titan-ivory"
+                  onClick={() => onStatusChange(experiment.id, "archived")}
+                  type="button"
+                >
+                  Archive
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-lg border border-titan-gold/10 bg-black/20 p-4 text-sm leading-6 text-titan-ivory/58">
+            No experiments here yet. Start one from a strategic signal and Titan
+            will begin watching for movement.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function CorrelationPanel({ correlations }: { correlations: string[] }) {
+  return (
+    <section className="titan-panel rounded-lg p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Correlation intelligence
+      </p>
+      <div className="mt-4 grid gap-3">
+        {correlations.map((correlation) => (
+          <div
+            className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+            key={correlation}
+          >
+            <p className="titan-copy text-sm text-titan-ivory/66">
+              {correlation}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StrategicExperimentTimeline({
+  timeline
+}: {
+  timeline: ExperimentTimelineItem[];
+}) {
+  return (
+    <section className="titan-panel rounded-lg p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Strategic timeline
+      </p>
+      <div className="mt-5 grid gap-4">
+        {timeline.map((item) => {
+          const visual = severityVisual(item.severity);
+
+          return (
+            <div
+              className="grid gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4 sm:grid-cols-[auto_minmax(0,1fr)]"
+              key={item.id}
+            >
+              <span
+                className={`mt-1 block size-3 rounded-full ${visual.dotClass} ${visual.pulseClass}`}
+              />
+              <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="titan-card-title font-black text-titan-ivory">
+                    {item.title}
+                  </h3>
+                  <span className="text-xs font-black uppercase text-titan-bright">
+                    {movementArrow(item.movement)} {item.movement}
+                  </span>
+                </div>
+                <p className="titan-copy mt-2 text-sm text-titan-ivory/62">
+                  {item.summary}
+                </p>
+                <p className="mt-2 text-[11px] font-bold uppercase text-titan-muted">
+                  {new Date(item.timestamp).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function GuidedOnboardingFlow({
   onComplete,
   onOpenAudit
@@ -2383,7 +3060,13 @@ function AgencyClientFoundation() {
   );
 }
 
-function DrillDownIntelligencePanel({ signal }: { signal: DrillDownSignal }) {
+function DrillDownIntelligencePanel({
+  onStartExperiment,
+  signal
+}: {
+  onStartExperiment: () => void;
+  signal: DrillDownSignal;
+}) {
   const visual = severityVisual(signal.severity);
 
   return (
@@ -2415,6 +3098,13 @@ function DrillDownIntelligencePanel({ signal }: { signal: DrillDownSignal }) {
               value={`${movementArrow(signal.predictedMovement)} ${signal.predictedMovement}`}
             />
           </div>
+          <button
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-titan-gold px-5 text-xs font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+            onClick={onStartExperiment}
+            type="button"
+          >
+            Test This Strategy
+          </button>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/24 p-5">
@@ -2642,7 +3332,13 @@ function SeverityBadge({ severity }: { severity: StrategicSeverity }) {
   );
 }
 
-function PrimaryBlockerCard({ blocker }: { blocker: StrategicBlocker }) {
+function PrimaryBlockerCard({
+  blocker,
+  onStartExperiment
+}: {
+  blocker: StrategicBlocker;
+  onStartExperiment: () => void;
+}) {
   const visual = severityVisual(blocker.severity);
 
   return (
@@ -2695,6 +3391,13 @@ function PrimaryBlockerCard({ blocker }: { blocker: StrategicBlocker }) {
             </p>
           </div>
         </div>
+        <button
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-titan-gold px-5 text-xs font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+          onClick={onStartExperiment}
+          type="button"
+        >
+          Start Experiment
+        </button>
       </div>
     </article>
   );
@@ -3035,12 +3738,14 @@ function CommandListCard({
   eyebrow,
   items,
   onItemSelect,
+  onStartExperiment,
   title,
   tone
 }: {
   eyebrow: string;
   items: string[];
   onItemSelect?: (item: string) => void;
+  onStartExperiment?: (item: string) => void;
   title: string;
   tone: "warning" | "positive" | "neutral";
 }) {
@@ -3059,14 +3764,27 @@ function CommandListCard({
       </h2>
       <div className="mt-5 grid gap-3">
         {items.map((item) => (
-          <button
-            className={`text-anywhere rounded-lg border p-4 text-left text-sm leading-6 text-titan-ivory/68 transition hover:-translate-y-0.5 hover:border-titan-bright/45 ${toneClass}`}
+          <div
+            className={`rounded-lg border p-4 ${toneClass}`}
             key={item}
-            onClick={() => onItemSelect?.(item)}
-            type="button"
           >
-            {item}
-          </button>
+            <button
+              className="text-anywhere block w-full text-left text-sm leading-6 text-titan-ivory/68 transition hover:text-titan-bright"
+              onClick={() => onItemSelect?.(item)}
+              type="button"
+            >
+              {item}
+            </button>
+            {onStartExperiment ? (
+              <button
+                className="mt-3 inline-flex min-h-9 items-center justify-center rounded-full border border-titan-gold/20 bg-black/20 px-4 text-[11px] font-black uppercase text-titan-bright transition hover:border-titan-bright hover:bg-titan-gold hover:text-black"
+                onClick={() => onStartExperiment(item)}
+                type="button"
+              >
+                Track This Adjustment
+              </button>
+            ) : null}
+          </div>
         ))}
       </div>
     </article>
