@@ -20,6 +20,7 @@ type VisibilityMemoryPanelProps = {
   context: { formData?: BusinessAuditFormData; profileData?: ProfileData | null };
   isUsingFallback: boolean;
   memoryDebug: VisibilityMemoryDebugState;
+  memoryEntriesSnapshot: VisibilityMemoryEntry[];
   memoryAccountKey: string;
   memoryRevision: number;
   profileUrl: string;
@@ -30,6 +31,7 @@ export function VisibilityMemoryPanel({
   context,
   isUsingFallback,
   memoryDebug,
+  memoryEntriesSnapshot,
   memoryAccountKey,
   memoryRevision,
   profileUrl
@@ -45,9 +47,13 @@ export function VisibilityMemoryPanel({
 
   useEffect(() => {
     const memoryReadResult = readVisibilityMemoryEntriesWithDebug();
-    setEntries(memoryReadResult.entries);
+    setEntries(
+      memoryEntriesSnapshot.length > 0
+        ? memoryEntriesSnapshot
+        : memoryReadResult.entries
+    );
     setReadDebug(memoryReadResult.debug);
-  }, [memoryRevision]);
+  }, [memoryEntriesSnapshot, memoryRevision]);
 
   const memoryReport = useMemo(
     () => createVisibilityMemoryReport(entries, accountKey),
@@ -106,6 +112,18 @@ export function VisibilityMemoryPanel({
                 value={String(memoryReport.auditCount)}
               />
               <DebugItem
+                label="Audit count before save"
+                value={String(memoryDebug.auditCountBeforeSave)}
+              />
+              <DebugItem
+                label="Audit count after save"
+                value={String(memoryDebug.auditCountAfterSave)}
+              />
+              <DebugItem
+                label="Serialized JSON length"
+                value={String(memoryDebug.serializedJsonLength)}
+              />
+              <DebugItem
                 label="Last attempted save"
                 value={memoryDebug.lastAttemptedSaveAt || "No save attempted"}
               />
@@ -128,6 +146,19 @@ export function VisibilityMemoryPanel({
               <DebugItem
                 label="Read error"
                 value={readDebug?.readError || memoryDebug.readError || "None"}
+              />
+            </div>
+            <div className="mt-4 grid gap-3">
+              <DebugPre
+                label="Full memory object before write"
+                value={memoryDebug.memoryObjectBeforeWrite || "No write payload captured"}
+              />
+              <DebugPre
+                label="Raw localStorage value immediately after setItem()"
+                value={
+                  memoryDebug.rawLocalStorageValueAfterSet ||
+                  "No raw localStorage value captured"
+                }
               />
             </div>
           </details>
@@ -197,6 +228,17 @@ export function VisibilityMemoryPanel({
         </article>
       </div>
     </section>
+  );
+}
+
+function DebugPre({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-[11px] font-black uppercase text-titan-muted">{label}</p>
+      <pre className="text-anywhere mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black/30 p-3 text-[11px] leading-5 text-titan-ivory/70">
+        {value}
+      </pre>
+    </div>
   );
 }
 

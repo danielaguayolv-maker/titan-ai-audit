@@ -21,7 +21,8 @@ import {
   emptyVisibilityMemoryDebug,
   normalizeAccountKey,
   saveMemoryAudit,
-  type VisibilityMemoryDebugState
+  type VisibilityMemoryDebugState,
+  type VisibilityMemoryEntry
 } from "@/lib/visibility-memory";
 import { AiAuditPanel, type RequestStatus } from "./ai-audit-panel";
 import { AuditAssets } from "./audit-assets";
@@ -49,6 +50,9 @@ export function DashboardContent() {
   const [memoryRevision, setMemoryRevision] = useState(0);
   const [memoryDebug, setMemoryDebug] =
     useState<VisibilityMemoryDebugState>(emptyVisibilityMemoryDebug);
+  const [memoryEntriesSnapshot, setMemoryEntriesSnapshot] = useState<
+    VisibilityMemoryEntry[]
+  >([]);
   const [pendingMemorySave, setPendingMemorySave] = useState<{
     result: AiAuditResult;
     context: { formData: BusinessAuditFormData; profileData: ProfileData | null };
@@ -134,6 +138,7 @@ export function DashboardContent() {
     }
 
     setMemoryDebug(memorySaveResult.debug);
+    setMemoryEntriesSnapshot(memorySaveResult.entries);
     setMemoryRevision((currentRevision) => currentRevision + 1);
     setPendingMemorySave(null);
   }, [auditResult, isUsingFallback, pendingMemorySave, planContext]);
@@ -175,6 +180,7 @@ export function DashboardContent() {
     setProfileUrl("");
     setMemoryAccountKey("");
     setMemoryDebug(emptyVisibilityMemoryDebug);
+    setMemoryEntriesSnapshot([]);
     setIsUsingFallback(true);
     setRequestStatus("idle");
     setLiveScan({
@@ -216,6 +222,7 @@ export function DashboardContent() {
             context={planContext}
             isUsingFallback={isUsingFallback}
             memoryDebug={memoryDebug}
+            memoryEntriesSnapshot={memoryEntriesSnapshot}
             memoryAccountKey={memoryAccountKey}
             memoryRevision={memoryRevision}
             profileUrl={profileUrl}

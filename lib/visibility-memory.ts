@@ -55,6 +55,11 @@ export type VisibilityMemoryDebugState = {
   storageReadKey: string;
   storedAuditsFound: number;
   matchingAuditsFound: number;
+  auditCountBeforeSave: number;
+  auditCountAfterSave: number;
+  serializedJsonLength: number;
+  memoryObjectBeforeWrite: string;
+  rawLocalStorageValueAfterSet: string;
   lastAttemptedSaveAt: string;
   saveMemoryAuditCalled: boolean;
   auditObjectPassedValidation: boolean;
@@ -71,6 +76,11 @@ export const emptyVisibilityMemoryDebug: VisibilityMemoryDebugState = {
   storageReadKey: visibilityMemoryStorageKey,
   storedAuditsFound: 0,
   matchingAuditsFound: 0,
+  auditCountBeforeSave: 0,
+  auditCountAfterSave: 0,
+  serializedJsonLength: 0,
+  memoryObjectBeforeWrite: "",
+  rawLocalStorageValueAfterSet: "",
   lastAttemptedSaveAt: "",
   saveMemoryAuditCalled: false,
   auditObjectPassedValidation: false,
@@ -589,22 +599,35 @@ export function saveMemoryAudit(
   try {
     const entry = createVisibilityMemoryEntry(auditResult, platform, context);
     const updatedEntries = upsertVisibilityMemoryEntry(readResult.entries, entry);
-    window.localStorage.setItem(
-      visibilityMemoryStorageKey,
-      JSON.stringify(updatedEntries)
-    );
+    const serializedMemory = JSON.stringify(updatedEntries);
+
+    window.localStorage.setItem(visibilityMemoryStorageKey, serializedMemory);
+
+    const rawLocalStorageValueAfterSet =
+      window.localStorage.getItem(visibilityMemoryStorageKey) ?? "";
+    const parsedEntriesAfterSet = rawLocalStorageValueAfterSet
+      ? (JSON.parse(rawLocalStorageValueAfterSet) as unknown)
+      : [];
+    const verifiedEntriesAfterSet = Array.isArray(parsedEntriesAfterSet)
+      ? (parsedEntriesAfterSet as VisibilityMemoryEntry[])
+      : [];
 
     return {
       entry,
-      entries: updatedEntries,
+      entries: verifiedEntriesAfterSet,
       debug: {
         ...baseDebug,
         normalizedAccountKey: entry.accountKey,
         readError: readResult.debug.readError,
-        storedAuditsFound: updatedEntries.length,
-        matchingAuditsFound: updatedEntries.filter(
+        storedAuditsFound: verifiedEntriesAfterSet.length,
+        matchingAuditsFound: verifiedEntriesAfterSet.filter(
           (storedEntry) => storedEntry.accountKey === entry.accountKey
-        ).length
+        ).length,
+        auditCountBeforeSave: readResult.entries.length,
+        auditCountAfterSave: verifiedEntriesAfterSet.length,
+        serializedJsonLength: serializedMemory.length,
+        memoryObjectBeforeWrite: JSON.stringify(updatedEntries, null, 2),
+        rawLocalStorageValueAfterSet
       }
     };
   } catch (error) {
@@ -621,6 +644,8 @@ export function saveMemoryAudit(
         matchingAuditsFound: readResult.entries.filter(
           (entry) => entry.accountKey === normalizedAccountKey
         ).length,
+        auditCountBeforeSave: readResult.entries.length,
+        auditCountAfterSave: readResult.entries.length,
         saveError: message
       }
     };
