@@ -47,6 +47,65 @@ function firstUseful(items: string[], fallback: string) {
   return items.find(Boolean) ?? fallback;
 }
 
+function sentenceCase(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
+}
+
+function removeLeadingOpenWith(value: string) {
+  return value
+    .replace(/^Likely winning structure:\s*/i, "")
+    .replace(/^open with\s+/i, "")
+    .trim();
+}
+
+function nicheSpecificCtas(plan: VisibilityContentPlan, primaryTrigger: string) {
+  if (plan.niche.id === "restaurants") {
+    return [
+      "Reserve tonight",
+      "Visit us this weekend",
+      "Order online",
+      "Tag who you'd bring",
+      "Save this for dinner",
+      "Call to book"
+    ];
+  }
+
+  if (plan.niche.id === "realtors") {
+    return [
+      "Book a showing",
+      "Save this neighborhood breakdown",
+      "DM for the listing details",
+      "Send this to someone house hunting"
+    ];
+  }
+
+  if (plan.niche.id === "fitness") {
+    return [
+      "Save this for your next workout",
+      "DM 'START' for coaching",
+      "Tag your training partner",
+      "Book your first session"
+    ];
+  }
+
+  if (plan.niche.id === "med-spas") {
+    return [
+      "Book a consultation",
+      "Save this before your next treatment",
+      "DM us your skin goal",
+      "Call to schedule"
+    ];
+  }
+
+  return [
+    `Act while the ${primaryTrigger} moment is still fresh.`,
+    "Save this before the decision moment passes.",
+    "Tag the person who needs this",
+    "Book the next step"
+  ];
+}
+
 function createAdaptiveStudioIntelligence(
   plan: VisibilityContentPlan,
   memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
@@ -90,9 +149,11 @@ function createAdaptiveStudioIntelligence(
     memoryReport.pacingHabits,
     "CTA timing should land while the strongest emotional moment is still active."
   );
-  const audience = plan.niche.audienceContexts[0] ?? plan.niche.audience;
+  const audience = sentenceCase(plan.niche.audienceContexts[0] ?? plan.niche.audience);
   const primaryTrigger = plan.niche.emotionalTriggers[0] ?? "belonging";
   const secondaryTrigger = plan.niche.emotionalTriggers[1] ?? "aspiration";
+  const winningOpening = removeLeadingOpenWith(winningStructure);
+  const adaptiveCtas = nicheSpecificCtas(plan, primaryTrigger);
 
   return {
     confidenceLabel,
@@ -114,17 +175,12 @@ function createAdaptiveStudioIntelligence(
       `Pattern interrupt: show the reaction first, then let the context catch up.`
     ],
     adaptiveScripts: [
-      `Open with ${winningStructure.replace(/^Likely winning structure:\s*/i, "")}`,
+      `Open with ${winningOpening}.`,
       `Delay explanation until after emotional tension forms around ${primaryTrigger}.`,
       `${identityRead} Build the script around that fingerprint instead of starting from a blank template.`,
-      `Use the first beat for atmosphere, the second beat for proof, and the final beat for the next step.`
+      `Use the first beat for atmosphere, the second beat for proof, and land "${adaptiveCtas[0]}" while the moment still has heat.`
     ],
-    adaptiveCtas: [
-      `Act while the ${primaryTrigger} moment is still fresh.`,
-      `Tag the person who would feel this first.`,
-      `Save this before the decision moment passes.`,
-      `Message us when you are ready for the next step.`
-    ],
+    adaptiveCtas,
     adaptiveCaptions: [
       `The audience does not need more information first. They need to feel why it matters.`,
       `${repeatedWeakness}`,
