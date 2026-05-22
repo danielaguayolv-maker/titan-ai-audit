@@ -397,6 +397,7 @@ function DashboardHome({
   onOpenReports: () => void;
   onOpenStudio: () => void;
 }) {
+  const [activeExploration, setActiveExploration] = useState("Hook Stability");
   const weakestCategories = [...auditResult.categoryScores]
     .sort((first, second) => first.score - second.score)
     .slice(0, 3);
@@ -451,6 +452,18 @@ function DashboardHome({
     ...memoryReport.emotionalPatterns,
     ...auditResult.topQuickWins.map((win) => win.title)
   ].slice(0, 4);
+  const drillDownSignals = buildDrillDownSignals(
+    strategicMetrics,
+    warnings,
+    opportunities,
+    recommendations,
+    emotionalTriggers,
+    identitySignals,
+    evolutionReport
+  );
+  const activeSignal =
+    drillDownSignals.find((signal) => signal.id === activeExploration) ??
+    drillDownSignals[0];
 
   return (
     <section className="px-5 py-8 sm:px-8 sm:py-10">
@@ -548,7 +561,12 @@ function DashboardHome({
             </div>
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               {strategicMetrics.map((metric) => (
-                <CommandMetricCard metric={metric} key={metric.label} />
+                <CommandMetricCard
+                  isActive={activeSignal.id === metric.label}
+                  key={metric.label}
+                  metric={metric}
+                  onSelect={() => setActiveExploration(metric.label)}
+                />
               ))}
             </div>
           </article>
@@ -566,6 +584,8 @@ function DashboardHome({
           </article>
         </div>
 
+        <DrillDownIntelligencePanel signal={activeSignal} />
+
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <TitanPulseFeed items={pulseFeed} />
           <MovementVisualization metrics={strategicMetrics} />
@@ -575,18 +595,21 @@ function DashboardHome({
           <CommandListCard
             eyebrow="Behavioral warnings"
             items={warnings}
+            onItemSelect={(item) => setActiveExploration(`warning-${item}`)}
             tone="warning"
             title="What could quietly weaken performance"
           />
           <CommandListCard
             eyebrow="Opportunity signals"
             items={opportunities}
+            onItemSelect={(item) => setActiveExploration(`opportunity-${item}`)}
             tone="positive"
             title="Where momentum can be created"
           />
           <CommandListCard
             eyebrow="Strategic recommendations"
             items={recommendations}
+            onItemSelect={(item) => setActiveExploration(`recommendation-${item}`)}
             tone="neutral"
             title="What to do this week"
           />
@@ -779,6 +802,35 @@ type StrategicFocus = {
   ignoreTemporarily: string;
   stabilizing: string;
   becomingDangerous: string;
+};
+
+type DrillDownSignal = {
+  id: string;
+  label: string;
+  summary: string;
+  severity: StrategicSeverity;
+  movement: EvolutionMovementStatus;
+  confidence: number;
+  why: string;
+  patterns: string[];
+  wins: string[];
+  losses: string[];
+  emotionalTriggers: string[];
+  pacingBehaviors: string[];
+  ctaBehaviors: string[];
+  audienceIdentity: string[];
+  weakExample: string;
+  strongExample: string;
+  sequence: string[];
+  immediateFixes: string[];
+  highestLeverage: string;
+  ignoreTemporarily: string;
+  improveFirst: string;
+  prediction: string;
+  predictedMovement: EvolutionMovementStatus;
+  impact: string;
+  education: string;
+  trend: number[];
 };
 
 function movementArrow(status: EvolutionMovementStatus) {
@@ -1226,6 +1278,603 @@ function buildStrategicFocusMode(
   };
 }
 
+function buildDrillDownSignals(
+  metrics: CommandMetric[],
+  warnings: string[],
+  opportunities: string[],
+  recommendations: string[],
+  emotionalTriggers: string[],
+  identitySignals: string[],
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>
+): DrillDownSignal[] {
+  const repeatedWins = [
+    ...evolutionReport.strengtheningSignals,
+    ...evolutionReport.emergingPatterns,
+    ...opportunities
+  ];
+  const repeatedLosses = [
+    ...evolutionReport.regressions,
+    ...evolutionReport.unstablePatterns,
+    ...warnings
+  ];
+
+  const metricSignals = metrics.map((metric) =>
+    buildMetricDrillDownSignal(
+      metric,
+      repeatedWins,
+      repeatedLosses,
+      recommendations,
+      emotionalTriggers,
+      identitySignals
+    )
+  );
+  const warningSignals = warnings.slice(0, 4).map((warning, index) =>
+    buildTextDrillDownSignal({
+      id: `warning-${warning}`,
+      label: index === 0 ? "Behavioral Warning" : `Warning ${index + 1}`,
+      text: warning,
+      severity: index === 0 ? "High Priority" : "Warning",
+      movement: "declining",
+      repeatedWins,
+      repeatedLosses,
+      recommendations,
+      emotionalTriggers,
+      identitySignals
+    })
+  );
+  const opportunitySignals = opportunities.slice(0, 4).map((opportunity, index) =>
+    buildTextDrillDownSignal({
+      id: `opportunity-${opportunity}`,
+      label: index === 0 ? "Opportunity Signal" : `Opportunity ${index + 1}`,
+      text: opportunity,
+      severity: "Opportunity",
+      movement: "improving",
+      repeatedWins,
+      repeatedLosses,
+      recommendations,
+      emotionalTriggers,
+      identitySignals
+    })
+  );
+  const recommendationSignals = recommendations.slice(0, 4).map((recommendation, index) =>
+    buildTextDrillDownSignal({
+      id: `recommendation-${recommendation}`,
+      label: index === 0 ? "Strategic Recommendation" : `Recommendation ${index + 1}`,
+      text: recommendation,
+      severity: "High Confidence",
+      movement: "improving",
+      repeatedWins,
+      repeatedLosses,
+      recommendations,
+      emotionalTriggers,
+      identitySignals
+    })
+  );
+
+  return [
+    ...metricSignals,
+    ...warningSignals,
+    ...opportunitySignals,
+    ...recommendationSignals
+  ];
+}
+
+function buildMetricDrillDownSignal(
+  metric: CommandMetric,
+  repeatedWins: string[],
+  repeatedLosses: string[],
+  recommendations: string[],
+  emotionalTriggers: string[],
+  identitySignals: string[]
+): DrillDownSignal {
+  const severity = severityFromMovement(metric.direction, metric.score);
+  const label = metric.label;
+  const lowerLabel = label.toLowerCase();
+  const isCta = lowerLabel.includes("cta") || lowerLabel.includes("conversion");
+  const isHook = lowerLabel.includes("hook") || lowerLabel.includes("tension");
+  const isIdentity =
+    lowerLabel.includes("identity") ||
+    lowerLabel.includes("memory") ||
+    lowerLabel.includes("audience");
+  const isSearch = lowerLabel.includes("search");
+
+  return {
+    id: label,
+    label,
+    summary: metric.interpretation,
+    severity,
+    movement: metric.direction,
+    confidence: metric.confidence,
+    why: drillDownWhy(label, metric.direction),
+    patterns: [
+      metric.interpretation,
+      repeatedLosses[0] ?? "Titan is still building enough history to separate one-off noise from repeat behavior.",
+      repeatedWins[0] ?? "The strongest signal is still emerging from the latest audit."
+    ],
+    wins: repeatedWins.slice(0, 3),
+    losses: repeatedLosses.slice(0, 3),
+    emotionalTriggers: emotionalTriggers.length
+      ? emotionalTriggers.slice(0, 4)
+      : ["curiosity", "belonging", "recognition"],
+    pacingBehaviors: isHook
+      ? [
+          "The first frame needs tension before explanation.",
+          "The payoff should arrive after the viewer has a reason to want it.",
+          "Cut before the frame feels fully processed."
+        ]
+      : [
+          "Energy should rise before the proof moment appears.",
+          "Slow the reveal one beat when the visual is strong.",
+          "Remove context that does not create a reason to keep watching."
+        ],
+    ctaBehaviors: isCta
+      ? [
+          "Place the CTA while the strongest visual or emotional moment is still alive.",
+          "Make the next step visible, spoken, or captioned.",
+          "Match the CTA to the viewer’s intent in that moment."
+        ]
+      : [
+          "Do not let the CTA arrive after the edit loses energy.",
+          "Keep the action simple enough to understand without rereading.",
+          "Use the strongest emotional beat as the bridge to action."
+        ],
+    audienceIdentity: identitySignals.length
+      ? identitySignals.slice(0, 4)
+      : [
+          "The audience needs to recognize who the account is for.",
+          "Identity becomes memorable when the same emotional world repeats."
+        ],
+    weakExample: isCta
+      ? "Strong visual moment, then the next step appears after attention cools."
+      : isSearch
+        ? "The caption names the topic, but not the search phrase people actually use."
+        : isIdentity
+          ? "Clean content, but no recurring image or feeling survives after the scroll."
+          : "Explanation first, tension second.",
+    strongExample: isCta
+      ? "CTA lands while the proof frame is still on screen."
+      : isSearch
+        ? "The first sentence carries the exact local or niche phrase the audience would search."
+        : isIdentity
+          ? "The account repeats a recognizable atmosphere, rhythm, and emotional cue."
+          : "Movement first, emotional contrast second, context last.",
+    sequence: isCta
+      ? ["Proof frame", "Emotional peak", "CTA lands", "Action path stays visible"]
+      : isSearch
+        ? ["Search phrase", "Specific proof", "Local or niche context", "Action cue"]
+        : ["Interrupt", "Tension", "Proof", "Release"],
+    immediateFixes: [
+      recommendations[0] ?? "Rewrite the next post around one visible behavior change.",
+      isHook
+        ? "Fix the first 2 seconds before increasing posting volume."
+        : "Make the strongest moment easier to recognize before adding more content.",
+      isCta
+        ? "Move the CTA closer to the emotional high point."
+        : "Remove one explanatory beat from the opening."
+    ],
+    highestLeverage: isCta
+      ? "Conversion friction changes fastest when the action lands during the strongest proof moment."
+      : isHook
+        ? "Hook stability changes fastest when the opening creates unresolved tension."
+        : "The fastest lift comes from making the recurring signal repeat cleanly.",
+    ignoreTemporarily: isSearch
+      ? "Ignore visual polish until searchable language is clearer."
+      : "Ignore cosmetic polish until the behavior pattern is easier to feel.",
+    improveFirst: isIdentity
+      ? "Repeat one recognizable emotional cue across the next three posts."
+      : isCta
+        ? "Fix CTA timing before changing the offer."
+        : "Strengthen the opening sequence before changing content topics.",
+    prediction: predictionForSignal(label, metric.direction),
+    predictedMovement:
+      metric.direction === "declining"
+        ? "stable"
+        : metric.direction === "stable"
+          ? "improving"
+          : "improving",
+    impact: isCta
+      ? "Conversion friction should decrease when the next step lands earlier."
+      : isIdentity
+        ? "Memorability should strengthen when the account repeats a recognizable emotional cue."
+        : "Audience pull should improve when attention is earned before context appears.",
+    education: educationForSignal(label),
+    trend: buildMiniTrend(metric, 0)
+  };
+}
+
+function buildTextDrillDownSignal({
+  emotionalTriggers,
+  id,
+  identitySignals,
+  label,
+  movement,
+  recommendations,
+  repeatedLosses,
+  repeatedWins,
+  severity,
+  text
+}: {
+  emotionalTriggers: string[];
+  id: string;
+  identitySignals: string[];
+  label: string;
+  movement: EvolutionMovementStatus;
+  recommendations: string[];
+  repeatedLosses: string[];
+  repeatedWins: string[];
+  severity: StrategicSeverity;
+  text: string;
+}): DrillDownSignal {
+  return {
+    id,
+    label,
+    summary: text,
+    severity,
+    movement,
+    confidence: severity === "Opportunity" ? 72 : 68,
+    why: "Titan is connecting this signal to repeated audit language, movement history, and the current strategic priority stack.",
+    patterns: [text, repeatedLosses[0], repeatedWins[0]].filter(Boolean),
+    wins: repeatedWins.slice(0, 3),
+    losses: repeatedLosses.slice(0, 3),
+    emotionalTriggers: emotionalTriggers.slice(0, 4),
+    pacingBehaviors: [
+      "Watch where energy rises or drops before the message lands.",
+      "The strongest frame should appear before the explanation gets comfortable.",
+      "The edit should create a reason to stay before asking for logic."
+    ],
+    ctaBehaviors: [
+      "The next step should appear while attention is still warm.",
+      "The CTA needs to match what the viewer is feeling in that moment.",
+      "Remove extra decisions between interest and action."
+    ],
+    audienceIdentity: identitySignals.slice(0, 4),
+    weakExample: "The audience receives information before they feel a reason to care.",
+    strongExample: "The audience feels the point first, then understands the logic.",
+    sequence: ["Attention", "Feeling", "Proof", "Action"],
+    immediateFixes: [
+      recommendations[0] ?? "Turn this signal into one visible behavior change this week.",
+      "Keep the next post focused on one emotional job.",
+      "Remove one extra explanation before the proof appears."
+    ],
+    highestLeverage: "Change the moment where attention first forms.",
+    ignoreTemporarily: "Ignore lower-priority polish until this signal stabilizes.",
+    improveFirst: "Make the next piece of content prove this signal visually.",
+    prediction:
+      severity === "Opportunity"
+        ? "If repeated, this signal can become a recognizable account advantage."
+        : "If it continues, this signal will keep pulling attention away from stronger moments.",
+    predictedMovement: severity === "Opportunity" ? "improving" : "stable",
+    impact:
+      severity === "Opportunity"
+        ? "Strategic health should rise when the account repeats the same winning behavior."
+        : "Volatility should decrease when the repeated weak behavior is removed.",
+    education: "People remember the felt pattern before they remember the explanation.",
+    trend: buildMiniTrend(
+      {
+        confidence: severity === "Opportunity" ? 72 : 68,
+        direction: movement,
+        interpretation: text,
+        label,
+        score: severity === "Opportunity" ? 76 : 58
+      },
+      1
+    )
+  };
+}
+
+function drillDownWhy(label: string, movement: EvolutionMovementStatus) {
+  const movementRead =
+    movement === "declining"
+      ? "The signal is moving down because the account is repeating behavior that drains attention before the strongest moment lands."
+      : movement === "inconsistent"
+        ? "The signal is volatile because strong moments appear, but the account has not repeated the same behavior cleanly enough."
+        : movement === "improving"
+          ? "The signal is improving because Titan is seeing more repeatable behavior around this strategic area."
+          : "Titan is watching this signal as a baseline until more movement history forms.";
+
+  if (label.includes("CTA") || label.includes("Conversion")) {
+    return `${movementRead} The conversion moment depends on timing: action needs to appear while interest still feels alive.`;
+  }
+
+  if (label.includes("Hook") || label.includes("Tension")) {
+    return `${movementRead} Openings are being judged by whether tension appears before context.`;
+  }
+
+  if (label.includes("Identity") || label.includes("Memorability")) {
+    return `${movementRead} Recognition forms when the audience sees the same emotional world more than once.`;
+  }
+
+  if (label.includes("Search")) {
+    return `${movementRead} Search momentum depends on whether captions and profile language match real audience intent.`;
+  }
+
+  return movementRead;
+}
+
+function predictionForSignal(label: string, movement: EvolutionMovementStatus) {
+  if (label.includes("CTA") || label.includes("Conversion")) {
+    return "If CTA timing improves, conversion friction likely decreases before overall visibility changes.";
+  }
+
+  if (label.includes("Identity") || label.includes("Memorability")) {
+    return "If emotional consistency stabilizes, memorability should strengthen across the next audits.";
+  }
+
+  if (label.includes("Hook") || label.includes("Tension")) {
+    return movement === "declining"
+      ? "If hook volatility continues, audience pull will weaken further."
+      : "If first-frame tension becomes repeatable, audience pull should rise.";
+  }
+
+  return "If the strongest recurring behavior repeats, Titan expects the signal to move upward.";
+}
+
+function educationForSignal(label: string) {
+  if (label.includes("CTA") || label.includes("Conversion")) {
+    return "The audience emotionally decides before they logically evaluate the next step.";
+  }
+
+  if (label.includes("Identity") || label.includes("Memorability")) {
+    return "Recognition forms before trust deepens.";
+  }
+
+  if (label.includes("Hook") || label.includes("Tension")) {
+    return "People stay when the opening creates a question the next frame can answer.";
+  }
+
+  if (label.includes("Search")) {
+    return "Searchable language works when it sounds like the way the audience already thinks.";
+  }
+
+  return "People remember emotional contrast before information.";
+}
+
+function DrillDownIntelligencePanel({ signal }: { signal: DrillDownSignal }) {
+  const visual = severityVisual(signal.severity);
+
+  return (
+    <article
+      className={`mt-5 min-w-0 overflow-hidden rounded-lg p-6 transition-all duration-500 sm:p-8 ${visual.panelClass}`}
+    >
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="min-w-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-titan-muted">
+              Interactive Intelligence Mode
+            </p>
+            <SeverityBadge severity={signal.severity} />
+          </div>
+          <h2 className="text-anywhere mt-4 text-3xl font-black leading-tight text-titan-ivory sm:text-4xl">
+            {signal.label}
+          </h2>
+          <p className="text-anywhere mt-4 text-sm leading-7 text-titan-ivory/68 sm:text-base">
+            {signal.summary}
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <SignalReadout
+              label="Movement"
+              value={`${movementArrow(signal.movement)} ${signal.movement}`}
+            />
+            <SignalReadout label="Confidence" value={`${signal.confidence}%`} />
+            <SignalReadout
+              label="Predicted"
+              value={`${movementArrow(signal.predictedMovement)} ${signal.predictedMovement}`}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-black/24 p-5">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Why Titan thinks this
+          </p>
+          <p className="text-anywhere mt-3 text-sm leading-7 text-titan-ivory/70">
+            {signal.why}
+          </p>
+          <div className="mt-5 grid gap-2">
+            {signal.patterns.slice(0, 3).map((pattern) => (
+              <p
+                className="text-anywhere rounded-lg border border-titan-gold/10 bg-black/24 p-3 text-xs leading-5 text-titan-ivory/62"
+                key={pattern}
+              >
+                {pattern}
+              </p>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="grid gap-5">
+          <StrategicBreakdown signal={signal} />
+          <PredictiveSimulation signal={signal} />
+        </div>
+        <div className="grid gap-5">
+          <ShowMeIntelligence signal={signal} />
+          <InteractiveMovementDetail signal={signal} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SignalReadout({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/24 p-4">
+      <p className="text-xs font-black uppercase text-titan-muted">{label}</p>
+      <p className="text-anywhere mt-2 text-xl font-black text-titan-bright">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StrategicBreakdown({ signal }: { signal: DrillDownSignal }) {
+  const sections = [
+    ["Strongest contributing patterns", signal.patterns],
+    ["Recurring wins", signal.wins],
+    ["Recurring losses", signal.losses],
+    ["Emotional triggers involved", signal.emotionalTriggers],
+    ["Pacing behaviors", signal.pacingBehaviors],
+    ["CTA timing behaviors", signal.ctaBehaviors],
+    ["Audience identity patterns", signal.audienceIdentity]
+  ] as const;
+
+  return (
+    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Strategic breakdown
+      </p>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {sections.map(([title, items]) => (
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4" key={title}>
+            <p className="text-xs font-black uppercase text-titan-bright">
+              {title}
+            </p>
+            <div className="mt-3 grid gap-2">
+              {(items.length ? items : ["More history will sharpen this read."])
+                .slice(0, 3)
+                .map((item) => (
+                  <p
+                    className="text-anywhere text-xs leading-5 text-titan-ivory/62"
+                    key={item}
+                  >
+                    {item}
+                  </p>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ShowMeIntelligence({ signal }: { signal: DrillDownSignal }) {
+  return (
+    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Show me
+      </p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-red-300/20 bg-red-500/10 p-4">
+          <p className="text-xs font-black uppercase text-red-100">
+            Weak pattern
+          </p>
+          <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/70">
+            {signal.weakExample}
+          </p>
+        </div>
+        <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 p-4">
+          <p className="text-xs font-black uppercase text-emerald-100">
+            Stronger pattern
+          </p>
+          <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/70">
+            {signal.strongExample}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+        <p className="text-xs font-black uppercase text-titan-muted">
+          Attention flow
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {signal.sequence.map((step, index) => (
+            <div className="min-w-0" key={step}>
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-titan-gold text-xs font-black text-black">
+                  {index + 1}
+                </span>
+                <span className="h-px flex-1 bg-titan-gold/25" />
+              </div>
+              <p className="text-anywhere mt-2 text-xs font-bold uppercase text-titan-ivory/64">
+                {step}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PredictiveSimulation({ signal }: { signal: DrillDownSignal }) {
+  return (
+    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Predictive simulation
+      </p>
+      <h3 className="text-anywhere mt-2 text-xl font-black text-titan-ivory">
+        {signal.prediction}
+      </h3>
+      <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/64">
+        {signal.impact}
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Highest-leverage adjustment
+          </p>
+          <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/68">
+            {signal.highestLeverage}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            What to ignore temporarily
+          </p>
+          <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/68">
+            {signal.ignoreTemporarily}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4">
+        <p className="text-xs font-black uppercase text-titan-bright">
+          Why this matters
+        </p>
+        <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/72">
+          {signal.education}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function InteractiveMovementDetail({ signal }: { signal: DrillDownSignal }) {
+  return (
+    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-5">
+      <p className="text-xs font-black uppercase text-titan-muted">
+        Movement detail
+      </p>
+      <div className="mt-5 flex h-28 items-end gap-2">
+        {signal.trend.map((height, index) => (
+          <div className="flex flex-1 flex-col items-center gap-2" key={`${height}-${index}`}>
+            <span
+              className="w-full rounded-t-full bg-gradient-to-t from-titan-gold/15 via-titan-gold/55 to-titan-bright shadow-[0_0_18px_rgba(212,175,55,0.18)] transition-all duration-700"
+              style={{ height: `${height}%` }}
+            />
+            <span className="size-1.5 rounded-full bg-titan-gold/70" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 grid gap-3">
+        {signal.immediateFixes.slice(0, 3).map((fix) => (
+          <div
+            className="rounded-lg border border-white/10 bg-black/20 p-4"
+            key={fix}
+          >
+            <p className="text-anywhere text-sm leading-6 text-titan-ivory/68">
+              {fix}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="text-anywhere mt-4 rounded-lg border border-titan-gold/10 bg-black/20 p-4 text-sm leading-6 text-titan-bright">
+        Improve first: {signal.improveFirst}
+      </p>
+    </div>
+  );
+}
+
 function SeverityBadge({ severity }: { severity: StrategicSeverity }) {
   const visual = severityVisual(severity);
 
@@ -1574,12 +2223,26 @@ function buildCommandRecommendations(
     .slice(0, 5);
 }
 
-function CommandMetricCard({ metric }: { metric: CommandMetric }) {
+function CommandMetricCard({
+  isActive,
+  metric,
+  onSelect
+}: {
+  isActive: boolean;
+  metric: CommandMetric;
+  onSelect: () => void;
+}) {
   const severity = severityFromMovement(metric.direction, metric.score);
   const visual = severityVisual(severity);
 
   return (
-    <div className={`min-w-0 rounded-lg p-4 transition hover:-translate-y-0.5 ${visual.panelClass}`}>
+    <button
+      className={`min-w-0 rounded-lg p-4 text-left transition hover:-translate-y-0.5 ${
+        isActive ? "ring-2 ring-titan-bright/45" : ""
+      } ${visual.panelClass}`}
+      onClick={onSelect}
+      type="button"
+    >
       <div className="flex items-start justify-between gap-3">
         <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
         <SeverityBadge severity={severity} />
@@ -1599,7 +2262,7 @@ function CommandMetricCard({ metric }: { metric: CommandMetric }) {
       <p className="text-anywhere mt-3 text-xs leading-5 text-titan-ivory/58">
         {metric.interpretation}
       </p>
-    </div>
+    </button>
   );
 }
 
@@ -1615,11 +2278,13 @@ function PulseItem({ label, value }: { label: string; value: string }) {
 function CommandListCard({
   eyebrow,
   items,
+  onItemSelect,
   title,
   tone
 }: {
   eyebrow: string;
   items: string[];
+  onItemSelect?: (item: string) => void;
   title: string;
   tone: "warning" | "positive" | "neutral";
 }) {
@@ -1638,12 +2303,14 @@ function CommandListCard({
       </h2>
       <div className="mt-5 grid gap-3">
         {items.map((item) => (
-          <p
-            className={`text-anywhere rounded-lg border p-4 text-sm leading-6 text-titan-ivory/68 ${toneClass}`}
+          <button
+            className={`text-anywhere rounded-lg border p-4 text-left text-sm leading-6 text-titan-ivory/68 transition hover:-translate-y-0.5 hover:border-titan-bright/45 ${toneClass}`}
             key={item}
+            onClick={() => onItemSelect?.(item)}
+            type="button"
           >
             {item}
-          </p>
+          </button>
         ))}
       </div>
     </article>
