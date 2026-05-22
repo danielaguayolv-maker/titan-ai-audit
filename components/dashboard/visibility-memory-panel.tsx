@@ -79,17 +79,17 @@ export function VisibilityMemoryPanel({
               <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory sm:text-5xl">
                 Pattern recognition over time.
               </h2>
-              <p className="text-anywhere mt-4 max-w-3xl text-sm leading-6 text-titan-ivory/60">
+              <p className="titan-copy text-anywhere mt-4 text-sm text-titan-ivory/60">
                 Titan now remembers recurring hooks, CTA habits, pacing behavior,
                 visual fingerprints, audience language, and emotional patterns for
                 each audited account on this device.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-titan-gold/10 px-4 py-2 text-xs font-black uppercase text-titan-bright">
+              <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
                 {memoryReport.auditCount} audit{memoryReport.auditCount === 1 ? "" : "s"} remembered
               </span>
-              <span className="rounded-full bg-white/10 px-4 py-2 text-xs font-bold uppercase text-titan-ivory/68">
+              <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/68">
                 Local memory
               </span>
             </div>
@@ -175,8 +175,8 @@ export function VisibilityMemoryPanel({
           </details>
 
           {isUsingFallback ? (
-            <div className="mt-7 rounded-lg border border-titan-gold/10 bg-black/24 p-5">
-              <p className="text-anywhere text-sm leading-6 text-titan-ivory/68">
+            <div className="titan-signal-card mt-7 rounded-lg p-5">
+              <p className="titan-copy text-anywhere text-sm text-titan-ivory/68">
                 Run a live Visibility Audit to start building account memory.
                 Snapshot analysis becomes stronger once Titan can compare behavior
                 across multiple audits.
@@ -184,7 +184,7 @@ export function VisibilityMemoryPanel({
             </div>
           ) : (
             <>
-              <section className="mt-7 rounded-lg border border-titan-gold/15 bg-black/24 p-5 sm:p-6">
+              <section className="titan-panel mt-7 rounded-lg p-5 sm:p-7">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div>
                     <p className="text-sm font-bold uppercase text-titan-muted">
@@ -193,18 +193,18 @@ export function VisibilityMemoryPanel({
                     <h3 className="text-anywhere mt-2 text-3xl font-black text-titan-ivory">
                       Movement intelligence.
                     </h3>
-                    <p className="text-anywhere mt-3 max-w-3xl text-sm leading-6 text-titan-ivory/60">
+                    <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/60">
                       Titan now reads not just what the account is, but how its
                       hooks, conversion behavior, identity, and momentum are
                       changing over time.
                     </p>
                   </div>
-                  <span className="rounded-full bg-titan-gold/10 px-4 py-2 text-xs font-black uppercase text-titan-bright">
+                  <span className="titan-chip bg-titan-gold/10 text-xs font-black uppercase text-titan-bright">
                     {evolutionReport.auditCount} history point{evolutionReport.auditCount === 1 ? "" : "s"}
                   </span>
                 </div>
 
-                <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
                   {evolutionReport.movementScores.map((metric) => (
                     <MovementMetricCard key={metric.label} metric={metric} />
                   ))}
@@ -250,7 +250,7 @@ export function VisibilityMemoryPanel({
                   <div className="mt-4 grid gap-3">
                     {evolutionReport.timeline.map((item) => (
                       <div
-                        className="grid gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[auto_minmax(0,1fr)_auto]"
+                        className="grid gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4 lg:grid-cols-[auto_minmax(0,1fr)_auto]"
                         key={item.id}
                       >
                         <div className="flex size-12 items-center justify-center rounded-full bg-titan-gold text-sm font-black text-black">
@@ -260,13 +260,13 @@ export function VisibilityMemoryPanel({
                           <p className="text-xs font-black uppercase text-titan-muted">
                             {new Date(item.createdAt).toLocaleString()}
                           </p>
-                          <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/70">
+                          <p className="titan-copy text-anywhere mt-2 text-sm text-titan-ivory/70">
                             {item.summary}
                           </p>
                           <div className="mt-3 flex flex-wrap gap-2">
                             {item.strengths.map((strength) => (
                               <span
-                                className="rounded-full bg-titan-gold/10 px-3 py-1 text-[11px] font-black uppercase text-titan-bright"
+                                className="titan-chip bg-titan-gold/10 text-[11px] font-black uppercase text-titan-bright"
                                 key={strength}
                               >
                                 {strength}
@@ -274,7 +274,7 @@ export function VisibilityMemoryPanel({
                             ))}
                             {item.weaknesses.map((weakness) => (
                               <span
-                                className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-titan-ivory/55"
+                                className="titan-chip bg-white/10 text-[11px] font-bold uppercase text-titan-ivory/55"
                                 key={weakness}
                               >
                                 {weakness}
@@ -282,7 +282,7 @@ export function VisibilityMemoryPanel({
                             ))}
                           </div>
                         </div>
-                        <span className="h-fit rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase text-titan-ivory/70">
+                        <span className="titan-chip h-fit bg-white/10 text-xs font-black uppercase text-titan-ivory/70">
                           Grade {item.grade}
                         </span>
                       </div>
@@ -369,11 +369,11 @@ const movementLabels: Record<EvolutionMovementStatus, string> = {
 
 function MovementMetricCard({ metric }: { metric: VisibilityEvolutionMetric }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+    <div className="titan-signal-card min-w-0 rounded-lg p-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
         <span
-          className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${movementStyles[metric.status]}`}
+          className={`titan-chip text-[10px] font-black uppercase ${movementStyles[metric.status]}`}
         >
           {movementLabels[metric.status]}
         </span>
@@ -389,7 +389,7 @@ function MovementMetricCard({ metric }: { metric: VisibilityEvolutionMetric }) {
           </span>
         ) : null}
       </div>
-      <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
+      <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
         {metric.summary}
       </p>
     </div>
@@ -398,7 +398,7 @@ function MovementMetricCard({ metric }: { metric: VisibilityEvolutionMetric }) {
 
 function DebugPre({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-4">
       <p className="text-[11px] font-black uppercase text-titan-muted">{label}</p>
       <pre className="text-anywhere mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black/30 p-3 text-[11px] leading-5 text-titan-ivory/70">
         {value}
@@ -409,7 +409,7 @@ function DebugPre({ label, value }: { label: string; value: string }) {
 
 function DebugItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-4">
       <p className="text-[11px] font-black uppercase text-titan-muted">{label}</p>
       <p className="text-anywhere mt-2 text-xs leading-5 text-titan-ivory/70">
         {value}
@@ -428,7 +428,7 @@ function MemoryCard({
   title: string;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-5">
+    <div className="titan-signal-card min-w-0 rounded-lg p-5">
       <p className="text-xs font-bold uppercase text-titan-muted">{eyebrow}</p>
       <h3 className="text-anywhere mt-2 text-xl font-black text-titan-ivory">
         {title}
@@ -436,7 +436,7 @@ function MemoryCard({
       <div className="mt-4 grid gap-3">
         {items.slice(0, 4).map((item) => (
           <p
-            className="text-anywhere rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-titan-ivory/68"
+            className="text-anywhere rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-titan-ivory/68"
             key={item}
           >
             {item}

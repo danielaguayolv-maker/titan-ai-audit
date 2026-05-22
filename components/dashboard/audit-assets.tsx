@@ -42,7 +42,7 @@ export function AuditAssets({
 
   return (
     <section id="report" className="px-5 pb-16 sm:px-8 sm:pb-20">
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <article className="premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-8">
           <p className="text-sm font-bold uppercase text-titan-muted">
             Optimized bio output
@@ -50,12 +50,12 @@ export function AuditAssets({
           <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
             Lead-facing positioning
           </h2>
-          <div className="mt-6 rounded-lg border border-titan-gold/15 bg-titan-gold/10 p-5">
-            <p className="text-anywhere text-lg font-bold leading-8 text-titan-ivory">
+          <div className="mt-6 rounded-lg border border-titan-gold/15 bg-titan-gold/10 p-5 sm:p-6">
+            <p className="titan-copy text-anywhere text-lg font-bold text-titan-ivory">
               {auditResult.optimizedBio}
             </p>
           </div>
-          <p className="mt-5 text-sm leading-6 text-titan-ivory/58">
+          <p className="titan-copy mt-5 text-sm text-titan-ivory/58">
             Written to work across profile bios, landing pages, and outbound
             audit summaries without sounding like technical software copy.
           </p>
@@ -89,13 +89,13 @@ export function AuditAssets({
           </h2>
           <div className="mt-7 grid gap-3">
             {auditResult.leadReadyAuditReport.findings.map((highlight) => (
-              <div className="flex min-w-0 gap-3 rounded-lg border border-titan-gold/10 bg-black/25 p-4 transition hover:border-titan-bright/40" key={highlight}>
+              <div className="titan-signal-card flex min-w-0 gap-3 rounded-lg p-4 sm:p-5" key={highlight}>
                 <span className="mt-1 size-2 shrink-0 rounded-full bg-titan-gold" />
-                <p className="text-anywhere min-w-0 leading-7 text-titan-ivory/72">{highlight}</p>
+                <p className="titan-copy text-anywhere min-w-0 text-titan-ivory/72">{highlight}</p>
               </div>
             ))}
           </div>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-7 flex flex-col gap-3 md:flex-row">
             <button
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-titan-gold px-6 text-sm font-bold uppercase text-black shadow-gold transition hover:bg-titan-bright"
               disabled={isDownloading}

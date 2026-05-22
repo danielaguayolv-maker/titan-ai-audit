@@ -13,22 +13,22 @@ export function QuickWins({ quickWins }: QuickWinsProps) {
           Three moves that can sharpen lead capture fast.
         </h2>
 
-        <div className="mt-9 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="mt-9 grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3">
           {quickWins.map((win) => (
             <article
-              className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6"
+              className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7"
               key={win.title}
             >
               <div className="mb-6 flex flex-wrap gap-2">
-                <span className="rounded-full bg-titan-gold px-3 py-1 text-xs font-black uppercase text-black">
+                <span className="titan-chip bg-titan-gold text-xs font-black uppercase text-black">
                   {win.impact}
                 </span>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/70">
+                <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/70">
                   {win.effort} effort
                 </span>
               </div>
               <h3 className="text-anywhere text-2xl font-black text-titan-ivory">{win.title}</h3>
-              <p className="text-anywhere mt-4 leading-7 text-titan-ivory/64">{win.description}</p>
+              <p className="titan-copy text-anywhere mt-4 text-titan-ivory/64">{win.description}</p>
             </article>
           ))}
         </div>

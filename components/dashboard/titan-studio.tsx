@@ -331,7 +331,7 @@ export function TitanStudio({
                 CTAs, engagement quality, local search intent, and content gaps.
               </p>
             </div>
-            <div className="rounded-lg border border-titan-gold/15 bg-black/24 p-4">
+            <div className="titan-panel rounded-lg p-4 sm:p-5">
               <p className="text-xs font-bold uppercase text-titan-muted">
                 Intelligence source
               </p>
@@ -366,7 +366,7 @@ export function TitanStudio({
           </div>
         </div>
 
-        <article className="premium-surface mt-5 min-w-0 rounded-lg p-6 sm:p-7">
+        <article className="premium-surface mt-5 min-w-0 rounded-lg p-6 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-bold uppercase text-titan-muted">
@@ -386,8 +386,8 @@ export function TitanStudio({
               {adaptiveIntelligence.confidenceLabel}
             </span>
           </div>
-          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="titan-panel rounded-lg p-5">
               <p className="text-xs font-black uppercase text-titan-muted">
                 Strategic confidence
               </p>
@@ -397,7 +397,7 @@ export function TitanStudio({
               <div className="mt-4 grid gap-2">
                 {adaptiveIntelligence.generationReasons.map((reason) => (
                   <p
-                    className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/62"
+                    className="titan-signal-card text-anywhere rounded-lg p-4 text-sm leading-6 text-titan-ivory/66"
                     key={reason}
                   >
                     {reason}
@@ -405,7 +405,7 @@ export function TitanStudio({
                 ))}
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <AdaptivePreview
                 title="Adaptive hooks"
                 items={adaptiveIntelligence.adaptiveHooks}
@@ -427,14 +427,14 @@ export function TitanStudio({
         </article>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-8">
             <p className="text-sm font-bold uppercase text-titan-muted">
               Niche intelligence profile
             </p>
             <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
               Detected Niche: {plan.niche.label}
             </h2>
-            <p className="text-anywhere mt-4 leading-7 text-titan-ivory/64">
+            <p className="titan-copy text-anywhere mt-4 text-titan-ivory/64">
               {plan.niche.audience}
             </p>
             <div className="mt-5 grid gap-3">
@@ -444,14 +444,14 @@ export function TitanStudio({
             </div>
           </article>
 
-          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-8">
             <p className="text-sm font-bold uppercase text-titan-muted">
               Visibility intelligence map
             </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
               {plan.visibilitySignals.map((signal) => (
                 <div
-                  className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                  className="titan-signal-card rounded-lg p-4"
                   key={signal.label}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -465,7 +465,7 @@ export function TitanStudio({
                   <p className="mt-2 text-xs font-bold uppercase text-titan-muted">
                     {signal.status}
                   </p>
-                  <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
+                  <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
                     {signal.insight}
                   </p>
                   <div className="mt-4 grid gap-2">
@@ -480,7 +480,7 @@ export function TitanStudio({
         </div>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-8">
             <p className="text-sm font-bold uppercase text-titan-muted">
               Execution strategy
             </p>
@@ -490,17 +490,17 @@ export function TitanStudio({
             <div className="mt-6 grid gap-3">
               {plan.contentPriorities.map((priority) => (
                 <p
-                  className="text-anywhere rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/72"
+                  className="titan-signal-card text-anywhere rounded-lg bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/72"
                   key={priority}
                 >
                   {priority}
                 </p>
               ))}
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
               {plan.recommendedMix.map((item) => (
                 <div
-                  className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                  className="titan-signal-card rounded-lg p-4"
                   key={item.label}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -509,7 +509,7 @@ export function TitanStudio({
                       {item.share}
                     </span>
                   </div>
-                  <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
+                  <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
                     {item.purpose}
                   </p>
                 </div>
@@ -517,7 +517,7 @@ export function TitanStudio({
             </div>
           </article>
 
-          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
+          <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-8">
             <p className="text-sm font-bold uppercase text-titan-muted">
               Hook taxonomy
             </p>
@@ -527,7 +527,7 @@ export function TitanStudio({
             <div className="mt-6 grid gap-3">
               {plan.hookTaxonomy.map((group) => (
                 <div
-                  className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                  className="titan-signal-card rounded-lg p-4"
                   key={group.category}
                 >
                   <p className="text-xs font-black uppercase text-titan-bright">
@@ -536,7 +536,7 @@ export function TitanStudio({
                   <div className="mt-3 grid gap-2">
                     {group.hooks.map((hook) => (
                       <p
-                        className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/66"
+                        className="text-anywhere rounded-lg bg-white/[0.04] p-4 text-sm leading-6 text-titan-ivory/68"
                         key={hook}
                       >
                         {hook}
@@ -556,7 +556,7 @@ export function TitanStudio({
           <h2 className="mt-3 text-3xl font-black text-titan-ivory sm:text-4xl">
             30-day visibility plan
           </h2>
-          <p className="text-anywhere mt-4 max-w-3xl leading-7 text-titan-ivory/62">
+          <p className="titan-copy text-anywhere mt-4 text-titan-ivory/62">
             Each week compounds the audit intelligence: clarify visibility,
             stabilize content rhythm, build authority, then convert attention
             into leads.
@@ -574,8 +574,9 @@ export function TitanStudio({
 
 function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/15 bg-black/24 p-5 sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+    <div className="titan-panel min-w-0 rounded-lg p-5 sm:p-7">
+      <div className="titan-pulse-line mb-6" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase text-titan-muted">
             {week.week}
@@ -583,7 +584,7 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
           <h3 className="text-anywhere mt-2 text-2xl font-black text-titan-bright">
             {week.objective}
           </h3>
-          <p className="text-anywhere mt-4 leading-7 text-titan-ivory/68">
+          <p className="titan-copy text-anywhere mt-4 text-titan-ivory/68">
             {week.strategy}
           </p>
 
@@ -601,24 +602,24 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
           <div className="mt-4 grid gap-3">
             {week.dailyPosts.map((post) => (
               <div
-                className="rounded-md border border-white/10 bg-white/[0.03] p-4"
+                className="titan-signal-card rounded-lg p-4"
                 key={`${week.week}-${post.day}`}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-titan-gold px-3 py-1 text-xs font-black text-black">
+                  <span className="titan-chip bg-titan-gold text-xs font-black text-black">
                     {post.day}
                   </span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/64">
+                  <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/64">
                     {post.format}
                   </span>
-                  <span className="rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright">
+                  <span className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright">
                     {post.visibilitySignal}
                   </span>
                 </div>
                 <p className="text-anywhere mt-3 font-bold leading-6 text-titan-ivory">
                   {post.topic}
                 </p>
-                <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/58">
+                <p className="titan-copy text-anywhere mt-2 text-sm text-titan-ivory/58">
                   {post.goal}
                 </p>
               </div>
@@ -627,7 +628,7 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <MiniList title="Video/script concepts" items={week.videoScriptConcepts} />
         <MiniList title="Caption ideas" items={week.captionIdeas} />
         <MiniList title="Engagement tasks" items={week.engagementTasks} />
@@ -638,12 +639,12 @@ function WeekPlanCard({ week }: { week: WeeklyVisibilityPlan }) {
 
 function AdaptivePreview({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+    <div className="titan-signal-card min-w-0 rounded-lg p-4">
       <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
       <div className="mt-3 grid gap-2">
         {items.slice(0, 3).map((item) => (
           <p
-            className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/66"
+            className="text-anywhere rounded-lg bg-white/[0.04] p-4 text-sm leading-6 text-titan-ivory/68"
             key={item}
           >
             {item}
@@ -656,29 +657,31 @@ function AdaptivePreview({ title, items }: { title: string; items: string[] }) {
 
 function MiniList({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/20 p-4">
-      <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
+    <details className="titan-signal-card min-w-0 rounded-lg p-4" open>
+      <summary className="cursor-pointer text-xs font-black uppercase text-titan-muted">
+        {title}
+      </summary>
       <div className="mt-3 grid gap-2">
         {items.map((item) => (
           <p
-            className="text-anywhere rounded-md bg-white/[0.035] p-3 text-sm leading-6 text-titan-ivory/66"
+            className="text-anywhere rounded-lg bg-white/[0.04] p-4 text-sm leading-6 text-titan-ivory/68"
             key={item}
           >
             {item}
           </p>
         ))}
       </div>
-    </div>
+    </details>
   );
 }
 
 function SignalDiagnostic({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-md border border-titan-gold/10 bg-white/[0.03] p-3">
+    <div className="rounded-lg border border-titan-gold/10 bg-white/[0.03] p-4">
       <p className="text-[11px] font-black uppercase text-titan-bright">
         {title}
       </p>
-      <p className="text-anywhere mt-1 text-xs leading-5 text-titan-ivory/58">
+      <p className="text-anywhere mt-2 text-xs leading-5 text-titan-ivory/62">
         {text}
       </p>
     </div>
@@ -687,12 +690,12 @@ function SignalDiagnostic({ title, text }: { title: string; text: string }) {
 
 function PillGroup({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="rounded-lg border border-titan-gold/10 bg-black/24 p-4">
+    <div className="titan-signal-card rounded-lg p-4">
       <p className="text-xs font-black uppercase text-titan-muted">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.map((item) => (
           <span
-            className="text-anywhere rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright"
+            className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright"
             key={item}
           >
             {item}

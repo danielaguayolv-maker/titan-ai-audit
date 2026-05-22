@@ -23,7 +23,7 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
   const overallScore = Math.max(0, Math.min(100, Math.round(auditResult.overallScore)));
 
   return (
-    <section className="relative mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-5 pb-10 pt-10 sm:px-8 sm:pt-14 lg:grid-cols-[minmax(0,0.92fr)_minmax(280px,1.08fr)]">
+    <section className="relative mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-5 pb-10 pt-10 sm:px-8 sm:pt-14 xl:grid-cols-[minmax(0,0.92fr)_minmax(340px,1.08fr)]">
       <div className="subtle-grid pointer-events-none absolute inset-x-0 top-0 h-72" />
       <div className="fade-up premium-surface relative min-w-0 max-w-full rounded-lg p-6 sm:p-8">
         <p className="text-sm font-bold uppercase text-titan-muted">
@@ -33,12 +33,12 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
           <span className="block max-w-full">{auditResult.businessName}</span>
           <span className="gold-text block">Visibility score</span>
         </h1>
-        <p className="text-anywhere mt-5 max-w-2xl text-lg leading-8 text-titan-ivory/66">
+        <p className="titan-copy text-anywhere mt-5 text-lg text-titan-ivory/66">
           {auditResult.personalizedDiagnosis}
         </p>
       </div>
 
-      <div className="fade-up relative grid min-w-0 max-w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1 [animation-delay:120ms]">
+      <div className="fade-up relative grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-1 [animation-delay:120ms]">
         <div className="luxury-border min-w-0 max-w-full rounded-lg bg-titan-gold p-6 text-black shadow-gold">
           <p className="text-sm font-black uppercase">Overall score</p>
           <div className="mt-5 flex min-w-0 items-end gap-3">
@@ -60,19 +60,19 @@ export function ScoreSummary({ auditResult, isUsingFallback }: ScoreSummaryProps
           </p>
         </div>
         {topCategory ? (
-          <div className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6">
+          <div className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7">
             <p className="text-sm font-bold uppercase text-titan-muted">Strongest area</p>
             <p className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">{topCategory.name}</p>
-            <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/62">
+            <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
               Score {topCategory.score}: {topCategory.insight}
             </p>
           </div>
         ) : null}
         {lowestCategory ? (
-          <div className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6">
+          <div className="interactive-card premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7">
             <p className="text-sm font-bold uppercase text-titan-muted">Priority gap</p>
             <p className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">{lowestCategory.name}</p>
-            <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/62">
+            <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/62">
               Score {lowestCategory.score}: {lowestCategory.insight}
             </p>
           </div>

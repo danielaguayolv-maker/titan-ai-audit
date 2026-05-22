@@ -51,12 +51,12 @@ export function StrategyCta({
           <h2 className="text-anywhere mt-3 text-4xl font-black text-titan-ivory sm:text-5xl">
             Ready to Improve Your Visibility?
           </h2>
-          <p className="text-anywhere mt-5 max-w-3xl text-lg leading-8 text-titan-ivory/68">
+          <p className="titan-copy text-anywhere mt-5 text-lg text-titan-ivory/68">
             Titan Visibility OS identified growth opportunities for your brand.
             Titan Media Group can help implement the strategy.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 lg:flex-row">
             <a
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-titan-gold px-6 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
               href="mailto:hello@titanmediagroup.com?subject=Titan%20Visibility%20Strategy%20Call"

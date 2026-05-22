@@ -256,7 +256,7 @@ export function CompetitorIntelligence({
     <section className="px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
       <div className="mx-auto w-full max-w-7xl">
         <article className="premium-surface min-w-0 rounded-lg p-6 shadow-gold sm:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:items-start">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:items-start">
             <div className="min-w-0">
               <p className="text-sm font-bold uppercase text-titan-muted">
                 Competitor Intelligence
@@ -264,7 +264,7 @@ export function CompetitorIntelligence({
               <h1 className="text-anywhere mt-3 text-4xl font-black leading-tight text-titan-ivory sm:text-6xl">
                 Reverse-engineer why one account wins attention.
               </h1>
-              <p className="text-anywhere mt-5 max-w-3xl text-lg leading-8 text-titan-ivory/66">
+              <p className="titan-copy text-anywhere mt-5 text-lg text-titan-ivory/66">
                 Paste your profile and a competitor profile. Titan Visibility OS
                 runs both through the shared audit engine, then compares hooks,
                 proof, CTA clarity, visual pacing, content rhythm, and audience
@@ -273,7 +273,7 @@ export function CompetitorIntelligence({
             </div>
 
             <form
-              className="min-w-0 rounded-lg border border-titan-gold/15 bg-black/24 p-4 sm:p-5"
+              className="titan-panel min-w-0 rounded-lg p-4 sm:p-5"
               onSubmit={submitComparison}
             >
               <label className="block min-w-0 text-sm font-bold text-titan-ivory/72">
@@ -320,7 +320,7 @@ export function CompetitorIntelligence({
               <div className="mt-4 flex flex-wrap gap-2">
                 {["Hooks", "Visual strategy", "CTA clarity", "Audience psychology"].map((item) => (
                   <span
-                    className="rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright"
+                    className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright"
                     key={item}
                   >
                     {item}
@@ -369,7 +369,7 @@ function LoadingStages({ activeStage }: { activeStage: number }) {
       <div className="mt-5 grid gap-3">
         {stages.map((stage, index) => (
           <div
-            className="flex items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
             key={stage}
           >
             <span
@@ -379,7 +379,7 @@ function LoadingStages({ activeStage }: { activeStage: number }) {
             />
             <p className="text-sm font-bold text-titan-ivory/72">{stage}</p>
             {index === activeStage ? (
-              <span className="ml-auto text-xs font-black uppercase text-titan-bright">
+              <span className="text-xs font-black uppercase text-titan-bright sm:ml-auto">
                 Running
               </span>
             ) : null}
@@ -399,7 +399,7 @@ function CompetitorEmptyState() {
       <h2 className="text-anywhere mt-3 text-3xl font-black text-titan-ivory">
         Compare accounts by behavior, not vanity metrics.
       </h2>
-      <p className="text-anywhere mt-4 max-w-3xl leading-7 text-titan-ivory/62">
+      <p className="titan-copy text-anywhere mt-4 text-titan-ivory/62">
         The report will show what the competitor does better, what you do
         better, and the biggest opportunity gap across visual execution,
         emotional triggers, content rhythm, and conversion clarity.
@@ -420,7 +420,7 @@ function CompetitorReport({
   return (
     <div className="mt-5 grid gap-5">
       <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-8">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <ProfileSummary
             label="Your profile"
             niche={report.yourNiche.label}
@@ -436,7 +436,7 @@ function CompetitorReport({
         </div>
       </article>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-3">
         <InsightCard
           eyebrow="What They Do Better"
           items={report.whatTheyDoBetter}
@@ -454,7 +454,7 @@ function CompetitorReport({
           <h2 className="text-anywhere mt-3 text-2xl font-black text-titan-bright">
             Where to attack first
           </h2>
-          <p className="text-anywhere mt-4 text-sm leading-7 text-titan-ivory/66">
+          <p className="titan-copy text-anywhere mt-4 text-sm text-titan-ivory/66">
             {report.biggestOpportunityGap}
           </p>
         </article>
@@ -575,8 +575,8 @@ function ProfileSummary({
   snapshot: AuditSnapshotState;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="titan-signal-card min-w-0 rounded-lg p-5 sm:p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase text-titan-muted">
             {label}
@@ -588,22 +588,22 @@ function ProfileSummary({
             {snapshot.profileUrl}
           </p>
         </div>
-        <span className="rounded-full bg-titan-gold px-3 py-1 text-xs font-black uppercase text-black">
+        <span className="titan-chip bg-titan-gold text-xs font-black uppercase text-black">
           {Math.round(snapshot.result.overallScore)}
         </span>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <span className="rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright">
+        <span className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright">
           {platformLabels[snapshot.platform]}
         </span>
-        <span className="rounded-full border border-titan-gold/15 bg-white/5 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/64">
+        <span className="titan-chip bg-white/5 text-xs font-bold uppercase text-titan-ivory/64">
           {niche}
         </span>
-        <span className="rounded-full border border-titan-gold/15 bg-white/5 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/64">
+        <span className="titan-chip bg-white/5 text-xs font-bold uppercase text-titan-ivory/64">
           {scan.status}
         </span>
       </div>
-      <p className="text-anywhere mt-4 text-sm leading-6 text-titan-ivory/62">
+      <p className="titan-copy text-anywhere mt-4 text-sm text-titan-ivory/62">
         {snapshot.result.personalizedDiagnosis}
       </p>
     </div>
@@ -619,8 +619,8 @@ function DimensionCard({
   const youAhead = dimension.scoreDelta < -4;
 
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <div className="titan-panel min-w-0 rounded-lg p-5 sm:p-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase text-titan-muted">
             Competitive signal
@@ -629,7 +629,7 @@ function DimensionCard({
             {dimension.label}
           </h3>
         </div>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase text-titan-ivory/70">
+        <span className="titan-chip bg-white/10 text-xs font-black uppercase text-titan-ivory/70">
           {competitorAhead
             ? "Competitor edge"
             : youAhead
@@ -637,11 +637,11 @@ function DimensionCard({
               : "Close signal"}
         </span>
       </div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+      <div className="mt-5 grid gap-3 xl:grid-cols-2">
         <SignalBlock label="Your signal" text={dimension.yourSignal} />
         <SignalBlock label="Competitor signal" text={dimension.competitorSignal} />
       </div>
-      <p className="text-anywhere mt-5 text-sm leading-7 text-titan-ivory/68">
+      <p className="titan-copy text-anywhere mt-5 text-sm text-titan-ivory/68">
         {dimension.strategicRead}
       </p>
       <div className="mt-4 grid gap-3">
@@ -650,7 +650,7 @@ function DimensionCard({
         <ObservationBlock text={dimension.difference} />
         <ObservationBlock text={dimension.adaptation} />
       </div>
-      <p className="text-anywhere mt-3 rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/72">
+      <p className="titan-copy text-anywhere mt-3 rounded-lg border border-titan-gold/10 bg-titan-gold/10 p-4 text-sm text-titan-ivory/72">
         {dimension.whyItMatters} {dimension.emotionalRead}
       </p>
     </div>
@@ -659,8 +659,8 @@ function DimensionCard({
 
 function ObservationBlock({ text }: { text: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/20 p-4">
-      <p className="text-anywhere text-sm leading-6 text-titan-ivory/64">
+    <div className="titan-signal-card min-w-0 rounded-lg p-4">
+      <p className="titan-copy text-anywhere text-sm text-titan-ivory/64">
         {text}
       </p>
     </div>
@@ -669,9 +669,9 @@ function ObservationBlock({ text }: { text: string }) {
 
 function SignalBlock({ label, text }: { label: string; text: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.03] p-4 sm:p-5">
       <p className="text-xs font-black uppercase text-titan-muted">{label}</p>
-      <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/62">
+      <p className="titan-copy text-anywhere mt-2 text-sm text-titan-ivory/62">
         {text}
       </p>
     </div>
@@ -688,7 +688,7 @@ function InsightCard({
   title: string;
 }) {
   return (
-    <article className="premium-surface min-w-0 rounded-lg p-6">
+    <article className="premium-surface min-w-0 rounded-lg p-6 sm:p-7">
       <p className="text-sm font-bold uppercase text-titan-muted">{eyebrow}</p>
       <h2 className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">
         {title}
@@ -696,7 +696,7 @@ function InsightCard({
       <div className="mt-5 grid gap-3">
         {(items.length > 0 ? items : ["No major gap detected yet. Re-run with richer profile data for a sharper read."]).map((item) => (
           <p
-            className="text-anywhere rounded-lg border border-titan-gold/10 bg-black/24 p-4 text-sm leading-6 text-titan-ivory/66"
+            className="titan-signal-card text-anywhere rounded-lg p-4 text-sm leading-6 text-titan-ivory/66"
             key={item}
           >
             {item}

@@ -336,15 +336,15 @@ function ModulePlaceholder({
           <h1 className="text-anywhere mt-3 text-4xl font-black text-titan-ivory sm:text-6xl">
             {moduleLabels[module]}
           </h1>
-          <p className="text-anywhere mt-5 max-w-3xl text-lg leading-8 text-titan-ivory/66">
+          <p className="titan-copy text-anywhere mt-5 text-lg text-titan-ivory/66">
             This module is staged into the OS architecture and ready to connect
             to the shared audit intelligence layer. The current active workflow
             is Visibility Audit to Titan Studio to Reports.
           </p>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+          <div className="mt-7 grid gap-3 lg:grid-cols-3">
             {weakAreas.map((area) => (
               <div
-                className="rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                className="titan-signal-card rounded-lg p-4"
                 key={area}
               >
                 <p className="text-xs font-bold uppercase text-titan-muted">
@@ -356,6 +356,22 @@ function ModulePlaceholder({
               </div>
             ))}
           </div>
+          {module === "content-planner" ? (
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {["Audit signal", "Studio concept", "Posting window", "Report handoff"].map(
+                (step, index) => (
+                  <div className="titan-panel rounded-lg p-4" key={step}>
+                    <span className="titan-chip bg-titan-gold/10 text-[11px] font-black uppercase text-titan-bright">
+                      Step {index + 1}
+                    </span>
+                    <p className="text-anywhere mt-3 text-sm font-bold leading-6 text-titan-ivory/70">
+                      {step}
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          ) : null}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-titan-gold px-6 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
@@ -739,7 +755,7 @@ function HomeCard({
       <h2 className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">
         {title}
       </h2>
-      <p className="text-anywhere mt-4 min-h-24 text-sm leading-6 text-titan-ivory/62">
+      <p className="titan-copy text-anywhere mt-4 min-h-24 text-sm text-titan-ivory/62">
         {description}
       </p>
       <button
@@ -1880,7 +1896,7 @@ function SeverityBadge({ severity }: { severity: StrategicSeverity }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black uppercase ${visual.badgeClass}`}
+      className={`inline-flex max-w-full shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black uppercase leading-tight ${visual.badgeClass}`}
     >
       <span className={`size-1.5 rounded-full ${visual.dotClass} ${visual.pulseClass}`} />
       {severity}
@@ -1965,7 +1981,7 @@ function StrategicPriorityRanking({
             className={`rounded-lg p-4 ${severityVisual(priority.severity).panelClass}`}
             key={priority.label}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase text-titan-muted">
                   {index + 1}. {priority.label}
@@ -1979,7 +1995,7 @@ function StrategicPriorityRanking({
             <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/64">
               {priority.description}
             </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <p className="text-anywhere text-xs font-bold uppercase text-titan-ivory/50">
                 {movementArrow(priority.movement)} {priority.movement} ·{" "}
                 {priority.confidence}% confidence
@@ -2018,7 +2034,7 @@ function TitanPulseFeed({ items }: { items: TitanPulseItem[] }) {
 
           return (
             <div
-              className="relative grid gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4 sm:grid-cols-[auto_minmax(0,1fr)]"
+              className="relative grid gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4 md:grid-cols-[auto_minmax(0,1fr)]"
               key={`${item.label}-${item.message}`}
             >
               <div className="flex items-start gap-3 sm:block">
@@ -2030,7 +2046,7 @@ function TitanPulseFeed({ items }: { items: TitanPulseItem[] }) {
                 </span>
               </div>
               <div className="min-w-0">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                   <p className="text-anywhere text-sm font-black text-titan-ivory">
                     {item.label}
                   </p>
@@ -2158,7 +2174,7 @@ function StrategicFocusMode({ focus }: { focus: StrategicFocus }) {
           Prioritized by severity
         </span>
       </div>
-      <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
         {focusCards.map((card) => (
           <div
             className={`min-w-0 rounded-lg p-4 ${severityVisual(card.severity).panelClass}`}
@@ -2243,7 +2259,7 @@ function CommandMetricCard({
       onClick={onSelect}
       type="button"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-anywhere font-black text-titan-ivory">{metric.label}</p>
         <SeverityBadge severity={severity} />
       </div>

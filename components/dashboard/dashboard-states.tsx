@@ -34,8 +34,8 @@ export function DashboardStates({
 
   return (
     <section className="px-5 pb-16 sm:px-8">
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 md:grid-cols-2">
-        <article className="premium-surface min-w-0 max-w-full rounded-lg p-6">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 lg:grid-cols-2">
+        <article className="premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7">
           <p className="text-sm font-bold uppercase text-titan-muted">
             Detected audit gaps
           </p>
@@ -45,16 +45,16 @@ export function DashboardStates({
           <div className="mt-5 grid min-w-0 gap-3">
             {missingSignals.map((signal) => (
               <div
-                className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                className="titan-signal-card min-w-0 rounded-lg p-4"
                 key={signal}
               >
-                <p className="text-anywhere text-sm leading-6 text-titan-ivory/68">{signal}</p>
+                <p className="titan-copy text-anywhere text-sm text-titan-ivory/68">{signal}</p>
               </div>
             ))}
           </div>
         </article>
 
-        <article className="premium-surface min-w-0 max-w-full rounded-lg p-6">
+        <article className="premium-surface min-w-0 max-w-full rounded-lg p-6 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-bold uppercase text-titan-muted">
               AI report workflow
@@ -82,7 +82,7 @@ export function DashboardStates({
 
               return (
                 <div
-                  className="flex min-w-0 items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                  className="flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
                   key={stage}
                 >
                   <span
@@ -92,7 +92,7 @@ export function DashboardStates({
                   />
                   <p className="min-w-0 text-sm font-bold text-titan-ivory/72">{stage}</p>
                   {isCurrent ? (
-                    <span className="ml-auto text-xs font-bold uppercase text-titan-bright">
+                    <span className="text-xs font-bold uppercase text-titan-bright sm:ml-auto">
                       Running
                     </span>
                   ) : null}

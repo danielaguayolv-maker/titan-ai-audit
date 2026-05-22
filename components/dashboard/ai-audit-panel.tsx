@@ -306,8 +306,8 @@ export function AiAuditPanel({
     <section className="relative px-5 pb-12 pt-10 sm:px-8 sm:pt-14">
       <div className="subtle-grid pointer-events-none absolute inset-x-0 top-0 h-80" />
       <div className="mx-auto w-full max-w-7xl">
-        <form className="premium-surface fade-up relative min-w-0 max-w-full rounded-lg p-6 sm:p-8 lg:p-10" onSubmit={submitAudit}>
-          <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:items-start">
+        <form className="premium-surface fade-up relative min-w-0 max-w-full rounded-lg p-6 shadow-gold sm:p-8 lg:p-10" onSubmit={submitAudit}>
+          <div className="grid min-w-0 grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] xl:items-start">
             <div className="min-w-0">
               <p className="text-sm font-bold uppercase text-titan-muted">
                 Visibility Audit
@@ -316,14 +316,14 @@ export function AiAuditPanel({
                 Paste a profile URL.{" "}
                 <span className="gold-text">Run a premium visibility audit.</span>
               </h2>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-titan-ivory/66">
+              <p className="titan-copy mt-5 text-lg text-titan-ivory/66">
                 Start with an Instagram or TikTok URL. Add deeper context only if
                 you want a sharper, more personalized report.
               </p>
             </div>
 
-            <div className="min-w-0 max-w-full rounded-lg border border-titan-gold/15 bg-black/24 p-4 sm:p-5">
-              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="titan-panel min-w-0 max-w-full rounded-lg p-4 sm:p-5">
+              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
                   Profile URL
                   <input
@@ -351,14 +351,14 @@ export function AiAuditPanel({
                 </label>
               </div>
 
-              <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4">
+              <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4 sm:p-5">
                 <p className="text-xs font-black uppercase text-titan-muted">
                   Unlock the full report
                 </p>
                 <h3 className="mt-2 text-xl font-black text-titan-ivory">
                   Where should we send the visibility strategy?
                 </h3>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
                     Name
                     <input
@@ -423,7 +423,7 @@ export function AiAuditPanel({
               <div className="mt-4 flex flex-wrap gap-2">
                 {platformFocus[formData.platform].slice(0, 6).map((item) => (
                   <span
-                    className="rounded-full border border-titan-gold/15 bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright"
+                    className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright"
                     key={item}
                   >
                     {item}
@@ -556,13 +556,13 @@ export function AiAuditPanel({
             </span>
           </div>
 
-          <div className="mt-5 min-w-0 max-w-full rounded-lg border border-titan-gold/15 bg-black/24 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="titan-panel mt-5 min-w-0 max-w-full rounded-lg p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-sm font-black uppercase text-titan-bright">
                   {liveScan.message}
                 </p>
-                <p className="mt-1 text-sm leading-6 text-titan-ivory/58">
+                <p className="titan-copy mt-1 text-sm text-titan-ivory/58">
                   {liveScan.status === "scanning"
                     ? "Checking the live public profile now. Each audit starts with a fresh scan for the submitted URL."
                     : liveScan.status === "success"
@@ -582,7 +582,7 @@ export function AiAuditPanel({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/70">
+                <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/70">
                   {liveScan.status === "scanning"
                     ? "Scanning"
                     : liveScan.status === "success"
@@ -595,17 +595,17 @@ export function AiAuditPanel({
                             ? "Live scan failed"
                             : "Ready"}
                 </span>
-                <span className="rounded-full bg-titan-gold/10 px-3 py-1 text-xs font-bold uppercase text-titan-bright">
+                <span className="titan-chip bg-titan-gold/10 text-xs font-bold uppercase text-titan-bright">
                   Quality {liveScan.scanCompleteness ?? 0}%
                 </span>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/70">
+                <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/70">
                   Confidence {liveScan.confidenceScore ?? 0}%
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3">
+            <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="titan-signal-card min-w-0 rounded-lg p-4">
                 <p className="text-xs font-bold uppercase text-titan-muted">
                   Platform detection
                 </p>
@@ -613,7 +613,7 @@ export function AiAuditPanel({
                   {platformLabels[formData.platform]}
                 </p>
               </div>
-              <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3">
+              <div className="titan-signal-card min-w-0 rounded-lg p-4">
                 <p className="text-xs font-bold uppercase text-titan-muted">
                   Metrics
                 </p>
@@ -621,7 +621,7 @@ export function AiAuditPanel({
                   {liveScan.metricsStatus ?? "limited"}
                 </p>
               </div>
-              <div className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3">
+              <div className="titan-signal-card min-w-0 rounded-lg p-4">
                 <p className="text-xs font-bold uppercase text-titan-muted">
                   Data points
                 </p>
@@ -635,7 +635,7 @@ export function AiAuditPanel({
               <div className="mt-4 flex flex-wrap gap-2">
                 {liveScan.dataPointsFound.map((point) => (
                   <span
-                    className="rounded-full border border-titan-gold/15 bg-white/5 px-3 py-1 text-xs font-bold uppercase text-titan-ivory/66"
+                    className="titan-chip bg-white/5 text-xs font-bold uppercase text-titan-ivory/66"
                     key={point}
                   >
                     {point}
@@ -652,7 +652,7 @@ export function AiAuditPanel({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {liveScan.missingDataPoints.slice(0, 8).map((point) => (
                     <span
-                      className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-bold uppercase text-titan-ivory/45"
+                      className="titan-chip border-white/10 bg-white/[0.03] text-xs font-bold uppercase text-titan-ivory/45"
                       key={point}
                     >
                       {point}
@@ -671,7 +671,7 @@ export function AiAuditPanel({
 
                 return (
                   <div
-                    className="flex items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
                     key={stage}
                   >
                     <span
@@ -681,7 +681,7 @@ export function AiAuditPanel({
                     />
                     <p className="text-sm font-bold text-titan-ivory/72">{stage}</p>
                     {isCurrent ? (
-                      <span className="ml-auto text-xs font-black uppercase text-titan-bright">
+                      <span className="text-xs font-black uppercase text-titan-bright sm:ml-auto">
                         Running
                       </span>
                     ) : null}
@@ -695,7 +695,7 @@ export function AiAuditPanel({
                 <p className="text-sm font-bold uppercase text-titan-bright">
                   Diagnosis
                 </p>
-                <p className="text-anywhere mt-3 leading-7 text-titan-ivory/72">
+                <p className="titan-copy text-anywhere mt-3 text-titan-ivory/72">
                   {auditResult.personalizedDiagnosis}
                 </p>
               </div>
@@ -704,7 +704,7 @@ export function AiAuditPanel({
                 <p className="text-sm font-bold uppercase text-titan-bright">
                   Optimized bio
                 </p>
-                <p className="text-anywhere mt-3 rounded-lg border border-titan-gold/15 bg-titan-gold/10 p-4 font-bold leading-7 text-titan-ivory">
+                <p className="titan-copy text-anywhere mt-3 rounded-lg border border-titan-gold/15 bg-titan-gold/10 p-4 font-bold text-titan-ivory">
                   {auditResult.optimizedBio}
                 </p>
               </div>
@@ -715,21 +715,21 @@ export function AiAuditPanel({
                 </p>
                 {auditResult.topQuickWins.map((win) => (
                   <div
-                    className="min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-4"
+                    className="titan-signal-card min-w-0 rounded-lg p-4 sm:p-5"
                     key={win.title}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-anywhere mr-auto min-w-0 font-black text-titan-ivory">
                         {win.title}
                       </h3>
-                      <span className="rounded-full bg-titan-gold px-2 py-1 text-xs font-black uppercase text-black">
+                      <span className="titan-chip bg-titan-gold text-xs font-black uppercase text-black">
                         {win.impact}
                       </span>
-                      <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-bold uppercase text-titan-ivory/70">
+                      <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/70">
                         {win.effort} effort
                       </span>
                     </div>
-                    <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/64">
+                    <p className="titan-copy text-anywhere mt-3 text-sm text-titan-ivory/64">
                       {win.description}
                     </p>
                   </div>
@@ -743,12 +743,12 @@ export function AiAuditPanel({
                 <h3 className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">
                   {auditResult.leadReadyAuditReport.headline}
                 </h3>
-                <p className="text-anywhere mt-3 leading-7 text-titan-ivory/68">
+                <p className="titan-copy text-anywhere mt-3 text-titan-ivory/68">
                   {auditResult.leadReadyAuditReport.summary}
                 </p>
               </div>
 
-              <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="min-w-0">
                   <p className="text-sm font-bold uppercase text-titan-bright">
                     Content recommendations
@@ -756,7 +756,7 @@ export function AiAuditPanel({
                   <div className="mt-3 grid gap-2">
                     {auditResult.contentRecommendations.map((recommendation) => (
                       <p
-                        className="text-anywhere min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3 text-sm leading-6 text-titan-ivory/68"
+                        className="titan-signal-card text-anywhere min-w-0 rounded-lg p-4 text-sm leading-6 text-titan-ivory/68"
                         key={recommendation}
                       >
                         {recommendation}
@@ -772,7 +772,7 @@ export function AiAuditPanel({
                   <div className="mt-3 grid gap-2">
                     {auditResult.leadReadyAuditReport.nextSteps.map((step) => (
                       <p
-                        className="text-anywhere min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3 text-sm leading-6 text-titan-ivory/68"
+                        className="titan-signal-card text-anywhere min-w-0 rounded-lg p-4 text-sm leading-6 text-titan-ivory/68"
                         key={step}
                       >
                         {step}
@@ -789,7 +789,7 @@ export function AiAuditPanel({
                 <div className="mt-3 grid gap-2">
                   {auditResult.leadReadyAuditReport.findings.map((finding) => (
                     <p
-                    className="text-anywhere min-w-0 rounded-lg border border-titan-gold/10 bg-black/24 p-3 text-sm leading-6 text-titan-ivory/68"
+                    className="titan-signal-card text-anywhere min-w-0 rounded-lg p-4 text-sm leading-6 text-titan-ivory/68"
                       key={finding}
                     >
                       {finding}

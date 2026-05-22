@@ -131,7 +131,7 @@ export function DashboardShell({
             <h1 className="mt-2 text-2xl font-black leading-tight text-titan-ivory">
               Titan Visibility OS
             </h1>
-            <p className="mt-3 text-sm leading-6 text-titan-ivory/58">
+            <p className="titan-copy mt-3 text-sm text-titan-ivory/58">
               AI-powered visibility intelligence and execution system for
               creators and businesses.
             </p>
@@ -148,7 +148,7 @@ export function DashboardShell({
                   className={`group min-w-0 rounded-lg border p-4 text-left transition ${
                     isActive
                       ? "border-titan-bright bg-titan-gold text-black shadow-gold"
-                      : "border-titan-gold/10 bg-white/[0.03] text-titan-ivory hover:border-titan-bright/50 hover:bg-white/[0.07]"
+                      : "titan-signal-card text-titan-ivory"
                   }`}
                   key={module.id}
                   onClick={() => onModuleChange(module.id)}
