@@ -168,12 +168,23 @@ function DashboardWorkspaceContent({
     writeJsonStorage<PersistedAuditWorkspace>(titanWorkspaceStorageKey, {
       savedAt: new Date().toISOString(),
       auditResult,
+      ownerEmail: session.user.email,
+      ownerUserId: session.user.id,
       platform,
       profileUrl,
       liveScan,
       planContext
     });
-  }, [auditResult, isUsingFallback, liveScan, planContext, platform, profileUrl]);
+  }, [
+    auditResult,
+    isUsingFallback,
+    liveScan,
+    planContext,
+    platform,
+    profileUrl,
+    session.user.email,
+    session.user.id
+  ]);
 
   useEffect(() => {
     if (!pendingMemorySave || isUsingFallback) {
@@ -288,6 +299,38 @@ function DashboardWorkspaceContent({
     );
   }
 
+  function updateWorkspaceProfile(profile: {
+    businessName?: string;
+    ownerEmail?: string;
+    ownerName?: string;
+    phone?: string;
+  }) {
+    const activeWorkspace =
+      workspaceEnvelope.workspaces.find(
+        (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
+      ) ?? workspaceEnvelope.workspaces[0];
+
+    if (!activeWorkspace) {
+      return;
+    }
+
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      workspaces: workspaceEnvelope.workspaces.map((workspace) =>
+        workspace.id === activeWorkspace.id
+          ? {
+              ...workspace,
+              businessName: profile.businessName ?? workspace.businessName,
+              ownerEmail: profile.ownerEmail ?? workspace.ownerEmail,
+              ownerName: profile.ownerName ?? workspace.ownerName,
+              phone: profile.phone ?? workspace.phone,
+              updatedAt: new Date().toISOString()
+            }
+          : workspace
+      )
+    });
+  }
+
   function startExperiment(input: TitanExperimentInput) {
     const experiment = createTitanExperiment(input, {
       accountKey: memoryAccountKey || normalizeAccountKey(profileUrl, auditResult.businessName),
@@ -340,6 +383,7 @@ function DashboardWorkspaceContent({
         <>
           <AiAuditPanel
             auditResult={auditResult}
+            authSession={session}
             onClearResults={clearCurrentResults}
             isUsingFallback={isUsingFallback}
             restoredFormData={planContext.formData}
@@ -349,6 +393,7 @@ function DashboardWorkspaceContent({
             onPlatformChange={handlePlatformChange}
             onProfileUrlChange={setProfileUrl}
             onStatusChange={handleRequestStatusChange}
+            onWorkspaceProfileUpdate={updateWorkspaceProfile}
           />
           <ScoreSummary auditResult={auditResult} isUsingFallback={isUsingFallback} />
           <CategoryScores categories={auditResult.categoryScores} />
@@ -562,6 +607,7 @@ function addWorkspaceAuditSnapshot(
     id: accountId,
     lastAuditAt: now,
     lastAuditScore: Math.round(snapshot.auditResult.overallScore),
+    ownerEmail: activeWorkspace.ownerEmail,
     platform: snapshot.platform,
     profileUrl: snapshot.profileUrl,
     workspaceId: activeWorkspace.id

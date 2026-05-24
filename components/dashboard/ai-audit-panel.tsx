@@ -10,11 +10,13 @@ import {
   type LiveScanResult,
   type ProfileData
 } from "@/lib/audit-ai";
+import type { TitanAuthSession } from "@/lib/titan-auth";
 
 export type RequestStatus = "idle" | "loading" | "success" | "error";
 
 type AiAuditPanelProps = {
   auditResult: AiAuditResult;
+  authSession?: TitanAuthSession | null;
   isUsingFallback: boolean;
   onClearResults: () => void;
   restoredFormData?: BusinessAuditFormData;
@@ -27,6 +29,12 @@ type AiAuditPanelProps = {
   onPlatformChange: (platform: AuditPlatform) => void;
   onProfileUrlChange: (profileUrl: string) => void;
   onStatusChange: (status: RequestStatus) => void;
+  onWorkspaceProfileUpdate?: (profile: {
+    businessName?: string;
+    ownerEmail?: string;
+    ownerName?: string;
+    phone?: string;
+  }) => void;
 };
 
 export type LeadCaptureData = {
@@ -108,6 +116,7 @@ const platformFocus: Record<AuditPlatform, string[]> = {
 
 export function AiAuditPanel({
   auditResult,
+  authSession,
   isUsingFallback,
   onClearResults,
   restoredFormData,
@@ -116,7 +125,8 @@ export function AiAuditPanel({
   onLiveScanChange,
   onPlatformChange,
   onProfileUrlChange,
-  onStatusChange
+  onStatusChange,
+  onWorkspaceProfileUpdate
 }: AiAuditPanelProps) {
   const [formData, setFormData] =
     useState<BusinessAuditFormData>(emptyBusinessAuditForm);
@@ -134,6 +144,9 @@ export function AiAuditPanel({
     process.env.NODE_ENV !== "production" &&
     (liveScan.status === "fallback" || liveScan.status === "failed") &&
     Boolean(liveScan.fallbackReason);
+  const isAuthenticatedWorkspace = Boolean(authSession);
+  const workspaceEmail = authSession?.user.email ?? "";
+  const workspaceName = authSession?.user.name ?? "";
 
   useEffect(() => {
     try {
@@ -220,16 +233,7 @@ export function AiAuditPanel({
   async function submitAudit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const requestPlatform = inferPlatformFromUrl(formData.profileUrl) ?? formData.platform;
-    const requestData = {
-      ...formData,
-      platform: requestPlatform,
-      profileUrl: formData.profileUrl.trim(),
-      businessName:
-        formData.businessName ||
-        formData.usernameDisplayName ||
-        leadData.businessCreatorName
-    };
-    const capturedLead: LeadCaptureData = {
+    const trimmedLeadData: LeadCaptureData = {
       ...leadData,
       name: leadData.name.trim(),
       email: leadData.email.trim(),
@@ -237,11 +241,37 @@ export function AiAuditPanel({
       phone: leadData.phone.trim(),
       capturedAt: new Date().toISOString()
     };
+    const workspaceLeadData: LeadCaptureData = {
+      ...trimmedLeadData,
+      email: workspaceEmail || trimmedLeadData.email,
+      name: workspaceName || trimmedLeadData.name
+    };
+    const activeLeadData = isAuthenticatedWorkspace
+      ? workspaceLeadData
+      : trimmedLeadData;
+    const requestData = {
+      ...formData,
+      platform: requestPlatform,
+      profileUrl: formData.profileUrl.trim(),
+      businessName:
+        formData.businessName ||
+        formData.usernameDisplayName ||
+        activeLeadData.businessCreatorName
+    };
 
     try {
-      window.localStorage.setItem(leadStorageKey, JSON.stringify(capturedLead));
+      window.localStorage.setItem(leadStorageKey, JSON.stringify(activeLeadData));
     } catch {
       // Temporary local lead storage is best-effort until database persistence is added.
+    }
+
+    if (isAuthenticatedWorkspace) {
+      onWorkspaceProfileUpdate?.({
+        businessName: activeLeadData.businessCreatorName || undefined,
+        ownerEmail: activeLeadData.email || undefined,
+        ownerName: activeLeadData.name || undefined,
+        phone: activeLeadData.phone || undefined
+      });
     }
 
     if (requestPlatform !== formData.platform) {
@@ -351,57 +381,121 @@ export function AiAuditPanel({
                 </label>
               </div>
 
-              <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4 sm:p-5">
-                <p className="text-xs font-black uppercase text-titan-muted">
-                  Unlock the full report
-                </p>
-                <h3 className="mt-2 text-xl font-black text-titan-ivory">
-                  Where should we send the visibility strategy?
-                </h3>
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
-                    Name
-                    <input
-                      className={fieldClass}
-                      name="name"
-                      onChange={updateLeadField}
-                      required
-                      value={leadData.name}
-                    />
-                  </label>
-                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
-                    Email
-                    <input
-                      className={fieldClass}
-                      name="email"
-                      onChange={updateLeadField}
-                      required
-                      type="email"
-                      value={leadData.email}
-                    />
-                  </label>
-                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
-                    Business / Creator Name
-                    <input
-                      className={fieldClass}
-                      name="businessCreatorName"
-                      onChange={updateLeadField}
-                      required
-                      value={leadData.businessCreatorName}
-                    />
-                  </label>
-                  <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
-                    Phone <span className="text-titan-ivory/36">(optional)</span>
-                    <input
-                      className={fieldClass}
-                      name="phone"
-                      onChange={updateLeadField}
-                      type="tel"
-                      value={leadData.phone}
-                    />
-                  </label>
+              {isAuthenticatedWorkspace ? (
+                <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4 sm:p-5">
+                  <p className="text-xs font-black uppercase text-titan-muted">
+                    Workspace access
+                  </p>
+                  <h3 className="mt-2 text-xl font-black text-titan-ivory">
+                    Run audits directly from your saved workspace.
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-titan-ivory/60">
+                    Audit history, memory, evolution, and plans will be connected
+                    to {workspaceEmail || "this authenticated workspace"}. Name,
+                    business name, and phone can be added as optional workspace
+                    context.
+                  </p>
+                  <details className="mt-4 rounded-lg border border-titan-gold/10 bg-white/[0.03] p-4">
+                    <summary className="cursor-pointer text-xs font-black uppercase text-titan-bright">
+                      Optional workspace profile fields
+                    </summary>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                        Name <span className="text-titan-ivory/36">(optional)</span>
+                        <input
+                          className={fieldClass}
+                          name="name"
+                          onChange={updateLeadField}
+                          value={leadData.name}
+                        />
+                      </label>
+                      <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                        Workspace email
+                        <input
+                          className={`${fieldClass} opacity-75`}
+                          readOnly
+                          value={workspaceEmail}
+                        />
+                      </label>
+                      <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                        Business / Creator Name{" "}
+                        <span className="text-titan-ivory/36">(optional)</span>
+                        <input
+                          className={fieldClass}
+                          name="businessCreatorName"
+                          onChange={updateLeadField}
+                          value={leadData.businessCreatorName}
+                        />
+                      </label>
+                      <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                        Phone <span className="text-titan-ivory/36">(optional)</span>
+                        <input
+                          className={fieldClass}
+                          name="phone"
+                          onChange={updateLeadField}
+                          type="tel"
+                          value={leadData.phone}
+                        />
+                      </label>
+                    </div>
+                  </details>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/30 p-4 sm:p-5">
+                  <p className="text-xs font-black uppercase text-titan-muted">
+                    Unlock the full report
+                  </p>
+                  <h3 className="mt-2 text-xl font-black text-titan-ivory">
+                    Where should we send the visibility strategy?
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-titan-ivory/60">
+                    Create an account to save audits across devices, or continue
+                    with lead capture for this report.
+                  </p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                      Name <span className="text-titan-ivory/36">(optional)</span>
+                      <input
+                        className={fieldClass}
+                        name="name"
+                        onChange={updateLeadField}
+                        value={leadData.name}
+                      />
+                    </label>
+                    <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                      Email
+                      <input
+                        className={fieldClass}
+                        name="email"
+                        onChange={updateLeadField}
+                        required
+                        type="email"
+                        value={leadData.email}
+                      />
+                    </label>
+                    <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                      Business / Creator Name{" "}
+                      <span className="text-titan-ivory/36">(optional)</span>
+                      <input
+                        className={fieldClass}
+                        name="businessCreatorName"
+                        onChange={updateLeadField}
+                        value={leadData.businessCreatorName}
+                      />
+                    </label>
+                    <label className="min-w-0 text-sm font-bold text-titan-ivory/72">
+                      Phone <span className="text-titan-ivory/36">(optional)</span>
+                      <input
+                        className={fieldClass}
+                        name="phone"
+                        onChange={updateLeadField}
+                        type="tel"
+                        value={leadData.phone}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <button
                 className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-titan-gold px-7 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright hover:shadow-[0_20px_70px_rgba(244,211,123,0.24)] disabled:cursor-not-allowed disabled:opacity-60"

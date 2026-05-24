@@ -16,6 +16,10 @@ export const titanWorkspaceFoundationStorageKey =
 export type TitanWorkspaceRecord = {
   id: string;
   ownerUserId: string;
+  ownerEmail?: string;
+  ownerName?: string;
+  businessName?: string;
+  phone?: string;
   name: string;
   mode: "local" | "supabase";
   currentStrategicMission: string;
@@ -28,6 +32,7 @@ export type TitanWorkspaceRecord = {
 export type TitanAuditedAccountRecord = {
   id: string;
   workspaceId: string;
+  ownerEmail?: string;
   profileUrl: string;
   platform: AuditPlatform;
   displayName: string;
@@ -61,6 +66,8 @@ export type TitanWorkspacePersistenceEnvelope = {
 
 export type PersistedAuditWorkspace = {
   savedAt: string;
+  ownerEmail?: string;
+  ownerUserId?: string;
   auditResult: AiAuditResult;
   platform: AuditPlatform;
   profileUrl: string;
@@ -107,6 +114,7 @@ export function createDefaultTitanWorkspace(
         id: workspaceId,
         mode,
         name: `${userEmail.split("@")[0] || "Titan"} Workspace`,
+        ownerEmail: userEmail,
         ownerUserId: userId,
         pinnedPriorities: [
           "Run first audit",

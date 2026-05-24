@@ -35,11 +35,27 @@ type SupabaseAuthResponse = {
   msg?: string;
 };
 
+export type SupabaseEnvDebug = {
+  hasSupabaseUrl: boolean;
+  hasSupabaseAnonKey: boolean;
+  urlHostname: string;
+};
+
+export function getSupabaseEnvDebug(): SupabaseEnvDebug {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+
+  return {
+    hasSupabaseAnonKey: supabaseAnonKey.length > 0,
+    hasSupabaseUrl: supabaseUrl.length > 0,
+    urlHostname: getSafeSupabaseHostname(supabaseUrl)
+  };
+}
+
 export function isSupabaseConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const envDebug = getSupabaseEnvDebug();
+  return envDebug.hasSupabaseUrl && envDebug.hasSupabaseAnonKey;
 }
 
 export function readTitanAuthSession() {
@@ -105,10 +121,12 @@ export function createLocalTitanSession(email: string, name?: string): TitanAuth
 }
 
 async function requestSupabaseAuth(path: string, body: unknown): Promise<TitanAuthSession> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+  const envDebug = getSupabaseEnvDebug();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!envDebug.hasSupabaseUrl || !envDebug.hasSupabaseAnonKey) {
     throw new Error("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
   }
 
@@ -149,4 +167,16 @@ async function requestSupabaseAuth(path: string, body: unknown): Promise<TitanAu
       name: data.user.user_metadata?.name ?? data.user.user_metadata?.full_name
     }
   };
+}
+
+function getSafeSupabaseHostname(value: string) {
+  if (!value) {
+    return "Not detected";
+  }
+
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return "Invalid URL";
+  }
 }
