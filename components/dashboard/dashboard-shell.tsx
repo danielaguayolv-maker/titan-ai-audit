@@ -23,6 +23,7 @@ type DashboardShellProps = {
   activeModule: TitanOsModule;
   onModuleChange: (module: TitanOsModule) => void;
   onLogout: () => void;
+  onDemoWorkspacesCreate: () => void;
   onWorkspaceCreate: (name: string) => void;
   onWorkspaceNoteAdd: (note: string) => void;
   onWorkspaceSwitch: (workspaceId: string) => void;
@@ -92,6 +93,7 @@ export function DashboardShell({
   children,
   activeModule,
   onLogout,
+  onDemoWorkspacesCreate,
   onModuleChange,
   onWorkspaceCreate,
   onWorkspaceNoteAdd,
@@ -165,6 +167,7 @@ export function DashboardShell({
 
           <WorkspaceStatusPanel
             onWorkspaceCreate={onWorkspaceCreate}
+            onDemoWorkspacesCreate={onDemoWorkspacesCreate}
             onWorkspaceNoteAdd={onWorkspaceNoteAdd}
             onWorkspaceSwitch={onWorkspaceSwitch}
             onWorkspaceViewModeChange={onWorkspaceViewModeChange}
@@ -227,6 +230,7 @@ export function DashboardShell({
 
 function WorkspaceStatusPanel({
   onWorkspaceCreate,
+  onDemoWorkspacesCreate,
   onWorkspaceNoteAdd,
   onWorkspaceSwitch,
   onWorkspaceViewModeChange,
@@ -234,6 +238,7 @@ function WorkspaceStatusPanel({
   workspaceEnvelope
 }: {
   onWorkspaceCreate: (name: string) => void;
+  onDemoWorkspacesCreate: () => void;
   onWorkspaceNoteAdd: (note: string) => void;
   onWorkspaceSwitch: (workspaceId: string) => void;
   onWorkspaceViewModeChange: (mode: TitanWorkspaceRecord["viewMode"]) => void;
@@ -314,6 +319,13 @@ function WorkspaceStatusPanel({
           Add
         </button>
       </form>
+      <button
+        className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-full border border-titan-gold/20 bg-titan-gold/10 px-4 text-[10px] font-black uppercase text-titan-bright transition hover:border-titan-bright hover:bg-titan-gold hover:text-black"
+        onClick={onDemoWorkspacesCreate}
+        type="button"
+      >
+        Load Demo Workspaces
+      </button>
       <div className="mt-4 flex flex-wrap gap-2">
         <span className="titan-chip bg-titan-gold/10 text-[10px] font-black uppercase text-titan-bright">
           {session.mode === "supabase" ? "Supabase Auth" : "Local mode"}

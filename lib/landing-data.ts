@@ -1,23 +1,44 @@
 export const features = [
   {
-    title: "AI Readiness Score",
+    title: "Visibility Intelligence",
     description:
-      "Pinpoint how prepared a local business is to capture leads, automate follow-up, and convert search demand."
+      "Titan studies profile signals, audience behavior, emotional identity, and conversion friction before growth shifts become obvious."
   },
   {
-    title: "Revenue Leak Finder",
+    title: "Strategic Momentum",
     description:
-      "Surface missed calls, weak review signals, slow response loops, and other quiet losses that drain growth."
+      "Track whether hooks, CTAs, memorability, search alignment, and audience pull are strengthening, flattening, or becoming volatile."
   },
   {
-    title: "Executive Report",
+    title: "Execution System",
     description:
-      "Turn audit findings into a polished action plan owners can understand in minutes and act on the same day."
+      "Turn movement signals into Titan Studio roadmaps, experiments, client-ready reports, and workspace timelines."
   }
 ];
 
 export const stats = [
-  { value: "15 min", label: "audit intake" },
-  { value: "24/7", label: "lead visibility" },
-  { value: "90 day", label: "growth plan" }
+  { value: "01", label: "first scan" },
+  { value: "30 day", label: "execution roadmap" },
+  { value: "∞", label: "memory over time" }
+];
+
+export const activationSignals = [
+  "Titan studies movement before visibility collapses.",
+  "Audience behavior leaves patterns before growth shifts.",
+  "Momentum forms before performance becomes obvious."
+];
+
+export const productTiers = [
+  {
+    name: "Free",
+    description: "First scan, executive read, and a starter visibility snapshot."
+  },
+  {
+    name: "Pro",
+    description: "Memory, evolution, experiments, Titan Studio, and PDF reports."
+  },
+  {
+    name: "Agency",
+    description: "Multi-workspace operations, client view, and white-label foundations."
+  }
 ];

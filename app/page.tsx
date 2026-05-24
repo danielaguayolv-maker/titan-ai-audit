@@ -4,6 +4,7 @@ import { Hero } from "@/components/landing/hero";
 import { LeadCapture } from "@/components/landing/lead-capture";
 import { Navbar } from "@/components/landing/navbar";
 import { Process } from "@/components/landing/process";
+import { ProductActivation } from "@/components/landing/product-activation";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <Features />
+      <ProductActivation />
       <Process />
       <LeadCapture />
       <Footer />

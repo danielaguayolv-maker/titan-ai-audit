@@ -395,6 +395,106 @@ function DashboardWorkspaceContent({
     setActiveModule("home");
   }
 
+  function createDemoWorkspaces() {
+    const now = new Date().toISOString();
+    const demoNames = [
+      "888 BBQ",
+      "Luna Fitness Creator",
+      "Aguayo Customs"
+    ];
+    const existingNames = new Set(
+      workspaceEnvelope.workspaces.map((workspace) => workspace.name.toLowerCase())
+    );
+    const demoWorkspaces = demoNames
+      .filter((name) => !existingNames.has(name.toLowerCase()))
+      .map((name, index) => {
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+        return {
+          createdAt: now,
+          currentStrategicMission:
+            index === 0
+              ? "Make the dining room feel alive before the offer appears."
+              : index === 1
+                ? "Turn creator presence into repeatable audience pull."
+                : "Clarify proof, local search intent, and quote-ready CTAs.",
+          id: `demo-${slug}`,
+          mode: session.mode,
+          name,
+          ownerEmail: session.user.email,
+          ownerUserId: session.user.id,
+          pinnedPriorities:
+            index === 0
+              ? ["Reaction-first openings", "Room-energy proof", "Reserve tonight CTA"]
+              : index === 1
+                ? ["Creator presence", "Transformation hooks", "Comment prompts"]
+                : ["Before/after proof", "Local service SEO", "Quote request path"],
+          savedAccountIds: [`demo-account-${slug}`],
+          updatedAt: now,
+          viewMode: "strategist" as const,
+          whiteLabel: {
+            brandName: name
+          }
+        };
+      });
+
+    if (demoWorkspaces.length === 0) {
+      return;
+    }
+
+    const demoAccounts = demoWorkspaces.map((workspace, index) => ({
+      displayName: workspace.name,
+      id: workspace.savedAccountIds[0],
+      lastAuditAt: now,
+      lastAuditScore: [78, 84, 69][index],
+      ownerEmail: session.user.email,
+      platform: (index === 2 ? "instagram" : "tiktok") as AuditPlatform,
+      profileUrl: `https://www.${index === 2 ? "instagram" : "tiktok"}.com/@${workspace.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")}`,
+      workspaceId: workspace.id
+    }));
+    const demoTimeline = demoWorkspaces.flatMap((workspace, index) => [
+      {
+        accountId: workspace.savedAccountIds[0],
+        createdAt: now,
+        id: `demo-timeline-${workspace.id}-1`,
+        source: "audit" as const,
+        summary:
+          index === 0
+            ? "Room-energy posts are creating stronger audience pull than plated product-only reveals."
+            : index === 1
+              ? "Creator presence is becoming more recognizable when transformation clips open before instruction."
+              : "Local proof is present, but quote intent needs a clearer next step.",
+        title: "Movement signal detected",
+        workspaceId: workspace.id
+      },
+      {
+        accountId: workspace.savedAccountIds[0],
+        createdAt: now,
+        id: `demo-timeline-${workspace.id}-2`,
+        source: "experiment" as const,
+        summary:
+          index === 0
+            ? "Test reaction-first openings across the next five posts."
+            : index === 1
+              ? "Test confidence-first hooks before tutorial framing."
+              : "Test before/after proof followed by a direct quote CTA.",
+        title: "Strategic experiment started",
+        workspaceId: workspace.id
+      }
+    ]);
+
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      activeWorkspaceId: demoWorkspaces[0].id,
+      auditedAccounts: [...demoAccounts, ...workspaceEnvelope.auditedAccounts],
+      strategicTimeline: [...demoTimeline, ...workspaceEnvelope.strategicTimeline],
+      workspaces: [...demoWorkspaces, ...workspaceEnvelope.workspaces]
+    });
+    setActiveModule("home");
+  }
+
   function switchWorkspace(workspaceId: string) {
     onWorkspaceEnvelopeChange({
       ...workspaceEnvelope,
@@ -512,6 +612,7 @@ function DashboardWorkspaceContent({
     <DashboardShell
       activeModule={activeModule}
       onLogout={onLogout}
+      onDemoWorkspacesCreate={createDemoWorkspaces}
       onModuleChange={setActiveModule}
       onWorkspaceCreate={createWorkspace}
       onWorkspaceNoteAdd={addWorkspaceNote}
@@ -888,6 +989,154 @@ function AgencySignalCard({
         {detail}
       </p>
     </div>
+  );
+}
+
+function ProductActivationPanel({
+  experiments,
+  isUsingFallback,
+  memoryCount,
+  onOpenAudit,
+  onOpenStudio,
+  timelineCount
+}: {
+  experiments: TitanExperiment[];
+  isUsingFallback: boolean;
+  memoryCount: number;
+  onOpenAudit: () => void;
+  onOpenStudio: () => void;
+  timelineCount: number;
+}) {
+  const activeExperiments = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  ).length;
+  const milestones = [
+    {
+      complete: !isUsingFallback,
+      label: "Run first visibility scan",
+      prompt: "Reveal the primary blocker and one-sentence intelligence."
+    },
+    {
+      complete: activeExperiments > 0,
+      label: "Start first strategic experiment",
+      prompt: "Turn one recommendation into a tracked movement test."
+    },
+    {
+      complete: memoryCount > 1 || timelineCount > 2,
+      label: "Track first momentum shift",
+      prompt: "Return after new content or a second audit to compare movement."
+    }
+  ];
+  const completedCount = milestones.filter((milestone) => milestone.complete).length;
+
+  return (
+    <article className="premium-surface mb-5 min-w-0 rounded-lg p-6 sm:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Activation path
+          </p>
+          <h2 className="text-anywhere mt-2 text-3xl font-black leading-tight text-titan-ivory">
+            Build the first momentum loop.
+          </h2>
+          <p className="text-anywhere mt-3 max-w-3xl text-sm leading-6 text-titan-ivory/62">
+            Titan becomes more valuable when scan, experiment, and movement
+            tracking start working together.
+          </p>
+        </div>
+        <div className="rounded-full border border-titan-gold/20 bg-titan-gold/10 px-5 py-3 text-sm font-black uppercase text-titan-bright">
+          {completedCount}/3 activated
+        </div>
+      </div>
+
+      <div className="titan-readable-grid mt-6">
+        {milestones.map((milestone, index) => (
+          <div
+            className={`rounded-lg border p-4 ${
+              milestone.complete
+                ? "border-titan-bright bg-titan-gold/10"
+                : "border-titan-gold/10 bg-black/24"
+            }`}
+            key={milestone.label}
+          >
+            <span className="titan-chip bg-white/10 text-[10px] font-black uppercase text-titan-ivory/60">
+              {milestone.complete ? "Complete" : `Start ${index + 1}`}
+            </span>
+            <p className="text-anywhere mt-3 font-black text-titan-ivory">
+              {milestone.label}
+            </p>
+            <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/58">
+              {milestone.prompt}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div className="titan-panel rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Strategic welcome narration
+          </p>
+          <div className="mt-4 grid gap-3">
+            {[
+              "Titan studies movement before visibility collapses.",
+              "Audience behavior leaves patterns before growth shifts.",
+              "Momentum forms before performance becomes obvious."
+            ].map((line) => (
+              <p
+                className="text-anywhere rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-sm leading-6 text-titan-ivory/66"
+                key={line}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        </div>
+        <div className="titan-panel rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Sample movement visual
+          </p>
+          <div className="mt-5 grid gap-4">
+            {[
+              ["Hook Stability", 72],
+              ["Audience Pull", 84],
+              ["CTA Efficiency", 58]
+            ].map(([label, value]) => (
+              <div key={label}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold text-titan-ivory/72">{label}</p>
+                  <span className="text-xs font-black uppercase text-titan-bright">
+                    {value}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-titan-gold transition-all duration-700"
+                    style={{ width: `${value}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <button
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-titan-gold px-5 text-xs font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+              onClick={onOpenAudit}
+              type="button"
+            >
+              Start Here
+            </button>
+            <button
+              className="luxury-border inline-flex min-h-11 items-center justify-center rounded-full bg-white/5 px-5 text-xs font-black uppercase text-titan-ivory transition hover:border-titan-bright"
+              onClick={onOpenStudio}
+              type="button"
+            >
+              Preview Studio
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -1325,6 +1574,15 @@ function DashboardHome({
           experiments={experiments}
           timeline={workspaceEnvelope.strategicTimeline}
           workspaces={workspaceEnvelope.workspaces}
+        />
+
+        <ProductActivationPanel
+          experiments={experiments}
+          isUsingFallback={isUsingFallback}
+          memoryCount={memoryReport.auditCount}
+          onOpenAudit={onOpenAudit}
+          onOpenStudio={onOpenStudio}
+          timelineCount={activeWorkspaceTimeline.length}
         />
 
         <IntelligenceModeSelector
@@ -4048,6 +4306,9 @@ function WorkspacePersistenceOverview({
   const activeExperiments = experiments.filter(
     (experiment) => experiment.status === "testing" || experiment.status === "applied"
   );
+  const activeAccounts = workspaceEnvelope.auditedAccounts.filter(
+    (account) => account.workspaceId === activeWorkspace?.id
+  );
 
   return (
     <article className="premium-surface mb-5 rounded-lg p-5 sm:p-6">
@@ -4070,7 +4331,7 @@ function WorkspacePersistenceOverview({
             {session.mode === "supabase" ? "Cloud-ready" : "Local dev mode"}
           </span>
           <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/62">
-            {workspaceEnvelope.auditedAccounts.length} saved accounts
+            {activeAccounts.length} saved accounts
           </span>
           <span className="titan-chip bg-white/10 text-xs font-bold uppercase text-titan-ivory/62">
             {activeExperiments.length} active experiments
@@ -4092,8 +4353,8 @@ function WorkspacePersistenceOverview({
             Recent audits
           </p>
           <div className="mt-3 grid gap-2">
-            {(workspaceEnvelope.auditedAccounts.length
-              ? workspaceEnvelope.auditedAccounts.slice(0, 3)
+            {(activeAccounts.length
+              ? activeAccounts.slice(0, 3)
               : [
                   {
                     displayName: "No saved audits yet",
@@ -4216,7 +4477,7 @@ function FirstAuditGuidance({
 }) {
   const steps = [
     "Paste an Instagram or TikTok URL and run the first Visibility Audit.",
-    "Read the Primary Blocker before scanning the rest of the dashboard.",
+    "Read the Primary Blocker and one-sentence intelligence before scanning the rest of the dashboard.",
     "Use Titan Studio to turn the audit into an adaptive 30-day roadmap.",
     "Return after new content or a later audit to unlock movement tracking."
   ];
@@ -4236,6 +4497,31 @@ function FirstAuditGuidance({
               Step {index + 1}
             </span>
             <p className="titan-copy mt-3 text-sm text-titan-ivory/68">{step}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {[
+          {
+            label: "Aha moment",
+            value: "Titan names the bottleneck before it shows every detail."
+          },
+          {
+            label: "What Titan detected",
+            value: "A weak signal, a missing emotional trigger, or a conversion friction point."
+          },
+          {
+            label: "First experiment",
+            value: "Test one behavior for the next content cycle instead of changing everything."
+          }
+        ].map((item) => (
+          <div className="titan-panel rounded-lg p-4" key={item.label}>
+            <p className="text-xs font-black uppercase text-titan-muted">
+              {item.label}
+            </p>
+            <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/66">
+              {item.value}
+            </p>
           </div>
         ))}
       </div>

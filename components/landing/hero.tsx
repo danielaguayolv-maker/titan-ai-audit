@@ -1,4 +1,4 @@
-import { stats } from "@/lib/landing-data";
+import { activationSignals, stats } from "@/lib/landing-data";
 import { CtaButton } from "./cta-button";
 
 export function Hero() {
@@ -10,22 +10,32 @@ export function Hero() {
       <div className="subtle-grid pointer-events-none absolute inset-x-0 top-0 h-80" />
       <div className="fade-up relative max-w-3xl">
         <p className="mb-5 inline-flex rounded-full border border-titan-gold/30 bg-titan-gold/10 px-4 py-2 text-xs font-bold uppercase text-titan-bright">
-          Premium visibility OS for creators and businesses
+          Visibility intelligence for creators, operators, and agencies
         </p>
         <h1 className="max-w-4xl text-5xl font-black leading-[0.96] text-titan-ivory sm:text-6xl lg:text-7xl">
-          Turn hidden business gaps into a{" "}
-          <span className="gold-text">gold-grade growth plan.</span>
+          See how audience attention is{" "}
+          <span className="gold-text">moving before growth changes.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-titan-ivory/72 sm:text-xl">
-          Titan Visibility OS gives creators, service companies, clinics,
-          retailers, and local operators a sharper system for visibility
-          intelligence, content execution, and client-ready reporting.
+          Titan Visibility OS reads profile clarity, content rhythm, emotional
+          identity, conversion friction, and strategic momentum so teams know
+          what to fix, what to test, and what to ignore.
         </p>
         <div className="mt-9 flex flex-col gap-4 sm:flex-row">
           <CtaButton>Open Visibility OS</CtaButton>
           <CtaButton href="#features" variant="secondary">
-            View Features
+            See How It Works
           </CtaButton>
+        </div>
+        <div className="mt-8 grid max-w-2xl gap-3">
+          {activationSignals.map((signal) => (
+            <p
+              className="rounded-lg border border-titan-gold/10 bg-white/[0.03] px-4 py-3 text-sm font-bold leading-6 text-titan-ivory/68"
+              key={signal}
+            >
+              {signal}
+            </p>
+          ))}
         </div>
         <div className="mt-10 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
           {stats.map((stat) => (
@@ -48,10 +58,10 @@ export function Hero() {
           <div className="mb-5 flex items-center justify-between border-b border-titan-gold/15 pb-5">
             <div>
               <p className="text-xs uppercase text-titan-muted">
-                Visibility OS Preview
+                Command Center Preview
               </p>
               <h2 className="mt-1 text-2xl font-black text-titan-ivory">
-                Live Profile Workspace
+                Movement Intelligence
               </h2>
             </div>
             <div className="rounded-full bg-titan-gold px-4 py-2 text-2xl font-black text-black shadow-gold">
@@ -62,8 +72,8 @@ export function Hero() {
           <div className="space-y-4">
             {[
               ["Lead Response", "92%", "w-[92%]"],
-              ["Reviews + Reputation", "78%", "w-[78%]"],
-              ["AI Automation", "64%", "w-[64%]"]
+              ["Audience Pull", "78%", "w-[78%]"],
+              ["CTA Friction", "64%", "w-[64%]"]
             ].map(([label, value, width]) => (
               <div key={label}>
                 <div className="mb-2 flex justify-between text-sm">
@@ -81,20 +91,20 @@ export function Hero() {
             <div className="rounded-lg bg-titan-gold/10 p-4">
               <p className="text-sm font-bold text-titan-bright">Top Opportunity</p>
               <p className="mt-2 text-sm leading-6 text-titan-ivory/70">
-                Convert weak visibility signals into a 30-day execution plan.
+                Open with the emotional proof before the explanation.
               </p>
             </div>
             <div className="rounded-lg bg-white/[0.05] p-4">
               <p className="text-sm font-bold text-titan-bright">Projected Lift</p>
               <p className="mt-2 text-sm leading-6 text-titan-ivory/70">
-                Turn profile attention into stronger content and clearer CTAs.
+                Stronger audience pull, cleaner CTAs, and a clearer identity signal.
               </p>
             </div>
           </div>
 
           <div className="mt-5 rounded-lg border border-titan-gold/15 bg-black/22 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-bold text-titan-ivory">Report prep</p>
+              <p className="text-sm font-bold text-titan-ivory">Momentum read</p>
               <p className="text-xs font-bold uppercase text-titan-bright">Ready</p>
             </div>
             <div className="space-y-2">
