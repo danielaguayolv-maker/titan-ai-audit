@@ -11,12 +11,17 @@ import type {
 } from "@/lib/audit-ai";
 import {
   clearJsonStorage,
+  makeWorkspaceScopedStorageKey,
   readJsonStorage,
+  titanCompetitorStorageKey,
   titanStudioPlanStorageKey,
   titanWorkspaceStorageKey,
   writeJsonStorage,
   type PersistedAuditWorkspace,
-  type TitanWorkspacePersistenceEnvelope
+  type TitanAuditedAccountRecord,
+  type TitanStrategicTimelineRecord,
+  type TitanWorkspacePersistenceEnvelope,
+  type TitanWorkspaceRecord
 } from "@/lib/workspace-persistence";
 import type { TitanAuthSession } from "@/lib/titan-auth";
 import {
@@ -111,6 +116,27 @@ function DashboardWorkspaceContent({
     confidenceScore: 0,
     metricsStatus: "limited"
   });
+  const activeWorkspace =
+    workspaceEnvelope.workspaces.find(
+      (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
+    ) ?? workspaceEnvelope.workspaces[0];
+  const activeWorkspaceId = activeWorkspace?.id ?? "default";
+  const workspaceAuditStorageKey = makeWorkspaceScopedStorageKey(
+    titanWorkspaceStorageKey,
+    activeWorkspaceId
+  );
+  const workspaceStudioPlanStorageKey = makeWorkspaceScopedStorageKey(
+    titanStudioPlanStorageKey,
+    activeWorkspaceId
+  );
+  const workspaceCompetitorStorageKey = makeWorkspaceScopedStorageKey(
+    titanCompetitorStorageKey,
+    activeWorkspaceId
+  );
+  const workspaceExperimentStorageKey = makeWorkspaceScopedStorageKey(
+    titanExperimentStorageKey,
+    activeWorkspaceId
+  );
 
   useEffect(() => {
     setShowGuidedOnboarding(
@@ -123,21 +149,39 @@ function DashboardWorkspaceContent({
       setUxMode(savedMode);
     }
 
-    const savedExperiments = readJsonStorage<TitanExperiment[]>(
-      titanExperimentStorageKey
-    );
-
-    if (Array.isArray(savedExperiments)) {
-      setExperiments(savedExperiments);
-    }
   }, []);
 
   useEffect(() => {
+    const savedExperiments = readJsonStorage<TitanExperiment[]>(
+      workspaceExperimentStorageKey
+    );
+
+    setExperiments(Array.isArray(savedExperiments) ? savedExperiments : []);
+  }, [workspaceExperimentStorageKey]);
+
+  useEffect(() => {
     const savedWorkspace = readJsonStorage<PersistedAuditWorkspace>(
-      titanWorkspaceStorageKey
+      workspaceAuditStorageKey
     );
 
     if (!savedWorkspace) {
+      setAuditResult(createFallbackAuditResult(initialPlatform));
+      setPlatform(initialPlatform);
+      setProfileUrl("");
+      setMemoryAccountKey("");
+      setLiveScan({
+        status: "skipped",
+        message: "Live Scan: Ready",
+        dataPointsFound: [],
+        missingDataPoints: [],
+        scanCompleteness: 0,
+        confidenceScore: 0,
+        metricsStatus: "limited"
+      });
+      setPlanContext({});
+      setMemoryEntriesSnapshot(readVisibilityMemoryEntries());
+      setIsUsingFallback(true);
+      setRequestStatus("idle");
       return;
     }
 
@@ -158,14 +202,14 @@ function DashboardWorkspaceContent({
     setMemoryEntriesSnapshot(readVisibilityMemoryEntries());
     setIsUsingFallback(false);
     setRequestStatus("success");
-  }, []);
+  }, [workspaceAuditStorageKey]);
 
   useEffect(() => {
     if (isUsingFallback) {
       return;
     }
 
-    writeJsonStorage<PersistedAuditWorkspace>(titanWorkspaceStorageKey, {
+    writeJsonStorage<PersistedAuditWorkspace>(workspaceAuditStorageKey, {
       savedAt: new Date().toISOString(),
       auditResult,
       ownerEmail: session.user.email,
@@ -183,7 +227,8 @@ function DashboardWorkspaceContent({
     platform,
     profileUrl,
     session.user.email,
-    session.user.id
+    session.user.id,
+    workspaceAuditStorageKey
   ]);
 
   useEffect(() => {
@@ -261,7 +306,7 @@ function DashboardWorkspaceContent({
   }
 
   function clearCurrentResults() {
-    clearJsonStorage(titanWorkspaceStorageKey, titanStudioPlanStorageKey);
+    clearJsonStorage(workspaceAuditStorageKey, workspaceStudioPlanStorageKey);
     setAuditResult(createFallbackAuditResult(platform));
     setPlanContext({});
     setProfileUrl("");
@@ -294,9 +339,111 @@ function DashboardWorkspaceContent({
   function updateExperiments(nextExperiments: TitanExperiment[]) {
     setExperiments(nextExperiments);
     writeJsonStorage<TitanExperiment[]>(
-      titanExperimentStorageKey,
+      workspaceExperimentStorageKey,
       nextExperiments
     );
+  }
+
+  function createWorkspace(name: string) {
+    const now = new Date().toISOString();
+    const workspaceId = `workspace-${Date.now()}-${name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40)}`;
+
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      activeWorkspaceId: workspaceId,
+      strategicTimeline: [
+        {
+          createdAt: now,
+          id: `timeline-${Date.now()}`,
+          source: "note" as const,
+          summary:
+            "Client workspace created. Audit history, experiments, notes, and strategic movement will stay isolated here.",
+          title: "Client workspace created",
+          workspaceId
+        },
+        ...workspaceEnvelope.strategicTimeline
+      ],
+      workspaces: [
+        {
+          createdAt: now,
+          currentStrategicMission:
+            "Identify the highest-leverage visibility bottleneck and track strategic movement over time.",
+          id: workspaceId,
+          mode: session.mode,
+          name,
+          ownerEmail: session.user.email,
+          ownerUserId: session.user.id,
+          pinnedPriorities: [
+            "Run client audit",
+            "Set weekly strategic focus",
+            "Start first experiment"
+          ],
+          savedAccountIds: [],
+          updatedAt: now,
+          viewMode: "strategist",
+          whiteLabel: {
+            brandName: name
+          }
+        },
+        ...workspaceEnvelope.workspaces
+      ]
+    });
+    setActiveModule("home");
+  }
+
+  function switchWorkspace(workspaceId: string) {
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      activeWorkspaceId: workspaceId
+    });
+    setActiveModule("home");
+    setPendingMemorySave(null);
+  }
+
+  function updateWorkspaceViewMode(mode: "client" | "strategist") {
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      workspaces: workspaceEnvelope.workspaces.map((workspace) =>
+        workspace.id === activeWorkspaceId
+          ? {
+              ...workspace,
+              updatedAt: new Date().toISOString(),
+              viewMode: mode
+            }
+          : workspace
+      )
+    });
+  }
+
+  function addWorkspaceNote(note: string) {
+    const now = new Date().toISOString();
+
+    onWorkspaceEnvelopeChange({
+      ...workspaceEnvelope,
+      strategicTimeline: [
+        {
+          createdAt: now,
+          id: `note-${Date.now()}`,
+          source: "note" as const,
+          summary: note,
+          title: "Strategist note",
+          workspaceId: activeWorkspaceId
+        },
+        ...workspaceEnvelope.strategicTimeline
+      ].slice(0, 120),
+      workspaces: workspaceEnvelope.workspaces.map((workspace) =>
+        workspace.id === activeWorkspaceId
+          ? {
+              ...workspace,
+              updatedAt: now
+            }
+          : workspace
+      )
+    });
   }
 
   function updateWorkspaceProfile(profile: {
@@ -366,6 +513,10 @@ function DashboardWorkspaceContent({
       activeModule={activeModule}
       onLogout={onLogout}
       onModuleChange={setActiveModule}
+      onWorkspaceCreate={createWorkspace}
+      onWorkspaceNoteAdd={addWorkspaceNote}
+      onWorkspaceSwitch={switchWorkspace}
+      onWorkspaceViewModeChange={updateWorkspaceViewMode}
       session={session}
       workspaceEnvelope={workspaceEnvelope}
     >
@@ -450,6 +601,7 @@ function DashboardWorkspaceContent({
           memoryEntriesSnapshot={memoryEntriesSnapshot}
           onClearResults={clearCurrentResults}
           platform={platform}
+          storageKey={workspaceStudioPlanStorageKey}
         />
       ) : null}
 
@@ -465,7 +617,10 @@ function DashboardWorkspaceContent({
       ) : null}
 
       {activeModule === "competitor-intelligence" ? (
-        <CompetitorIntelligence platform={platform} />
+        <CompetitorIntelligence
+          platform={platform}
+          storageKey={workspaceCompetitorStorageKey}
+        />
       ) : null}
 
       {activeModule !== "audit" &&
@@ -570,6 +725,333 @@ function ModulePlaceholder({
             >
               Run Visibility Audit
             </button>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function AgencyCommandCenter({
+  accounts,
+  activeWorkspaceId,
+  experiments,
+  timeline,
+  workspaces
+}: {
+  accounts: TitanAuditedAccountRecord[];
+  activeWorkspaceId: string;
+  experiments: TitanExperiment[];
+  timeline: TitanStrategicTimelineRecord[];
+  workspaces: TitanWorkspaceRecord[];
+}) {
+  const activeWorkspaces = workspaces.slice(0, 5);
+  const scoredAccounts = accounts.filter(
+    (account) => typeof account.lastAuditScore === "number"
+  );
+  const highestRisk = [...scoredAccounts].sort(
+    (first, second) => (first.lastAuditScore ?? 100) - (second.lastAuditScore ?? 100)
+  )[0];
+  const strongestClient = [...scoredAccounts].sort(
+    (first, second) => (second.lastAuditScore ?? 0) - (first.lastAuditScore ?? 0)
+  )[0];
+  const activeExperiments = experiments.filter(
+    (experiment) => experiment.status === "testing" || experiment.status === "applied"
+  );
+  const recentMilestones = timeline.slice(0, 4);
+
+  return (
+    <article className="premium-surface mb-5 min-w-0 rounded-lg p-6 shadow-gold sm:p-7">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Agency Command Center
+          </p>
+          <h2 className="text-anywhere mt-2 text-3xl font-black leading-tight text-titan-ivory sm:text-4xl">
+            Multi-client visibility operations.
+          </h2>
+          <p className="text-anywhere mt-3 max-w-3xl text-sm leading-6 text-titan-ivory/62">
+            Manage client workspaces, isolate strategic history, monitor risk,
+            and prepare white-label delivery from one operating layer.
+          </p>
+        </div>
+        <span className="rounded-full border border-titan-gold/20 bg-titan-gold/10 px-4 py-2 text-xs font-black uppercase text-titan-bright">
+          {workspaces.length} workspaces active
+        </span>
+      </div>
+
+      <div className="titan-readable-grid mt-6">
+        <AgencySignalCard
+          label="Strongest improving client"
+          value={strongestClient?.displayName ?? "Awaiting audits"}
+          detail={
+            strongestClient
+              ? `${strongestClient.lastAuditScore}/100 latest visibility score`
+              : "Run audits inside client workspaces to surface movement."
+          }
+        />
+        <AgencySignalCard
+          label="Highest-risk workspace"
+          value={highestRisk?.displayName ?? "No risk signal yet"}
+          detail={
+            highestRisk
+              ? `${highestRisk.lastAuditScore}/100 needs strategic attention`
+              : "Titan will flag the lowest scoring account here."
+          }
+        />
+        <AgencySignalCard
+          label="Active experiments"
+          value={`${activeExperiments.length}`}
+          detail="Strategic tests currently being tracked in this workspace."
+        />
+        <AgencySignalCard
+          label="White-label foundation"
+          value="Ready"
+          detail="Workspace records support future logos, colors, and client-shareable views."
+        />
+      </div>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="titan-panel rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Recent workspaces
+          </p>
+          <div className="mt-4 grid gap-3">
+            {activeWorkspaces.map((workspace) => (
+              <div
+                className={`rounded-lg border p-3 ${
+                  workspace.id === activeWorkspaceId
+                    ? "border-titan-bright bg-titan-gold/10"
+                    : "border-titan-gold/10 bg-black/20"
+                }`}
+                key={workspace.id}
+              >
+                <p className="text-anywhere font-black text-titan-ivory">
+                  {workspace.name}
+                </p>
+                <p className="mt-1 text-xs uppercase text-titan-ivory/45">
+                  {workspace.viewMode === "client" ? "Client view" : "Internal strategist view"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="titan-panel rounded-lg p-4">
+          <p className="text-xs font-black uppercase text-titan-muted">
+            Strategic timeline
+          </p>
+          <div className="mt-4 grid gap-3">
+            {recentMilestones.length > 0 ? (
+              recentMilestones.map((item) => (
+                <div
+                  className="rounded-lg border border-titan-gold/10 bg-black/20 p-3"
+                  key={item.id}
+                >
+                  <p className="text-anywhere text-sm font-black text-titan-bright">
+                    {item.title}
+                  </p>
+                  <p className="text-anywhere mt-1 text-xs leading-5 text-titan-ivory/58">
+                    {item.summary}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-sm leading-6 text-titan-ivory/58">
+                Strategic milestones will appear here as audits, experiments,
+                and notes are saved across client workspaces.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function AgencySignalCard({
+  detail,
+  label,
+  value
+}: {
+  detail: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="titan-signal-card min-w-0 rounded-lg p-4">
+      <p className="text-xs font-black uppercase text-titan-muted">{label}</p>
+      <p className="text-anywhere mt-2 text-2xl font-black text-titan-bright">
+        {value}
+      </p>
+      <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/58">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function ClientCommandCenter({
+  auditResult,
+  cycleChanges,
+  isUsingFallback,
+  momentum,
+  onOpenAudit,
+  onOpenReports,
+  onOpenStudio,
+  primaryBlocker,
+  recommendations,
+  timeline,
+  trackedAccounts,
+  workspaceName
+}: {
+  auditResult: AiAuditResult;
+  cycleChanges: CycleChange[];
+  isUsingFallback: boolean;
+  momentum: ReturnType<typeof commandMomentum>;
+  onOpenAudit: () => void;
+  onOpenReports: () => void;
+  onOpenStudio: () => void;
+  primaryBlocker: StrategicBlocker;
+  recommendations: string[];
+  timeline: TitanStrategicTimelineRecord[];
+  trackedAccounts: number;
+  workspaceName: string;
+}) {
+  return (
+    <section className="px-5 py-8 sm:px-8 sm:py-10">
+      <div className="mx-auto w-full max-w-7xl">
+        <article className="premium-surface min-w-0 rounded-lg p-6 shadow-gold sm:p-8 lg:p-10">
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Client View
+          </p>
+          <h1 className="text-anywhere mt-3 text-4xl font-black leading-tight text-titan-ivory sm:text-6xl">
+            {workspaceName} visibility progress.
+          </h1>
+          <p className="text-anywhere mt-5 max-w-4xl text-lg leading-8 text-titan-ivory/66">
+            A simplified executive view focused on movement, wins, priorities,
+            and next steps without internal strategist drilldowns.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <button
+              className="inline-flex min-h-12 items-center justify-center rounded-full bg-titan-gold px-6 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright"
+              onClick={onOpenAudit}
+              type="button"
+            >
+              Run Audit
+            </button>
+            <button
+              className="luxury-border inline-flex min-h-12 items-center justify-center rounded-full bg-white/5 px-6 text-sm font-bold uppercase text-titan-ivory transition hover:border-titan-bright hover:bg-white/10"
+              onClick={onOpenStudio}
+              type="button"
+            >
+              View Plan
+            </button>
+            <button
+              className="luxury-border inline-flex min-h-12 items-center justify-center rounded-full bg-black/20 px-6 text-sm font-bold uppercase text-titan-ivory/70 transition hover:border-titan-bright hover:text-titan-bright"
+              onClick={onOpenReports}
+              type="button"
+            >
+              Reports
+            </button>
+          </div>
+        </article>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+          <div className={`${severityVisual(momentum.severity).panelClass} rounded-lg p-6`}>
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              Momentum
+            </p>
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-4xl font-black text-titan-bright">
+                  {momentum.label}
+                </h2>
+                <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/64">
+                  {momentum.summary}
+                </p>
+              </div>
+              <span className="text-5xl text-titan-bright">{momentum.arrow}</span>
+            </div>
+          </div>
+
+          <div className="premium-surface rounded-lg p-6">
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              Visibility score
+            </p>
+            <p className="mt-3 text-6xl font-black text-titan-bright">
+              {Math.round(auditResult.overallScore)}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-titan-ivory/58">
+              {isUsingFallback
+                ? "Run a first audit to activate live client reporting."
+                : `${trackedAccounts} account${trackedAccounts === 1 ? "" : "s"} tracked in this workspace.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="titan-readable-grid mt-5">
+          <div className="premium-surface rounded-lg p-6">
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              Main priority
+            </p>
+            <h2 className="text-anywhere mt-3 text-2xl font-black text-titan-ivory">
+              {primaryBlocker.title}
+            </h2>
+            <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/62">
+              {primaryBlocker.recommendedFocus}
+            </p>
+          </div>
+          <div className="premium-surface rounded-lg p-6">
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              What changed
+            </p>
+            <div className="mt-4 grid gap-3">
+              {cycleChanges.slice(0, 3).map((change) => (
+                <p
+                  className="text-anywhere rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-sm leading-6 text-titan-ivory/64"
+                  key={change.label}
+                >
+                  {change.summary}
+                </p>
+              ))}
+            </div>
+          </div>
+          <div className="premium-surface rounded-lg p-6">
+            <p className="text-sm font-bold uppercase text-titan-muted">
+              Next actions
+            </p>
+            <div className="mt-4 grid gap-3">
+              {recommendations.slice(0, 3).map((item) => (
+                <p
+                  className="text-anywhere rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-sm leading-6 text-titan-ivory/64"
+                  key={item}
+                >
+                  {item}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <article className="premium-surface mt-5 rounded-lg p-6">
+          <p className="text-sm font-bold uppercase text-titan-muted">
+            Workspace timeline
+          </p>
+          <div className="mt-5 grid gap-3">
+            {timeline.slice(0, 6).map((item) => (
+              <div
+                className="rounded-lg border border-titan-gold/10 bg-black/20 p-4"
+                key={item.id}
+              >
+                <p className="text-anywhere font-black text-titan-bright">
+                  {item.title}
+                </p>
+                <p className="text-anywhere mt-2 text-sm leading-6 text-titan-ivory/62">
+                  {item.summary}
+                </p>
+              </div>
+            ))}
           </div>
         </article>
       </div>
@@ -804,10 +1286,47 @@ function DashboardHome({
   const showDeepIntelligence = uxMode === "deep";
   const showStrategistContent = uxMode === "strategist" || uxMode === "deep";
   const showSimplified = uxMode === "simplified";
+  const activeWorkspace =
+    workspaceEnvelope.workspaces.find(
+      (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
+    ) ?? workspaceEnvelope.workspaces[0];
+  const activeWorkspaceAccounts = workspaceEnvelope.auditedAccounts.filter(
+    (account) => account.workspaceId === activeWorkspace?.id
+  );
+  const activeWorkspaceTimeline = workspaceEnvelope.strategicTimeline.filter(
+    (item) => item.workspaceId === activeWorkspace?.id
+  );
+
+  if (activeWorkspace?.viewMode === "client") {
+    return (
+      <ClientCommandCenter
+        auditResult={auditResult}
+        cycleChanges={cycleChanges}
+        isUsingFallback={isUsingFallback}
+        momentum={momentum}
+        onOpenAudit={onOpenAudit}
+        onOpenReports={onOpenReports}
+        onOpenStudio={onOpenStudio}
+        primaryBlocker={primaryBlocker}
+        recommendations={recommendations}
+        trackedAccounts={activeWorkspaceAccounts.length}
+        timeline={activeWorkspaceTimeline}
+        workspaceName={activeWorkspace.name}
+      />
+    );
+  }
 
   return (
     <section className="px-5 py-8 sm:px-8 sm:py-10">
       <div className="mx-auto w-full max-w-7xl">
+        <AgencyCommandCenter
+          activeWorkspaceId={workspaceEnvelope.activeWorkspaceId}
+          accounts={workspaceEnvelope.auditedAccounts}
+          experiments={experiments}
+          timeline={workspaceEnvelope.strategicTimeline}
+          workspaces={workspaceEnvelope.workspaces}
+        />
+
         <IntelligenceModeSelector
           mode={uxMode}
           onModeChange={onUxModeChange}

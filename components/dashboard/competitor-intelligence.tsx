@@ -18,12 +18,12 @@ import {
 import {
   clearJsonStorage,
   readJsonStorage,
-  titanCompetitorStorageKey,
   writeJsonStorage
 } from "@/lib/workspace-persistence";
 
 type CompetitorIntelligenceProps = {
   platform: AuditPlatform;
+  storageKey: string;
 };
 
 type RunStatus = "idle" | "loading" | "success" | "error";
@@ -160,7 +160,8 @@ async function runAuditForProfile(
 }
 
 export function CompetitorIntelligence({
-  platform
+  platform,
+  storageKey
 }: CompetitorIntelligenceProps) {
   const [yourProfileUrl, setYourProfileUrl] = useState("");
   const [competitorProfileUrl, setCompetitorProfileUrl] = useState("");
@@ -173,10 +174,16 @@ export function CompetitorIntelligence({
 
   useEffect(() => {
     const savedComparison = readJsonStorage<PersistedCompetitorComparison>(
-      titanCompetitorStorageKey
+      storageKey
     );
 
     if (!savedComparison) {
+      setYourProfileUrl("");
+      setCompetitorProfileUrl("");
+      setYourAudit(null);
+      setCompetitorAudit(null);
+      setStatus("idle");
+      setActiveStage(-1);
       return;
     }
 
@@ -186,7 +193,7 @@ export function CompetitorIntelligence({
     setCompetitorAudit(savedComparison.competitorAudit);
     setStatus("success");
     setActiveStage(4);
-  }, []);
+  }, [storageKey]);
 
   const report = useMemo<CompetitorIntelligenceReport | null>(() => {
     if (!yourAudit || !competitorAudit) {
@@ -222,7 +229,7 @@ export function CompetitorIntelligence({
         "competitor"
       );
       setCompetitorAudit(competitorResult);
-      writeJsonStorage<PersistedCompetitorComparison>(titanCompetitorStorageKey, {
+      writeJsonStorage<PersistedCompetitorComparison>(storageKey, {
         savedAt: new Date().toISOString(),
         yourProfileUrl: yourProfileUrl.trim(),
         competitorProfileUrl: competitorProfileUrl.trim(),
@@ -242,7 +249,7 @@ export function CompetitorIntelligence({
   }
 
   function clearComparisonResults() {
-    clearJsonStorage(titanCompetitorStorageKey);
+    clearJsonStorage(storageKey);
     setYourProfileUrl("");
     setCompetitorProfileUrl("");
     setYourAudit(null);

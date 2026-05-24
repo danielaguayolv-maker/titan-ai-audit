@@ -17,7 +17,6 @@ import {
 } from "@/lib/visibility-memory";
 import {
   makeAuditWorkspaceKey,
-  titanStudioPlanStorageKey,
   writeJsonStorage,
   type PersistedTitanStudioPlan
 } from "@/lib/workspace-persistence";
@@ -30,6 +29,7 @@ type TitanStudioProps = {
   onClearResults: () => void;
   memoryAccountKey: string;
   memoryEntriesSnapshot: VisibilityMemoryEntry[];
+  storageKey: string;
 };
 
 type AdaptiveStudioIntelligence = {
@@ -256,7 +256,8 @@ export function TitanStudio({
   isUsingFallback,
   onClearResults,
   memoryAccountKey,
-  memoryEntriesSnapshot
+  memoryEntriesSnapshot,
+  storageKey
 }: TitanStudioProps) {
   const [storedMemoryEntries, setStoredMemoryEntries] = useState<
     VisibilityMemoryEntry[]
@@ -299,7 +300,7 @@ export function TitanStudio({
       return;
     }
 
-    writeJsonStorage<PersistedTitanStudioPlan>(titanStudioPlanStorageKey, {
+    writeJsonStorage<PersistedTitanStudioPlan>(storageKey, {
       savedAt: new Date().toISOString(),
       auditKey: makeAuditWorkspaceKey(
         auditResult,
@@ -307,7 +308,7 @@ export function TitanStudio({
       ),
       plan
     });
-  }, [auditResult, context, isUsingFallback, plan]);
+  }, [auditResult, context, isUsingFallback, plan, storageKey]);
 
   return (
     <section className="px-5 pb-16 pt-8 sm:px-8 sm:pt-10">

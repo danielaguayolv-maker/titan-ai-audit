@@ -20,6 +20,12 @@ export type TitanWorkspaceRecord = {
   ownerName?: string;
   businessName?: string;
   phone?: string;
+  viewMode: "client" | "strategist";
+  whiteLabel?: {
+    brandName?: string;
+    logoUrl?: string;
+    accentColor?: string;
+  };
   name: string;
   mode: "local" | "supabase";
   currentStrategicMission: string;
@@ -84,6 +90,11 @@ export type PersistedTitanStudioPlan = {
   plan: VisibilityContentPlan;
 };
 
+export function makeWorkspaceScopedStorageKey(baseKey: string, workspaceId: string) {
+  const safeWorkspaceId = workspaceId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return `${baseKey}:${safeWorkspaceId || "default"}`;
+}
+
 export function createDefaultTitanWorkspace(
   userId: string,
   userEmail: string,
@@ -121,6 +132,10 @@ export function createDefaultTitanWorkspace(
           "Identify primary blocker",
           "Start first strategic experiment"
         ],
+        viewMode: "strategist",
+        whiteLabel: {
+          brandName: "Titan Media Group"
+        },
         savedAccountIds: [],
         updatedAt: now
       }

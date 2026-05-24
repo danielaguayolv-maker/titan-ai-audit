@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { TitanLogo } from "@/components/shared/titan-logo";
 import type { TitanAuthSession } from "@/lib/titan-auth";
-import type { TitanWorkspacePersistenceEnvelope } from "@/lib/workspace-persistence";
+import type {
+  TitanWorkspacePersistenceEnvelope,
+  TitanWorkspaceRecord
+} from "@/lib/workspace-persistence";
 
 export type TitanOsModule =
   | "home"
@@ -20,6 +23,10 @@ type DashboardShellProps = {
   activeModule: TitanOsModule;
   onModuleChange: (module: TitanOsModule) => void;
   onLogout: () => void;
+  onWorkspaceCreate: (name: string) => void;
+  onWorkspaceNoteAdd: (note: string) => void;
+  onWorkspaceSwitch: (workspaceId: string) => void;
+  onWorkspaceViewModeChange: (mode: TitanWorkspaceRecord["viewMode"]) => void;
   workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
   session: TitanAuthSession;
 };
@@ -86,6 +93,10 @@ export function DashboardShell({
   activeModule,
   onLogout,
   onModuleChange,
+  onWorkspaceCreate,
+  onWorkspaceNoteAdd,
+  onWorkspaceSwitch,
+  onWorkspaceViewModeChange,
   session,
   workspaceEnvelope
 }: DashboardShellProps) {
@@ -153,6 +164,10 @@ export function DashboardShell({
           </div>
 
           <WorkspaceStatusPanel
+            onWorkspaceCreate={onWorkspaceCreate}
+            onWorkspaceNoteAdd={onWorkspaceNoteAdd}
+            onWorkspaceSwitch={onWorkspaceSwitch}
+            onWorkspaceViewModeChange={onWorkspaceViewModeChange}
             session={session}
             workspaceEnvelope={workspaceEnvelope}
           />
@@ -211,16 +226,54 @@ export function DashboardShell({
 }
 
 function WorkspaceStatusPanel({
+  onWorkspaceCreate,
+  onWorkspaceNoteAdd,
+  onWorkspaceSwitch,
+  onWorkspaceViewModeChange,
   session,
   workspaceEnvelope
 }: {
+  onWorkspaceCreate: (name: string) => void;
+  onWorkspaceNoteAdd: (note: string) => void;
+  onWorkspaceSwitch: (workspaceId: string) => void;
+  onWorkspaceViewModeChange: (mode: TitanWorkspaceRecord["viewMode"]) => void;
   session: TitanAuthSession;
   workspaceEnvelope: TitanWorkspacePersistenceEnvelope;
 }) {
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [note, setNote] = useState("");
   const activeWorkspace =
     workspaceEnvelope.workspaces.find(
       (workspace) => workspace.id === workspaceEnvelope.activeWorkspaceId
     ) ?? workspaceEnvelope.workspaces[0];
+  const activeWorkspaceAccounts = workspaceEnvelope.auditedAccounts.filter(
+    (account) => account.workspaceId === activeWorkspace?.id
+  );
+  const activeTimeline = workspaceEnvelope.strategicTimeline.filter(
+    (item) => item.workspaceId === activeWorkspace?.id
+  );
+
+  function submitWorkspace(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!workspaceName.trim()) {
+      return;
+    }
+
+    onWorkspaceCreate(workspaceName.trim());
+    setWorkspaceName("");
+  }
+
+  function submitNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!note.trim()) {
+      return;
+    }
+
+    onWorkspaceNoteAdd(note.trim());
+    setNote("");
+  }
 
   return (
     <section className="premium-surface mt-4 rounded-lg p-4">
@@ -233,13 +286,60 @@ function WorkspaceStatusPanel({
       <p className="mt-2 text-xs leading-5 text-titan-ivory/54">
         {session.user.email}
       </p>
+      <label className="mt-4 block text-xs font-black uppercase text-titan-muted">
+        Switch workspace
+        <select
+          className="mt-2 w-full rounded-lg border border-titan-gold/15 bg-black/40 px-3 py-3 text-sm font-bold normal-case text-titan-ivory outline-none transition focus:border-titan-bright"
+          onChange={(event) => onWorkspaceSwitch(event.target.value)}
+          value={activeWorkspace?.id ?? ""}
+        >
+          {workspaceEnvelope.workspaces.map((workspace) => (
+            <option key={workspace.id} value={workspace.id}>
+              {workspace.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <form className="mt-3 flex gap-2" onSubmit={submitWorkspace}>
+        <input
+          className="min-w-0 flex-1 rounded-full border border-titan-gold/15 bg-black/35 px-3 py-2 text-xs text-titan-ivory outline-none placeholder:text-titan-ivory/30 focus:border-titan-bright"
+          onChange={(event) => setWorkspaceName(event.target.value)}
+          placeholder="New client workspace"
+          value={workspaceName}
+        />
+        <button
+          className="shrink-0 rounded-full bg-titan-gold px-3 py-2 text-[10px] font-black uppercase text-black transition hover:bg-titan-bright"
+          type="submit"
+        >
+          Add
+        </button>
+      </form>
       <div className="mt-4 flex flex-wrap gap-2">
         <span className="titan-chip bg-titan-gold/10 text-[10px] font-black uppercase text-titan-bright">
           {session.mode === "supabase" ? "Supabase Auth" : "Local mode"}
         </span>
         <span className="titan-chip bg-white/10 text-[10px] font-bold uppercase text-titan-ivory/60">
-          {workspaceEnvelope.auditedAccounts.length} accounts
+          {activeWorkspaceAccounts.length} accounts
         </span>
+        <span className="titan-chip bg-white/10 text-[10px] font-bold uppercase text-titan-ivory/60">
+          {workspaceEnvelope.workspaces.length} workspaces
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {(["strategist", "client"] as const).map((mode) => (
+          <button
+            className={`rounded-full border px-3 py-2 text-[10px] font-black uppercase transition ${
+              activeWorkspace?.viewMode === mode
+                ? "border-titan-bright bg-titan-gold text-black"
+                : "border-titan-gold/15 bg-white/[0.03] text-titan-ivory/60 hover:border-titan-bright"
+            }`}
+            key={mode}
+            onClick={() => onWorkspaceViewModeChange(mode)}
+            type="button"
+          >
+            {mode === "strategist" ? "Internal" : "Client"}
+          </button>
+        ))}
       </div>
       <div className="mt-4 rounded-lg border border-titan-gold/10 bg-black/24 p-3">
         <p className="text-[10px] font-black uppercase text-titan-muted">
@@ -259,6 +359,38 @@ function WorkspaceStatusPanel({
             {priority}
           </p>
         ))}
+      </div>
+      <form className="mt-4 rounded-lg border border-titan-gold/10 bg-black/20 p-3" onSubmit={submitNote}>
+        <p className="text-[10px] font-black uppercase text-titan-muted">
+          Strategist note
+        </p>
+        <textarea
+          className="mt-2 min-h-20 w-full rounded-lg border border-titan-gold/10 bg-black/30 px-3 py-2 text-xs leading-5 text-titan-ivory outline-none placeholder:text-titan-ivory/30 focus:border-titan-bright"
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Campaign observation, client request, meeting reminder..."
+          value={note}
+        />
+        <button
+          className="mt-2 inline-flex min-h-9 w-full items-center justify-center rounded-full border border-titan-gold/20 bg-white/[0.04] px-3 text-[10px] font-black uppercase text-titan-bright transition hover:border-titan-bright"
+          type="submit"
+        >
+          Save Note
+        </button>
+      </form>
+      <div className="mt-4 rounded-lg border border-titan-gold/10 bg-black/20 p-3">
+        <p className="text-[10px] font-black uppercase text-titan-muted">
+          Recent timeline
+        </p>
+        <div className="mt-2 grid gap-2">
+          {activeTimeline.slice(0, 3).map((item) => (
+            <p
+              className="text-anywhere rounded-md bg-white/[0.03] p-2 text-xs leading-5 text-titan-ivory/58"
+              key={item.id}
+            >
+              {item.title}
+            </p>
+          ))}
+        </div>
       </div>
     </section>
   );
