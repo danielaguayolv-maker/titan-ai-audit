@@ -108,9 +108,10 @@ function TitanAuthScreen({
   const supabaseEnvDebug = getSupabaseEnvDebug();
   const supabaseConfigured =
     supabaseEnvDebug.hasSupabaseUrl && supabaseEnvDebug.hasSupabaseAnonKey;
+  const showAuthDiagnostics = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") {
+    if (!showAuthDiagnostics) {
       return;
     }
 
@@ -189,40 +190,42 @@ function TitanAuthScreen({
           <h2 className="mt-3 text-3xl font-black text-titan-ivory">
             Enter your Titan workspace.
           </h2>
-          {!supabaseConfigured ? (
+          {showAuthDiagnostics && !supabaseConfigured ? (
             <p className="mt-4 rounded-lg border border-titan-gold/15 bg-titan-gold/10 p-4 text-sm leading-6 text-titan-ivory/66">
               Supabase environment variables are not configured yet. Titan will
               use local workspace mode for development.
             </p>
           ) : null}
-          <div className="mt-4 rounded-lg border border-titan-gold/15 bg-black/25 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-titan-muted">
-                Supabase env debug
+          {showAuthDiagnostics ? (
+            <div className="mt-4 rounded-lg border border-titan-gold/15 bg-black/25 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-titan-muted">
+                  Supabase env debug
+                </p>
+                <span className="rounded-full border border-titan-gold/20 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.14em] text-titan-ivory/60">
+                  {supabaseConfigured ? "Browser auth ready" : "Local fallback"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 text-sm">
+                <SafeEnvDebugRow
+                  label="hasSupabaseUrl"
+                  value={String(supabaseEnvDebug.hasSupabaseUrl)}
+                />
+                <SafeEnvDebugRow
+                  label="hasSupabaseAnonKey"
+                  value={String(supabaseEnvDebug.hasSupabaseAnonKey)}
+                />
+                <SafeEnvDebugRow
+                  label="urlHostname"
+                  value={supabaseEnvDebug.urlHostname}
+                />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-titan-ivory/45">
+                Expected client-safe names: NEXT_PUBLIC_SUPABASE_URL and
+                NEXT_PUBLIC_SUPABASE_ANON_KEY. The anon key value is never shown.
               </p>
-              <span className="rounded-full border border-titan-gold/20 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.14em] text-titan-ivory/60">
-                {supabaseConfigured ? "Browser auth ready" : "Local fallback"}
-              </span>
             </div>
-            <div className="mt-3 grid gap-2 text-sm">
-              <SafeEnvDebugRow
-                label="hasSupabaseUrl"
-                value={String(supabaseEnvDebug.hasSupabaseUrl)}
-              />
-              <SafeEnvDebugRow
-                label="hasSupabaseAnonKey"
-                value={String(supabaseEnvDebug.hasSupabaseAnonKey)}
-              />
-              <SafeEnvDebugRow
-                label="urlHostname"
-                value={supabaseEnvDebug.urlHostname}
-              />
-            </div>
-            <p className="mt-3 text-xs leading-5 text-titan-ivory/45">
-              Expected client-safe names: NEXT_PUBLIC_SUPABASE_URL and
-              NEXT_PUBLIC_SUPABASE_ANON_KEY. The anon key value is never shown.
-            </p>
-          </div>
+          ) : null}
           {mode === "signup" ? (
             <label className="mt-5 block text-sm font-bold text-titan-ivory/72">
               Name

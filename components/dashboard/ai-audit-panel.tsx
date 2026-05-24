@@ -141,7 +141,7 @@ export function AiAuditPanel({
   });
   const currentLoadingStage = status === "loading" ? loadingStages.length - 2 : -1;
   const showFallbackReason =
-    process.env.NODE_ENV !== "production" &&
+    process.env.NODE_ENV === "development" &&
     (liveScan.status === "fallback" || liveScan.status === "failed") &&
     Boolean(liveScan.fallbackReason);
   const isAuthenticatedWorkspace = Boolean(authSession);
