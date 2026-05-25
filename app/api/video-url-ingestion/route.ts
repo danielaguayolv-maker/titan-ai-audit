@@ -19,6 +19,7 @@ const MAX_DIRECT_VIDEO_BYTES = 80 * 1024 * 1024;
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 const FFMPEG_BIN = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE_BIN = process.env.FFPROBE_PATH || "ffprobe";
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 const TIKTOK_VIDEO_ACTOR_ID =
   process.env.APIFY_TIKTOK_VIDEO_ACTOR_ID?.trim() ||
   process.env.APIFY_TIKTOK_ACTOR_ID?.trim() ||
@@ -37,6 +38,53 @@ type DownloaderResult = {
 type VideoDownloader = (url: string) => Promise<DownloaderResult>;
 
 type JsonRecord = Record<string, unknown>;
+
+type MediaCandidate = {
+  fieldPath: string;
+  url: string;
+};
+
+type VideoCandidateProbe = {
+  candidate: MediaCandidate;
+  contentType?: string;
+  failureReason?: string;
+  finalHostname?: string;
+  ok: boolean;
+  status?: number;
+};
+
+const TIKTOK_MEDIA_FIELD_NAMES = new Set(
+  [
+    "videoUrl",
+    "url",
+    "downloadAddr",
+    "playAddr",
+    "urlList",
+    "mediaUrls",
+    "videoMeta",
+    "coverUrl",
+    "webVideoUrl",
+    "diggUrl",
+    "originalVideoUrl",
+    "downloadUrl",
+    "downloadURL",
+    "downloadLink",
+    "download_addr",
+    "play_addr",
+    "video_url",
+    "noWatermark",
+    "noWatermarkUrl",
+    "noWatermarkURL"
+  ].map((field) => field.toLowerCase())
+);
+
+const TIKTOK_DOWNLOAD_HEADERS = {
+  Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  Referer: "https://www.tiktok.com/",
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+};
 
 function detectVideoUrlType(value: string): VideoUrlType {
   try {
@@ -113,12 +161,46 @@ async function assertFfmpegAvailable() {
   }
 }
 
-async function downloadDirectVideo(url: string): Promise<DownloaderResult> {
+function devLog(label: string, payload: unknown) {
+  if (IS_DEVELOPMENT) {
+    console.info(`[Titan Video URL] ${label}`, payload);
+  }
+}
+
+function summarizeJsonShape(value: unknown, depth = 0): unknown {
+  if (depth > 4) return "[depth-limit]";
+  if (Array.isArray(value)) {
+    return value.slice(0, 3).map((item) => summarizeJsonShape(item, depth + 1));
+  }
+  if (!isRecord(value)) return typeof value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nestedValue]) => [
+      key,
+      summarizeJsonShape(nestedValue, depth + 1)
+    ])
+  );
+}
+
+function safeHostname(value?: string) {
+  if (!value) return undefined;
+
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+async function downloadDirectVideo(
+  url: string,
+  headers: HeadersInit = {
+    "User-Agent": "TitanVisibilityOS/1.0"
+  }
+): Promise<DownloaderResult> {
   const response = await fetch(url, {
     redirect: "follow",
-    headers: {
-      "User-Agent": "TitanVisibilityOS/1.0"
-    }
+    headers
   });
 
   if (!response.ok) {
@@ -229,52 +311,14 @@ function looksLikeVideoUrl(value: string) {
   return (
     /\.(mp4|mov|m4v|webm)(\?|#|$)/.test(lowerValue) ||
     lowerValue.includes("video") ||
-    lowerValue.includes("play")
+    lowerValue.includes("play") ||
+    lowerValue.includes("download")
   );
 }
 
 function looksLikeImageUrl(value: string) {
   if (!isHttpUrl(value)) return false;
   return /\.(jpg|jpeg|png|webp)(\?|#|$)/.test(value.toLowerCase());
-}
-
-function firstVideoUrl(records: JsonRecord[]) {
-  const keys = [
-    "downloadUrl",
-    "downloadURL",
-    "downloadLink",
-    "downloadAddr",
-    "videoUrl",
-    "videoURL",
-    "video_url",
-    "videoUrlNoWaterMark",
-    "videoUrlNoWatermark",
-    "noWatermark",
-    "noWatermarkUrl",
-    "noWatermarkURL",
-    "playAddr",
-    "playUrl",
-    "playURL",
-    "mediaUrl",
-    "mediaURL",
-    "src",
-    "url"
-  ];
-
-  const candidates: string[] = [];
-
-  for (const record of records) {
-    for (const key of keys) {
-      const value = record[key];
-      if (typeof value === "string") {
-        candidates.push(value);
-      } else if (Array.isArray(value)) {
-        candidates.push(...value.filter((item): item is string => typeof item === "string"));
-      }
-    }
-  }
-
-  return candidates.find(looksLikeVideoUrl);
 }
 
 function firstImageUrl(records: JsonRecord[]) {
@@ -308,6 +352,151 @@ function firstImageUrl(records: JsonRecord[]) {
   }
 
   return candidates.find(looksLikeImageUrl) ?? candidates.find(isHttpUrl);
+}
+
+function pathContainsMediaField(pathParts: string[]) {
+  return pathParts.some((part) =>
+    TIKTOK_MEDIA_FIELD_NAMES.has(part.replace(/\[\d+\]$/, "").toLowerCase())
+  );
+}
+
+function collectTikTokVideoCandidates(
+  value: unknown,
+  pathParts: string[] = [],
+  depth = 0
+): MediaCandidate[] {
+  if (depth > 8) return [];
+
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    if (pathContainsMediaField(pathParts) && looksLikeVideoUrl(trimmedValue)) {
+      return [
+        {
+          fieldPath: pathParts.join("."),
+          url: trimmedValue
+        }
+      ];
+    }
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      collectTikTokVideoCandidates(item, [...pathParts, `[${index}]`], depth + 1)
+    );
+  }
+
+  if (!isRecord(value)) return [];
+
+  return Object.entries(value).flatMap(([key, nestedValue]) =>
+    collectTikTokVideoCandidates(nestedValue, [...pathParts, key], depth + 1)
+  );
+}
+
+function uniqueMediaCandidates(candidates: MediaCandidate[]) {
+  const seen = new Set<string>();
+  const priorityTerms = [
+    "downloadaddr",
+    "downloadurl",
+    "originalvideourl",
+    "videourl",
+    "videometa",
+    "playaddr",
+    "mediaurls",
+    "webvideourl",
+    "diggurl",
+    "url"
+  ];
+
+  return candidates
+    .filter((candidate) => {
+      if (seen.has(candidate.url)) return false;
+      seen.add(candidate.url);
+      return true;
+    })
+    .sort((firstCandidate, secondCandidate) => {
+      const firstPath = firstCandidate.fieldPath.toLowerCase();
+      const secondPath = secondCandidate.fieldPath.toLowerCase();
+      const firstRank = priorityTerms.findIndex((term) => firstPath.includes(term));
+      const secondRank = priorityTerms.findIndex((term) => secondPath.includes(term));
+      return (firstRank === -1 ? 99 : firstRank) - (secondRank === -1 ? 99 : secondRank);
+    });
+}
+
+async function probeVideoCandidate(
+  candidate: MediaCandidate
+): Promise<VideoCandidateProbe> {
+  try {
+    const response = await fetch(candidate.url, {
+      headers: {
+        ...TIKTOK_DOWNLOAD_HEADERS,
+        Range: "bytes=0-0"
+      },
+      redirect: "follow"
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    const lowerContentType = contentType.toLowerCase();
+    const finalHostname = safeHostname(response.url);
+    await response.body?.cancel().catch(() => undefined);
+
+    if (!response.ok && response.status !== 206) {
+      return {
+        candidate,
+        contentType,
+        failureReason: `HTTP ${response.status}`,
+        finalHostname,
+        ok: false,
+        status: response.status
+      };
+    }
+
+    if (!lowerContentType.startsWith("video/")) {
+      return {
+        candidate,
+        contentType,
+        failureReason: `Returned ${contentType || "unknown content type"}`,
+        finalHostname,
+        ok: false,
+        status: response.status
+      };
+    }
+
+    return {
+      candidate,
+      contentType,
+      finalHostname,
+      ok: true,
+      status: response.status
+    };
+  } catch (error) {
+    return {
+      candidate,
+      failureReason:
+        error instanceof Error ? error.message : "Candidate probe request failed.",
+      ok: false
+    };
+  }
+}
+
+async function selectDownloadableTikTokVideoUrl(candidates: MediaCandidate[]) {
+  const probes: VideoCandidateProbe[] = [];
+
+  for (const candidate of candidates) {
+    const probe = await probeVideoCandidate(candidate);
+    probes.push(probe);
+
+    if (probe.ok) {
+      return {
+        probe,
+        probes
+      };
+    }
+  }
+
+  return {
+    probe: null,
+    probes
+  };
 }
 
 function extractHashtags(records: JsonRecord[], caption?: string) {
@@ -422,6 +611,11 @@ function tiktokActorInput(videoUrl: string): JsonRecord {
 
 function normalizeTikTokMedia(items: JsonRecord[]) {
   const records = collectRecords(items);
+  const videoCandidates = uniqueMediaCandidates(
+    items.flatMap((item, index) =>
+      collectTikTokVideoCandidates(item, [`item[${index}]`])
+    )
+  );
   const caption = firstStringFromKeys(records, [
     "text",
     "caption",
@@ -452,7 +646,7 @@ function normalizeTikTokMedia(items: JsonRecord[]) {
     duration: firstNumberFromKeys(records, ["duration", "durationSec", "videoDuration"]),
     engagementMetrics,
     hashtags: extractHashtags(records, caption),
-    resolvedVideoUrl: firstVideoUrl(records)
+    videoCandidates
   };
 }
 
@@ -497,6 +691,36 @@ async function resolveTikTokVideo(url: string): Promise<DownloaderResult> {
   }
 
   const normalized = normalizeTikTokMedia(items);
+  devLog("TikTok Apify result shape", summarizeJsonShape(items));
+
+  const { probe: selectedVideoProbe, probes } =
+    await selectDownloadableTikTokVideoUrl(normalized.videoCandidates);
+  const selectedVideoUrl = selectedVideoProbe?.candidate.url;
+
+  devLog("TikTok media candidates", {
+    candidateFieldsFound: normalized.videoCandidates.map((candidate) => ({
+      fieldPath: candidate.fieldPath,
+      hostname: safeHostname(candidate.url)
+    })),
+    selectedContentType: selectedVideoProbe?.contentType,
+    selectedFieldPath: selectedVideoProbe?.candidate.fieldPath,
+    selectedMediaUrlHostname: safeHostname(selectedVideoUrl),
+    totalCandidates: normalized.videoCandidates.length
+  });
+
+  devLog(
+    "TikTok media candidate probe results",
+    probes.map((probe) => ({
+      contentType: probe.contentType,
+      failureReason: probe.failureReason,
+      fieldPath: probe.candidate.fieldPath,
+      finalHostname: probe.finalHostname,
+      hostname: safeHostname(probe.candidate.url),
+      ok: probe.ok,
+      status: probe.status
+    }))
+  );
+
   const metadata: Partial<VideoAuditMetadata> = {
     authorHandle: normalized.authorHandle,
     caption: normalized.caption,
@@ -504,13 +728,16 @@ async function resolveTikTokVideo(url: string): Promise<DownloaderResult> {
     duration: normalized.duration ?? 0,
     engagementMetrics: normalized.engagementMetrics,
     hashtags: normalized.hashtags,
-    resolvedVideoUrl: normalized.resolvedVideoUrl,
+    resolvedVideoUrl: selectedVideoUrl,
     urlType: "tiktok"
   };
 
-  if (normalized.resolvedVideoUrl) {
+  if (selectedVideoUrl) {
     try {
-      const downloaded = await downloadDirectVideo(normalized.resolvedVideoUrl);
+      const downloaded = await downloadDirectVideo(
+        selectedVideoUrl,
+        TIKTOK_DOWNLOAD_HEADERS
+      );
       return {
         ...downloaded,
         metadata,
@@ -546,8 +773,9 @@ async function resolveTikTokVideo(url: string): Promise<DownloaderResult> {
       coverFrame: await fetchCoverFrame(normalized.coverImageUrl),
       metadata,
       partial: true,
-      partialReason:
-        "Apify returned TikTok metadata and a cover image, but no downloadable video URL. Titan analyzed the cover image, caption, hashtags, and metadata only.",
+      partialReason: normalized.videoCandidates.length
+        ? "Apify returned TikTok media candidates, but none returned a direct video content type. Titan analyzed the cover image, caption, hashtags, and metadata only."
+        : "Apify returned TikTok metadata and a cover image, but no downloadable video URL. Titan analyzed the cover image, caption, hashtags, and metadata only.",
       sourceLabel: normalized.authorHandle
         ? `TikTok @${normalized.authorHandle}`
         : "TikTok video"
