@@ -5,10 +5,11 @@ import type {
   VideoAuditMetadata,
   VideoFrameSignal,
   VideoIntelligenceApiResponse,
-  VideoIntelligenceResult
+  VideoIntelligenceResult,
+  VideoUrlIngestionApiResponse
 } from "@/lib/video-intelligence";
 
-type RunStatus = "idle" | "extracting" | "analyzing" | "success" | "error";
+type RunStatus = "idle" | "extracting" | "ingesting-url" | "analyzing" | "success" | "error";
 
 const fieldClass =
   "mt-2 w-full rounded-lg border border-titan-gold/15 bg-black/30 px-4 py-3 text-sm text-titan-ivory outline-none transition placeholder:text-titan-ivory/30 focus:border-titan-bright focus:ring-2 focus:ring-titan-gold/20";
@@ -83,26 +84,15 @@ function captureFrame(video: HTMLVideoElement) {
   return canvas.toDataURL("image/jpeg", 0.72);
 }
 
-async function extractFramesFromSource({
-  file,
-  videoUrl
-}: {
-  file: File | null;
-  videoUrl: string;
-}) {
+async function extractFramesFromFile(file: File) {
   const video = document.createElement("video");
-  const objectUrl = file ? URL.createObjectURL(file) : "";
-  const source = objectUrl || videoUrl.trim();
-
-  if (!source) {
-    throw new Error("Upload a video file or paste a direct CORS-enabled video URL.");
-  }
+  const objectUrl = URL.createObjectURL(file);
 
   video.preload = "auto";
   video.muted = true;
   video.playsInline = true;
   video.crossOrigin = "anonymous";
-  video.src = source;
+  video.src = objectUrl;
 
   try {
     await waitForVideoEvent(video, "loadedmetadata");
@@ -113,10 +103,10 @@ async function extractFramesFromSource({
 
     const metadata: VideoAuditMetadata = {
       duration: video.duration,
-      fileSize: file?.size,
-      format: file?.type || "URL video",
-      sourceLabel: file?.name || videoUrl.trim(),
-      sourceType: file ? "upload" : "url"
+      fileSize: file.size,
+      format: file.type || "Uploaded video",
+      sourceLabel: file.name,
+      sourceType: "upload"
     };
     const frames: VideoFrameSignal[] = [];
 
@@ -138,10 +128,32 @@ async function extractFramesFromSource({
 
     return { frames, metadata };
   } finally {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-    }
+    URL.revokeObjectURL(objectUrl);
   }
+}
+
+async function ingestVideoUrlServerSide(videoUrl: string) {
+  const response = await fetch("/api/video-url-ingestion", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ videoUrl })
+  });
+  const payload = (await response.json()) as VideoUrlIngestionApiResponse;
+
+  if (!response.ok || "error" in payload) {
+    throw new Error(
+      "error" in payload
+        ? payload.message || payload.error
+        : "Titan could not ingest this video URL."
+    );
+  }
+
+  return {
+    frames: payload.frames,
+    metadata: payload.metadata
+  };
 }
 
 function SectionCard({
@@ -202,6 +214,7 @@ export function VideoIntelligence() {
 
   const statusLabel = useMemo(() => {
     if (status === "extracting") return "Extracting key frames";
+    if (status === "ingesting-url") return "Ingesting video URL server-side";
     if (status === "analyzing") return "Running video intelligence";
     if (status === "success") return "Video audit complete";
     if (status === "error") return "Video audit needs attention";
@@ -225,10 +238,12 @@ export function VideoIntelligence() {
     setStatus("extracting");
 
     try {
-      const extracted = await extractFramesFromSource({
-        file: videoFile,
-        videoUrl
-      });
+      const extracted = videoFile
+        ? await extractFramesFromFile(videoFile)
+        : await (async () => {
+            setStatus("ingesting-url");
+            return ingestVideoUrlServerSide(videoUrl.trim());
+          })();
       setFrames(extracted.frames);
       setMetadata(extracted.metadata);
       setStatus("analyzing");
@@ -282,9 +297,10 @@ export function VideoIntelligence() {
                 Audit one video with direct frame-level intelligence.
               </h1>
               <p className="titan-copy text-anywhere mt-5 text-lg text-titan-ivory/66">
-                Upload a single video or paste a direct video URL. Titan extracts
-                six key frames, attempts transcript analysis for uploads, and
-                labels every read as visual, transcript, or inferred.
+                Upload a single video or paste a supported video URL. Titan
+                extracts six key frames, attempts transcript analysis for
+                uploads, and labels every read as visual, transcript, or
+                inferred.
               </p>
               <div className="titan-readable-grid mt-8">
                 {[
@@ -319,7 +335,7 @@ export function VideoIntelligence() {
                 />
               </label>
               <label className="mt-4 block text-sm font-bold text-titan-ivory/72">
-                Or paste direct video URL
+                Or paste supported video URL
                 <input
                   className={fieldClass}
                   onChange={(event) => {
@@ -335,16 +351,23 @@ export function VideoIntelligence() {
                 />
               </label>
               <p className="mt-3 text-xs leading-5 text-titan-ivory/50">
-                URL mode only works for direct, browser-readable videos that
-                allow frame extraction. If a site blocks canvas access, upload
-                the file instead.
+                URL mode now runs server-side. Direct video files are supported
+                first. TikTok, Instagram Reels, and YouTube Shorts are detected
+                and will return a clear not-supported-yet message until a media
+                downloader is connected.
               </p>
               <button
                 className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-titan-gold px-7 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={status === "extracting" || status === "analyzing"}
+                disabled={
+                  status === "extracting" ||
+                  status === "ingesting-url" ||
+                  status === "analyzing"
+                }
                 type="submit"
               >
-                {status === "extracting" || status === "analyzing"
+                {status === "extracting" ||
+                status === "ingesting-url" ||
+                status === "analyzing"
                   ? statusLabel
                   : "Run Video Intelligence"}
               </button>
@@ -368,6 +391,15 @@ export function VideoIntelligence() {
                     Transcript {transcriptStatus}: {transcriptMessage}
                   </p>
                 ) : null}
+                <div className="mt-4 rounded-lg border border-titan-gold/10 bg-black/20 p-3">
+                  <p className="text-[10px] font-black uppercase text-titan-muted">
+                    URL support
+                  </p>
+                  <div className="mt-2 grid gap-1 text-xs leading-5 text-titan-ivory/52">
+                    <p>Direct .mp4/.mov/.m4v/.webm: supported when server ffmpeg is available.</p>
+                    <p>TikTok, Instagram Reels, YouTube Shorts: detected, downloader hook pending.</p>
+                  </div>
+                </div>
               </div>
               {error ? (
                 <p className="mt-4 rounded-lg border border-red-400/25 bg-red-500/10 p-4 text-sm leading-6 text-red-100/80">

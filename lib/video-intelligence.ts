@@ -45,6 +45,28 @@ export type VideoIntelligenceApiResponse =
       transcriptMessage?: string;
     };
 
+export type VideoUrlType =
+  | "direct-video"
+  | "tiktok"
+  | "instagram-reel"
+  | "youtube-shorts"
+  | "unsupported";
+
+export type VideoUrlIngestionResult = {
+  frames: VideoFrameSignal[];
+  metadata: VideoAuditMetadata;
+  urlType: VideoUrlType;
+  message: string;
+};
+
+export type VideoUrlIngestionApiResponse =
+  | VideoUrlIngestionResult
+  | {
+      error: string;
+      urlType: VideoUrlType;
+      message: string;
+    };
+
 const sectionSchema = {
   type: "object",
   additionalProperties: false,
