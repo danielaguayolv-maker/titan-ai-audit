@@ -9,7 +9,7 @@ export async function GET(
   context: { params: Promise<{ jobId: string }> }
 ) {
   const { jobId } = await context.params;
-  const job = getVideoAnalysisJob(jobId);
+  const job = await getVideoAnalysisJob(jobId);
 
   if (!job) {
     return NextResponse.json(
@@ -24,4 +24,3 @@ export async function GET(
 
   return NextResponse.json({ job });
 }
-

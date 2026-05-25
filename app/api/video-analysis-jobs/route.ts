@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import {
   createVideoAnalysisJob,
+  isSupabaseVideoJobStoreConfigured,
   updateVideoAnalysisJob
 } from "@/lib/video-analysis-jobs";
 import type {
@@ -203,7 +204,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const job = createVideoAnalysisJob({
+  const shouldProcessLocally = !isSupabaseVideoJobStoreConfigured();
+  const job = await createVideoAnalysisJob({
     inputUrl,
     platform,
     userId,
@@ -211,9 +213,11 @@ export async function POST(request: Request) {
   });
   const origin = new URL(request.url).origin;
 
-  after(() => {
-    void processVideoAnalysisJob(job.id, origin);
-  });
+  if (shouldProcessLocally) {
+    after(() => {
+      void processVideoAnalysisJob(job.id, origin);
+    });
+  }
 
   return NextResponse.json(
     {
