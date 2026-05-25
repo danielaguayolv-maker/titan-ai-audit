@@ -169,6 +169,7 @@ export async function POST(request: Request) {
         "Use direct visual evidence from the extracted frames where possible.",
         "Use transcript evidence only if a transcript is present.",
         "Clearly avoid overclaiming: if motion, audio, delivery, or exact pacing is not directly measurable from still frames/transcript, label the read as inferred.",
+        "If metadata.partial is true, clearly state that this is partial video intelligence and only analyze the provided cover/frame, caption, hashtags, and metadata. Do not claim actual motion, scene changes, audio delivery, or full pacing were directly analyzed.",
         "Return only JSON matching the schema.",
         "",
         `Video metadata: ${JSON.stringify(metadata, null, 2)}`,

@@ -10,6 +10,20 @@ export type VideoAuditMetadata = {
   format?: string;
   sourceType: "upload" | "url";
   sourceLabel: string;
+  urlType?: VideoUrlType;
+  partial?: boolean;
+  partialReason?: string;
+  resolvedVideoUrl?: string;
+  coverImageUrl?: string;
+  caption?: string;
+  hashtags?: string[];
+  authorHandle?: string;
+  engagementMetrics?: {
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    views?: number;
+  };
 };
 
 export type VideoAuditSection = {

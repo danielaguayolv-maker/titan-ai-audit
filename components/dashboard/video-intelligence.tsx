@@ -37,6 +37,12 @@ function formatBytes(bytes?: number) {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+function formatDuration(duration: number) {
+  return Number.isFinite(duration) && duration > 0
+    ? `${duration.toFixed(1)}s`
+    : "Unknown";
+}
+
 function waitForVideoEvent(video: HTMLVideoElement, eventName: keyof HTMLMediaElementEventMap) {
   return new Promise<void>((resolve, reject) => {
     const cleanup = () => {
@@ -351,10 +357,10 @@ export function VideoIntelligence() {
                 />
               </label>
               <p className="mt-3 text-xs leading-5 text-titan-ivory/50">
-                URL mode now runs server-side. Direct video files are supported
-                first. TikTok, Instagram Reels, and YouTube Shorts are detected
-                and will return a clear not-supported-yet message until a media
-                downloader is connected.
+                URL mode runs server-side. Direct video files are supported when
+                server ffmpeg is available. TikTok URLs use the Apify downloader
+                provider when configured; if no downloadable video is returned,
+                Titan falls back to cover image, caption, and metadata only.
               </p>
               <button
                 className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-titan-gold px-7 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright disabled:cursor-not-allowed disabled:opacity-60"
@@ -381,9 +387,24 @@ export function VideoIntelligence() {
                 </p>
                 {metadata ? (
                   <div className="mt-4 grid gap-2 text-xs text-titan-ivory/60">
-                    <p>Duration: {metadata.duration.toFixed(1)}s</p>
+                    <p>Duration: {formatDuration(metadata.duration)}</p>
                     <p>File size: {formatBytes(metadata.fileSize)}</p>
                     <p>Format: {metadata.format ?? "Unknown"}</p>
+                    {metadata.authorHandle ? (
+                      <p>Author: @{metadata.authorHandle}</p>
+                    ) : null}
+                    {metadata.caption ? (
+                      <p className="text-anywhere">Caption: {metadata.caption}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {metadata?.partial ? (
+                  <div className="text-anywhere mt-4 rounded-lg border border-titan-bright/30 bg-titan-gold/10 p-3 text-xs leading-5 text-titan-ivory/70">
+                    <span className="font-black uppercase text-titan-bright">
+                      Partial video intelligence:
+                    </span>{" "}
+                    {metadata.partialReason ??
+                      "Titan analyzed available image and metadata signals only."}
                   </div>
                 ) : null}
                 {transcriptMessage ? (
@@ -397,7 +418,8 @@ export function VideoIntelligence() {
                   </p>
                   <div className="mt-2 grid gap-1 text-xs leading-5 text-titan-ivory/52">
                     <p>Direct .mp4/.mov/.m4v/.webm: supported when server ffmpeg is available.</p>
-                    <p>TikTok, Instagram Reels, YouTube Shorts: detected, downloader hook pending.</p>
+                    <p>TikTok: supported through Apify when APIFY_TOKEN and APIFY_TIKTOK_VIDEO_ACTOR_ID are configured.</p>
+                    <p>Instagram Reels and YouTube Shorts: detected, downloader hooks pending.</p>
                   </div>
                 </div>
               </div>
@@ -427,7 +449,11 @@ export function VideoIntelligence() {
                   <div className="p-3">
                     <p className="font-black text-titan-ivory">{frame.label}</p>
                     <p className="mt-1 text-xs text-titan-ivory/52">
-                      {frame.timestamp.toFixed(2)} seconds
+                      {frame.timestamp > 0
+                        ? `${frame.timestamp.toFixed(2)} seconds`
+                        : metadata?.partial
+                          ? "Cover image signal"
+                          : "0.00 seconds"}
                     </p>
                   </div>
                 </div>
