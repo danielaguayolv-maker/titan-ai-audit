@@ -187,19 +187,27 @@ function isTikTokUrl(value: string) {
 }
 
 async function createVideoAnalysisJob({
+  accessToken,
   inputUrl,
   userId,
   workspaceId
 }: {
+  accessToken?: string;
   inputUrl: string;
   userId?: string;
   workspaceId?: string;
 }) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json"
+  };
+
+  if (accessToken && !accessToken.startsWith("local-")) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch("/api/video-analysis-jobs", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers,
     body: JSON.stringify({
       input_url: inputUrl,
       platform: "tiktok",
@@ -223,9 +231,16 @@ async function createVideoAnalysisJob({
   return payload.job;
 }
 
-async function getVideoAnalysisJob(jobId: string) {
+async function getVideoAnalysisJob(jobId: string, accessToken?: string) {
+  const headers: Record<string, string> = {};
+
+  if (accessToken && !accessToken.startsWith("local-")) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`/api/video-analysis-jobs/${jobId}`, {
-    cache: "no-store"
+    cache: "no-store",
+    headers
   });
   const payload = await readApiPayload<VideoAnalysisJobStatusResponse>(
     response,
@@ -316,9 +331,11 @@ function SectionCard({
 }
 
 export function VideoIntelligence({
+  accessToken,
   userId,
   workspaceId
 }: {
+  accessToken?: string;
   userId?: string;
   workspaceId?: string;
 }) {
@@ -361,7 +378,7 @@ export function VideoIntelligence({
   async function pollVideoAnalysisJob(jobId: string) {
     for (let attempt = 0; attempt < 90; attempt += 1) {
       await wait(attempt === 0 ? 800 : 2000);
-      const job = await getVideoAnalysisJob(jobId);
+      const job = await getVideoAnalysisJob(jobId, accessToken);
       setActiveJob(job);
 
       if (job.progressMessage === "Resolving TikTok media") {
@@ -423,6 +440,7 @@ export function VideoIntelligence({
       if (!videoFile && isTikTokUrl(trimmedVideoUrl)) {
         setStatus("queued");
         const job = await createVideoAnalysisJob({
+          accessToken,
           inputUrl: trimmedVideoUrl,
           userId,
           workspaceId

@@ -180,6 +180,10 @@ export async function POST(request: Request) {
     typeof (payload as { workspace_id?: unknown }).workspace_id === "string"
       ? (payload as { workspace_id: string }).workspace_id
       : undefined;
+  const authHeader = request.headers.get("authorization") ?? "";
+  const authToken = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : undefined;
 
   if (!inputUrl) {
     return NextResponse.json(
@@ -204,13 +208,33 @@ export async function POST(request: Request) {
     );
   }
 
-  const shouldProcessLocally = !isSupabaseVideoJobStoreConfigured();
-  const job = await createVideoAnalysisJob({
-    inputUrl,
-    platform,
-    userId,
-    workspaceId
-  });
+  const shouldProcessLocally =
+    process.env.NODE_ENV === "development" && !isSupabaseVideoJobStoreConfigured();
+  let job;
+
+  try {
+    job = await createVideoAnalysisJob(
+      {
+        inputUrl,
+        platform,
+        userId,
+        workspaceId
+      },
+      authToken
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Titan could not create a persistent video analysis job.",
+        message:
+          "Titan could not create the video job in persistent storage."
+      },
+      { status: 502 }
+    );
+  }
   const origin = new URL(request.url).origin;
 
   if (shouldProcessLocally) {

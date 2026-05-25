@@ -709,6 +709,7 @@ function DashboardWorkspaceContent({
 
       {activeModule === "video-intelligence" ? (
         <VideoIntelligence
+          accessToken={session.accessToken}
           userId={session.user.id}
           workspaceId={activeWorkspaceId}
         />

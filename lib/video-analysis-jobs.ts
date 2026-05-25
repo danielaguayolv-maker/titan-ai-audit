@@ -13,6 +13,7 @@ type CreateVideoAnalysisJobInput = {
 };
 
 const videoAnalysisJobs = new Map<string, VideoAnalysisJobRecord>();
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 
 type SupabaseVideoAnalysisJobRow = {
   created_at: string;
@@ -37,9 +38,11 @@ function getSupabaseJobStoreConfig() {
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ??
     "";
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
 
   return {
-    isConfigured: Boolean(supabaseUrl && serviceRoleKey),
+    anonKey,
+    isConfigured: Boolean(supabaseUrl && (serviceRoleKey || anonKey)),
     serviceRoleKey,
     supabaseUrl: supabaseUrl.replace(/\/$/, "")
   };
@@ -49,11 +52,18 @@ export function isSupabaseVideoJobStoreConfigured() {
   return getSupabaseJobStoreConfig().isConfigured;
 }
 
-function supabaseHeaders(serviceRoleKey: string, prefer?: string) {
+function supabaseHeaders(
+  config: ReturnType<typeof getSupabaseJobStoreConfig>,
+  authToken?: string,
+  prefer?: string
+) {
+  const apiKey = config.serviceRoleKey || config.anonKey;
+  const bearerToken = config.serviceRoleKey || authToken || config.anonKey;
+
   return {
     ...(prefer ? { Prefer: prefer } : {}),
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
+    apikey: apiKey,
+    Authorization: `Bearer ${bearerToken}`,
     "Content-Type": "application/json"
   };
 }
@@ -119,7 +129,10 @@ async function readSupabaseJson<T>(response: Response, label: string): Promise<T
   return (await response.json()) as T;
 }
 
-async function createSupabaseVideoAnalysisJob(job: VideoAnalysisJobRecord) {
+async function createSupabaseVideoAnalysisJob(
+  job: VideoAnalysisJobRecord,
+  authToken?: string
+) {
   const config = getSupabaseJobStoreConfig();
 
   if (!config.isConfigured) {
@@ -128,7 +141,7 @@ async function createSupabaseVideoAnalysisJob(job: VideoAnalysisJobRecord) {
 
   const response = await fetch(`${config.supabaseUrl}/rest/v1/video_analysis_jobs`, {
     body: JSON.stringify(jobToRow(job)),
-    headers: supabaseHeaders(config.serviceRoleKey, "return=representation"),
+    headers: supabaseHeaders(config, authToken, "return=representation"),
     method: "POST"
   });
   const rows = await readSupabaseJson<SupabaseVideoAnalysisJobRow[]>(
@@ -139,7 +152,7 @@ async function createSupabaseVideoAnalysisJob(job: VideoAnalysisJobRecord) {
   return rows[0] ? rowToJob(rows[0]) : job;
 }
 
-async function getSupabaseVideoAnalysisJob(jobId: string) {
+async function getSupabaseVideoAnalysisJob(jobId: string, authToken?: string) {
   const config = getSupabaseJobStoreConfig();
 
   if (!config.isConfigured) {
@@ -149,7 +162,7 @@ async function getSupabaseVideoAnalysisJob(jobId: string) {
   const response = await fetch(
     `${config.supabaseUrl}/rest/v1/video_analysis_jobs?id=eq.${encodeURIComponent(jobId)}&select=*`,
     {
-      headers: supabaseHeaders(config.serviceRoleKey),
+      headers: supabaseHeaders(config, authToken),
       method: "GET"
     }
   );
@@ -166,7 +179,10 @@ function createLocalVideoAnalysisJob(job: VideoAnalysisJobRecord) {
   return job;
 }
 
-export async function createVideoAnalysisJob(input: CreateVideoAnalysisJobInput) {
+export async function createVideoAnalysisJob(
+  input: CreateVideoAnalysisJobInput,
+  authToken?: string
+) {
   const now = new Date().toISOString();
   const job: VideoAnalysisJobRecord = {
     createdAt: now,
@@ -180,17 +196,31 @@ export async function createVideoAnalysisJob(input: CreateVideoAnalysisJobInput)
     workspaceId: input.workspaceId
   };
 
-  return (await createSupabaseVideoAnalysisJob(job)) ?? createLocalVideoAnalysisJob(job);
-}
-
-export async function getVideoAnalysisJob(jobId: string) {
-  const supabaseJob = await getSupabaseVideoAnalysisJob(jobId);
+  const supabaseJob = await createSupabaseVideoAnalysisJob(job, authToken);
 
   if (supabaseJob) {
     return supabaseJob;
   }
 
-  return videoAnalysisJobs.get(jobId) ?? null;
+  if (IS_DEVELOPMENT) {
+    return createLocalVideoAnalysisJob(job);
+  }
+
+  throw new Error("Supabase video job storage is not configured.");
+}
+
+export async function getVideoAnalysisJob(jobId: string, authToken?: string) {
+  const supabaseJob = await getSupabaseVideoAnalysisJob(jobId, authToken);
+
+  if (supabaseJob) {
+    return supabaseJob;
+  }
+
+  if (IS_DEVELOPMENT) {
+    return videoAnalysisJobs.get(jobId) ?? null;
+  }
+
+  return null;
 }
 
 export function updateVideoAnalysisJob(
