@@ -7,6 +7,10 @@ import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
 
+const WORKER_VERSION = "video-guard-v3";
+const AUDIO_ONLY_PARTIAL_MESSAGE =
+  "TikTok provider returned audio-only media, so Titan analyzed cover, caption, hashtags, and metadata.";
+
 const SUPABASE_URL = requiredEnv("SUPABASE_URL").replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
 const OPENAI_API_KEY = requiredEnv("OPENAI_API_KEY");
@@ -959,6 +963,12 @@ async function writeDownloadedMediaToFile(buffer, contentType, sourceUrl) {
 }
 
 async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, sourceUrl, candidate = {}) {
+  console.log("[Titan worker] ffprobe stream check before frame extraction", {
+    candidateField: candidate.fieldPath,
+    contentType,
+    selectedMediaHostname: safeHostname(sourceUrl),
+    workerVersion: WORKER_VERSION
+  });
   const streamInfo = await inspectMediaStreams(inputPath);
   const rejectionReason = streamInfo.hasVideoStream
     ? null
@@ -976,7 +986,7 @@ async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, so
   });
 
   if (!streamInfo.hasVideoStream) {
-    console.warn("[Titan worker] Skipping frame extraction: no video stream detected.", {
+    console.warn("[Titan worker] Skipping frame extraction: no video stream detected", {
       candidateField: candidate.fieldPath,
       contentType,
       hasAudioStream: streamInfo.hasAudioStream,
@@ -1179,10 +1189,16 @@ async function processJob(job) {
   try {
     console.log("[Titan worker] Processing video job", {
       jobId: job.id,
-      platform: job.platform
+      platform: job.platform,
+      workerVersion: WORKER_VERSION
     });
     await updateProgress(job.id, "Resolving TikTok media", {
       error_message: null,
+      metadata_result: {
+        debug: {
+          workerVersion: WORKER_VERSION
+        }
+      },
       status: "processing"
     });
 
@@ -1252,6 +1268,9 @@ async function processJob(job) {
           candidateWorkDir = undefined;
           metadata = {
             ...metadataBase,
+            debug: {
+              workerVersion: WORKER_VERSION
+            },
             duration,
             fileSize: downloaded.buffer.byteLength,
             format: downloaded.contentType,
@@ -1313,12 +1332,12 @@ async function processJob(job) {
       }
 
       if (frames.length === 0) {
-        if (!metadataBase.coverImageUrl || urlType !== "tiktok") {
+        if ((audioOnlyCandidateCount === 0 && !metadataBase.coverImageUrl) || urlType !== "tiktok") {
           throw lastMediaError ?? new Error("No downloadable video was available.");
         }
 
         const partialReason = audioOnlyCandidateCount > 0
-          ? "TikTok provider returned audio-only media, so Titan analyzed cover, caption, hashtags, and metadata."
+          ? AUDIO_ONLY_PARTIAL_MESSAGE
           : `The worker found TikTok media candidates, but download or frame extraction failed. Titan analyzed cover, caption, hashtags, and metadata only. Worker detail: ${
               lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
             }`;
@@ -1330,12 +1349,19 @@ async function processJob(job) {
           reason: lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
         });
         await updateProgress(job.id, "Partial analysis fallback");
-        frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
+        frames = metadataBase.coverImageUrl
+          ? [await fetchCoverFrame(metadataBase.coverImageUrl)]
+          : [];
         metadata = {
           ...metadataBase,
+          debug: {
+            audioOnlyCandidateCount,
+            workerVersion: WORKER_VERSION
+          },
           duration: metadataBase.duration ?? 0,
           format: "Cover image + metadata",
           partial: true,
+          partialKind: audioOnlyCandidateCount > 0 ? "audio-only-media" : "media-candidate-failure",
           partialReason,
           sourceLabel: metadataBase.sourceLabel,
           sourceType: "url",
@@ -1347,7 +1373,12 @@ async function processJob(job) {
           transcript: ""
         };
         await updateProgress(job.id, "Running vision analysis", {
-          frame_analysis_result: { frames, message: "Partial cover frame extracted by Railway worker after media candidates failed." },
+          frame_analysis_result: {
+            frames,
+            message: metadataBase.coverImageUrl
+              ? "Partial cover frame extracted by Railway worker after media candidates failed."
+              : "Partial TikTok metadata analysis only; no video stream or cover image was available."
+          },
           metadata_result: metadata,
           transcript_result: transcriptResult
         });
@@ -1361,6 +1392,9 @@ async function processJob(job) {
       frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
       metadata = {
         ...metadataBase,
+        debug: {
+          workerVersion: WORKER_VERSION
+        },
         duration: metadataBase.duration ?? 0,
         format: "Cover image + metadata",
         partial: true,
@@ -1389,8 +1423,22 @@ async function processJob(job) {
       transcript_result: transcriptResult
     });
     const finalAuditResult = await analyzeFrames(frames, metadata, transcriptResult);
+    if (metadata.partialKind === "audio-only-media") {
+      finalAuditResult.partialAnalysisMessage = AUDIO_ONLY_PARTIAL_MESSAGE;
+      finalAuditResult.transparencyNotes = [
+        AUDIO_ONLY_PARTIAL_MESSAGE,
+        ...(Array.isArray(finalAuditResult.transparencyNotes)
+          ? finalAuditResult.transparencyNotes.filter((note) => !note.includes("ffmpeg"))
+          : [])
+      ];
+      finalAuditResult.firstThreeSecondsAnalysis = {
+        ...finalAuditResult.firstThreeSecondsAnalysis,
+        summary: AUDIO_ONLY_PARTIAL_MESSAGE
+      };
+    }
     await updateProgress(job.id, metadata.partial ? "Partial analysis" : "Complete", {
       final_audit_result: finalAuditResult,
+      metadata_result: metadata,
       status: metadata.partial ? "partial" : "completed"
     });
     console.log("[Titan worker] Video job finished", {
@@ -1425,11 +1473,15 @@ async function processJob(job) {
 
 async function main() {
   console.log("Titan Video Intelligence worker started.", {
+    ffmpegPath: FFMPEG_BIN,
+    ffprobePath: FFPROBE_BIN,
     heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
     jobStaleMinutes: JOB_STALE_MINUTES,
     jobTimeoutMs: JOB_TIMEOUT_MS,
-    pollIntervalMs: POLL_INTERVAL_MS
+    pollIntervalMs: POLL_INTERVAL_MS,
+    workerVersion: WORKER_VERSION
   });
+  console.log("[Titan worker] worker version video-guard-v3");
   for (;;) {
     try {
       if (shuttingDown) {
