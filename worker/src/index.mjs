@@ -950,6 +950,57 @@ async function inspectMediaStreams(filePath) {
   };
 }
 
+async function writeDownloadedMediaToFile(buffer, contentType, sourceUrl) {
+  const workDir = path.join(tmpdir(), `titan-worker-video-${randomUUID()}`);
+  await mkdir(workDir, { recursive: true });
+  const inputPath = path.join(workDir, `input${extensionForContentType(contentType, sourceUrl)}`);
+  await writeFile(inputPath, buffer);
+  return { inputPath, workDir };
+}
+
+async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, sourceUrl, candidate = {}) {
+  const streamInfo = await inspectMediaStreams(inputPath);
+  const rejectionReason = streamInfo.hasVideoStream
+    ? null
+    : streamInfo.hasAudioStream
+      ? "audio-only media; no video stream found by ffprobe"
+      : "no video stream found by ffprobe";
+
+  console.log("[Titan worker] Media candidate ffprobe stream diagnostics", {
+    candidateField: candidate.fieldPath,
+    contentType,
+    hasAudioStream: streamInfo.hasAudioStream,
+    hasVideoStream: streamInfo.hasVideoStream,
+    rejectionReason,
+    selectedMediaHostname: safeHostname(sourceUrl)
+  });
+
+  if (!streamInfo.hasVideoStream) {
+    console.warn("[Titan worker] Skipping frame extraction: no video stream detected.", {
+      candidateField: candidate.fieldPath,
+      contentType,
+      hasAudioStream: streamInfo.hasAudioStream,
+      hasVideoStream: streamInfo.hasVideoStream,
+      rejectionReason,
+      selectedMediaHostname: safeHostname(sourceUrl)
+    });
+    throw new AudioOnlyMediaError(
+      streamInfo.hasAudioStream
+        ? "TikTok provider returned audio-only media."
+        : "Resolved media did not contain a video stream.",
+      {
+        ...streamInfo,
+        candidateField: candidate.fieldPath,
+        contentType,
+        rejectionReason,
+        selectedMediaHostname: safeHostname(sourceUrl)
+      }
+    );
+  }
+
+  return streamInfo;
+}
+
 function frameTimestamps(duration) {
   return [
     { label: "First frame", timestamp: 0 },
@@ -961,73 +1012,33 @@ function frameTimestamps(duration) {
   ];
 }
 
-async function extractFrames(buffer, contentType, sourceUrl, candidate = {}) {
-  const workDir = path.join(tmpdir(), `titan-worker-video-${randomUUID()}`);
-  await mkdir(workDir, { recursive: true });
-  try {
-    const inputPath = path.join(workDir, `input${extensionForContentType(contentType, sourceUrl)}`);
-    await writeFile(inputPath, buffer);
-    const streamInfo = await inspectMediaStreams(inputPath);
-    const rejectionReason = streamInfo.hasVideoStream
-      ? null
-      : streamInfo.hasAudioStream
-        ? "audio-only media; no video stream found by ffprobe"
-        : "no video stream found by ffprobe";
-
-    console.log("[Titan worker] Media candidate ffprobe stream diagnostics", {
-      candidateField: candidate.fieldPath,
-      contentType,
-      hasAudioStream: streamInfo.hasAudioStream,
-      hasVideoStream: streamInfo.hasVideoStream,
-      rejectionReason,
-      selectedMediaHostname: safeHostname(sourceUrl)
+async function extractFrames(inputPath, duration) {
+  const workDir = path.dirname(inputPath);
+  const frames = [];
+  for (const frame of frameTimestamps(duration)) {
+    const outputPath = path.join(workDir, `${frame.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.jpg`);
+    await execFileAsync(FFMPEG_BIN, [
+      "-y",
+      "-ss",
+      frame.timestamp.toFixed(3),
+      "-i",
+      inputPath,
+      "-frames:v",
+      "1",
+      "-vf",
+      "scale=min(720\\,iw):-2",
+      "-q:v",
+      "4",
+      outputPath
+    ]);
+    const image = await readFile(outputPath);
+    frames.push({
+      dataUrl: `data:image/jpeg;base64,${image.toString("base64")}`,
+      label: frame.label,
+      timestamp: frame.timestamp
     });
-
-    if (!streamInfo.hasVideoStream) {
-      throw new AudioOnlyMediaError(
-        streamInfo.hasAudioStream
-          ? "TikTok provider returned audio-only media."
-          : "Resolved media did not contain a video stream.",
-        {
-          ...streamInfo,
-          candidateField: candidate.fieldPath,
-          contentType,
-          rejectionReason,
-          selectedMediaHostname: safeHostname(sourceUrl)
-        }
-      );
-    }
-
-    const duration = await videoDuration(inputPath);
-    const frames = [];
-    for (const frame of frameTimestamps(duration)) {
-      const outputPath = path.join(workDir, `${frame.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.jpg`);
-      await execFileAsync(FFMPEG_BIN, [
-        "-y",
-        "-ss",
-        frame.timestamp.toFixed(3),
-        "-i",
-        inputPath,
-        "-frames:v",
-        "1",
-        "-vf",
-        "scale=min(720\\,iw):-2",
-        "-q:v",
-        "4",
-        outputPath
-      ]);
-      const image = await readFile(outputPath);
-      frames.push({
-        dataUrl: `data:image/jpeg;base64,${image.toString("base64")}`,
-        label: frame.label,
-        timestamp: frame.timestamp
-      });
-    }
-    return { duration, frames, inputPath, streamInfo };
-  } catch (error) {
-    await rm(workDir, { force: true, recursive: true });
-    throw error;
   }
+  return frames;
 }
 
 async function fetchCoverFrame(coverImageUrl) {
@@ -1216,18 +1227,32 @@ async function processJob(job) {
       let audioOnlyCandidateCount = 0;
 
       for (const candidate of mediaCandidates) {
+        let candidateWorkDir;
         try {
           await updateProgress(job.id, "Downloading video");
           const downloaded = await downloadVideo(candidate.url, candidate);
           assertJobNotTimedOut(startedAt);
+          const downloadedFile = await writeDownloadedMediaToFile(
+            downloaded.buffer,
+            downloaded.contentType,
+            downloaded.responseUrl || candidate.url
+          );
+          candidateWorkDir = downloadedFile.workDir;
+          await assertVideoStreamBeforeFrameExtraction(
+            downloadedFile.inputPath,
+            downloaded.contentType,
+            downloaded.responseUrl || candidate.url,
+            candidate
+          );
+          const duration = await videoDuration(downloadedFile.inputPath);
           await updateProgress(job.id, "Extracting frames");
-          const extracted = await extractFrames(downloaded.buffer, downloaded.contentType, downloaded.responseUrl || candidate.url, candidate);
+          frames = await extractFrames(downloadedFile.inputPath, duration);
           assertJobNotTimedOut(startedAt);
-          workDirToClean = path.dirname(extracted.inputPath);
-          frames = extracted.frames;
+          workDirToClean = candidateWorkDir;
+          candidateWorkDir = undefined;
           metadata = {
             ...metadataBase,
-            duration: extracted.duration,
+            duration,
             fileSize: downloaded.buffer.byteLength,
             format: downloaded.contentType,
             partial: false,
@@ -1240,10 +1265,13 @@ async function processJob(job) {
             frame_analysis_result: { frames, message: "Frames extracted by Railway worker." },
             metadata_result: metadata
           });
-          transcriptResult = await transcribeVideo(extracted.inputPath);
+          transcriptResult = await transcribeVideo(downloadedFile.inputPath);
           assertJobNotTimedOut(startedAt);
           break;
         } catch (mediaError) {
+          if (candidateWorkDir) {
+            await rm(candidateWorkDir, { force: true, recursive: true }).catch(() => undefined);
+          }
           lastMediaError = mediaError;
 
           if (mediaError instanceof JobTimeoutError) {
