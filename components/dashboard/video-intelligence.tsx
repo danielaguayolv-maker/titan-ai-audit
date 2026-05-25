@@ -635,6 +635,13 @@ export function VideoIntelligence({
                     </span>{" "}
                     {metadata.partialReason ??
                       "Titan analyzed available image and metadata signals only."}
+                    {metadata.urlType === "tiktok" ? (
+                      <span className="mt-2 block text-titan-ivory/60">
+                        TikTok metadata analyzed. Full frame extraction depends
+                        on whether the downloader provider exposes a
+                        downloadable media file.
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
                 {transcriptMessage ? (

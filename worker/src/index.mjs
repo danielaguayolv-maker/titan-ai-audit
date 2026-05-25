@@ -15,6 +15,10 @@ const APIFY_TIKTOK_VIDEO_ACTOR_ID =
   process.env.APIFY_TIKTOK_VIDEO_ACTOR_ID?.trim() ||
   process.env.APIFY_TIKTOK_ACTOR_ID?.trim() ||
   "";
+const APIFY_TIKTOK_DOWNLOADER_ACTOR_ID =
+  process.env.APIFY_TIKTOK_DOWNLOADER_ACTOR_ID?.trim() ?? "";
+const APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID =
+  process.env.APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID?.trim() ?? "";
 const OPENAI_MODEL =
   process.env.OPENAI_VIDEO_MODEL?.trim() ||
   process.env.OPENAI_MODEL?.trim() ||
@@ -36,6 +40,50 @@ const TIKTOK_DOWNLOAD_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 };
+
+const TIKTOK_MEDIA_FIELD_NAMES = [
+  "animatedCover",
+  "bitrateInfo",
+  "bit_rate",
+  "cdnUrl",
+  "download",
+  "downloadAddr",
+  "downloadUrl",
+  "downloadURL",
+  "download_url",
+  "downloadedVideoUrl",
+  "downloadedVideoURL",
+  "downloadLink",
+  "downloadURL",
+  "hdplay",
+  "mediaUrl",
+  "mediaURL",
+  "mediaUrls",
+  "media_urls",
+  "noWatermark",
+  "noWatermarkUrl",
+  "noWatermarkURL",
+  "noWatermarkVideoUrl",
+  "originCover",
+  "originalVideoUrl",
+  "play",
+  "playAddr",
+  "playApi",
+  "playUrl",
+  "playURL",
+  "play_url",
+  "src",
+  "url",
+  "urlList",
+  "url_list",
+  "video",
+  "videoMeta",
+  "videoUrl",
+  "videoURL",
+  "video_url",
+  "webVideoUrl",
+  "wmplay"
+].map((field) => field.toLowerCase());
 
 const responseSchema = {
   type: "object",
@@ -102,6 +150,45 @@ function requiredEnv(name) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function safeHostname(value) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return "invalid-url";
+  }
+}
+
+function summarizeShape(value, depth = 0) {
+  if (depth > 5) return "[depth-limit]";
+  if (Array.isArray(value)) {
+    return value.slice(0, 3).map((item) => summarizeShape(item, depth + 1));
+  }
+  if (!isRecord(value)) return typeof value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nestedValue]) => [
+      key,
+      summarizeShape(nestedValue, depth + 1)
+    ])
+  );
+}
+
+function topLevelKeySummary(items) {
+  return items.map((item, index) => ({
+    actorId: item.__titanActorId,
+    index,
+    keys: Object.keys(item).filter((key) => key !== "__titanActorId").sort()
+  }));
+}
+
+function safeActorConfigSummary() {
+  return {
+    downloaderActorId: APIFY_TIKTOK_DOWNLOADER_ACTOR_ID || "not-configured",
+    primaryActorId: APIFY_TIKTOK_VIDEO_ACTOR_ID || "not-configured",
+    secondaryActorId: APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID || "not-configured"
+  };
 }
 
 function supabaseHeaders(prefer) {
@@ -260,31 +347,32 @@ function looksLikeVideoUrl(value) {
     lower.includes("download");
 }
 
+function looksLikeVideoResponse(url, contentType, contentDisposition = "") {
+  const lowerContentType = contentType.toLowerCase();
+  const lowerDisposition = contentDisposition.toLowerCase();
+
+  return (
+    lowerContentType.startsWith("video/") ||
+    lowerContentType.includes("mpegurl") ||
+    lowerContentType.includes("x-mpegurl") ||
+    (lowerContentType.includes("octet-stream") &&
+      (looksLikeVideoUrl(url) ||
+        lowerDisposition.includes(".mp4") ||
+        lowerDisposition.includes("video")))
+  );
+}
+
 function looksLikeImageUrl(value) {
   if (!isHttpUrl(value)) return false;
   return /\.(jpg|jpeg|png|webp)(\?|#|$)/.test(value.toLowerCase());
 }
 
 function collectMediaCandidates(value, pathParts = [], depth = 0) {
-  const mediaFields = [
-    "videourl",
-    "url",
-    "downloadaddr",
-    "playaddr",
-    "urllist",
-    "mediaurls",
-    "videometa",
-    "webvideourl",
-    "diggurl",
-    "originalvideourl",
-    "downloadurl"
-  ];
-
   if (depth > 8) return [];
   if (typeof value === "string") {
     const path = pathParts.join(".");
     const isMediaPath = pathParts.some((part) =>
-      mediaFields.includes(part.replace(/\[\d+\]$/, "").toLowerCase())
+      TIKTOK_MEDIA_FIELD_NAMES.includes(part.replace(/\[\d+\]$/, "").toLowerCase())
     );
     return isMediaPath && looksLikeVideoUrl(value)
       ? [{ fieldPath: path, url: value.trim() }]
@@ -303,11 +391,37 @@ function collectMediaCandidates(value, pathParts = [], depth = 0) {
 
 function uniqueCandidates(candidates) {
   const seen = new Set();
-  return candidates.filter((candidate) => {
-    if (seen.has(candidate.url)) return false;
-    seen.add(candidate.url);
-    return true;
-  });
+  const priorityTerms = [
+    "downloadaddr",
+    "downloadurl",
+    "nowatermark",
+    "originalvideourl",
+    "videourl",
+    "videometa",
+    "mediaurls",
+    "playaddr",
+    "playurl",
+    "url_list",
+    "urllist",
+    "webvideourl",
+    "hdplay",
+    "wmplay",
+    "play"
+  ];
+
+  return candidates
+    .filter((candidate) => {
+      if (seen.has(candidate.url)) return false;
+      seen.add(candidate.url);
+      return true;
+    })
+    .sort((first, second) => {
+      const firstPath = first.fieldPath.toLowerCase();
+      const secondPath = second.fieldPath.toLowerCase();
+      const firstRank = priorityTerms.findIndex((term) => firstPath.includes(term));
+      const secondRank = priorityTerms.findIndex((term) => secondPath.includes(term));
+      return (firstRank === -1 ? 99 : firstRank) - (secondRank === -1 ? 99 : secondRank);
+    });
 }
 
 function firstImageUrl(records) {
@@ -364,59 +478,156 @@ async function apifyJson(response, label) {
   return response.json();
 }
 
-async function runApifyTikTok(url) {
-  if (!APIFY_TOKEN || !APIFY_TIKTOK_VIDEO_ACTOR_ID) {
-    throw new Error("TikTok downloader is not configured. Add APIFY_TOKEN and APIFY_TIKTOK_VIDEO_ACTOR_ID.");
-  }
-
+async function runSingleApifyTikTokActor(url, actorId) {
   const input = {
     maxItems: 1,
     postURLs: [url],
     resultsLimit: 1,
     shouldDownloadCovers: false,
+    shouldDownloadSlideshowImages: false,
+    shouldDownloadSubtitles: false,
     shouldDownloadVideos: false,
     startUrls: [url],
     urls: [url],
     videoUrls: [url]
   };
+  console.log("[Titan worker] Running TikTok downloader actor", {
+    actorId,
+    inputKeys: Object.keys(input)
+  });
   const runResponse = await fetch(
-    `${APIFY_BASE_URL}/acts/${actorPath(APIFY_TIKTOK_VIDEO_ACTOR_ID)}/runs?token=${encodeURIComponent(APIFY_TOKEN)}&waitForFinish=120`,
+    `${APIFY_BASE_URL}/acts/${actorPath(actorId)}/runs?token=${encodeURIComponent(APIFY_TOKEN)}&waitForFinish=120`,
     {
       body: JSON.stringify(input),
       headers: { "Content-Type": "application/json" },
       method: "POST"
     }
   );
-  const runPayload = await apifyJson(runResponse, "Apify TikTok actor run");
+  const runPayload = await apifyJson(runResponse, `Apify TikTok actor run (${actorId})`);
   const datasetId = runPayload?.data?.defaultDatasetId;
   const status = runPayload?.data?.status;
 
-  if (!datasetId) throw new Error("Apify did not return a dataset for TikTok media.");
+  if (!datasetId) throw new Error(`Apify actor ${actorId} did not return a dataset.`);
   if (status && !["SUCCEEDED", "READY"].includes(status)) {
-    throw new Error(`Apify TikTok actor finished with status ${status}.`);
+    throw new Error(`Apify TikTok actor ${actorId} finished with status ${status}.`);
   }
 
   const datasetResponse = await fetch(
     `${APIFY_BASE_URL}/datasets/${datasetId}/items?token=${encodeURIComponent(APIFY_TOKEN)}&clean=true&limit=10`
   );
-  const items = await apifyJson(datasetResponse, "Apify TikTok dataset");
-  return Array.isArray(items) ? items.filter(isRecord) : [];
+  const items = await apifyJson(datasetResponse, `Apify TikTok dataset (${actorId})`);
+  const datasetItems = Array.isArray(items) ? items.filter(isRecord) : [];
+
+  console.log("[Titan worker] Safe Apify TikTok result shape", {
+    actorId,
+    itemCount: datasetItems.length,
+    shape: summarizeShape(datasetItems)
+  });
+
+  return datasetItems.map((item) => ({
+    ...item,
+    __titanActorId: actorId
+  }));
+}
+
+async function runApifyTikTok(url) {
+  const actorIds = [
+    APIFY_TIKTOK_VIDEO_ACTOR_ID,
+    APIFY_TIKTOK_DOWNLOADER_ACTOR_ID,
+    APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID
+  ].filter(Boolean);
+
+  if (!APIFY_TOKEN || actorIds.length === 0) {
+    throw new Error("TikTok downloader is not configured. Add APIFY_TOKEN and APIFY_TIKTOK_VIDEO_ACTOR_ID.");
+  }
+
+  console.log("[Titan worker] TikTok downloader actor configuration", {
+    ...safeActorConfigSummary(),
+    actorExecutionOrder: [...new Set(actorIds)]
+  });
+
+  const allItems = [];
+  const failures = [];
+
+  for (const actorId of [...new Set(actorIds)]) {
+    try {
+      allItems.push(...(await runSingleApifyTikTokActor(url, actorId)));
+    } catch (error) {
+      failures.push(`${actorId}: ${error instanceof Error ? error.message : "unknown error"}`);
+      console.warn("[Titan worker] TikTok actor failed", {
+        actorId,
+        error: error instanceof Error ? error.message : "unknown error"
+      });
+    }
+  }
+
+  if (allItems.length === 0) {
+    throw new Error(`No TikTok downloader actor returned usable items. ${failures.join(" | ")}`);
+  }
+
+  console.log("[Titan worker] TikTok downloader aggregate result", {
+    actorConfig: safeActorConfigSummary(),
+    itemCount: allItems.length,
+    topLevelKeys: topLevelKeySummary(allItems)
+  });
+
+  return allItems;
 }
 
 async function probeCandidate(candidate) {
-  try {
-    const response = await fetch(candidate.url, {
+  const attempts = [
+    {
+      headers: TIKTOK_DOWNLOAD_HEADERS,
+      method: "HEAD"
+    },
+    {
       headers: { ...TIKTOK_DOWNLOAD_HEADERS, Range: "bytes=0-0" },
-      redirect: "follow"
-    });
-    const contentType = response.headers.get("content-type") ?? "";
-    await response.body?.cancel?.();
-    return response.ok || response.status === 206
-      ? contentType.toLowerCase().startsWith("video/")
-      : false;
-  } catch {
-    return false;
+      method: "GET"
+    }
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const response = await fetch(candidate.url, {
+        headers: attempt.headers,
+        method: attempt.method,
+        redirect: "follow"
+      });
+      const contentType = response.headers.get("content-type") ?? "";
+      const disposition = response.headers.get("content-disposition") ?? "";
+      await response.body?.cancel?.();
+      const okStatus = response.ok || response.status === 206;
+      const okMedia = looksLikeVideoResponse(response.url || candidate.url, contentType, disposition);
+      const result = {
+        contentType,
+        fieldPath: candidate.fieldPath,
+        finalHostname: safeHostname(response.url || candidate.url),
+        hostname: safeHostname(candidate.url),
+        method: attempt.method,
+        ok: okStatus && okMedia,
+        reason: okStatus
+          ? okMedia
+            ? "video-like response"
+            : `non-video content-type ${contentType || "unknown"}`
+          : `HTTP ${response.status}`,
+        status: response.status
+      };
+      console.log("[Titan worker] TikTok media candidate probe", result);
+
+      if (result.ok) {
+        return result;
+      }
+    } catch (error) {
+      console.warn("[Titan worker] TikTok media candidate probe failed", {
+        error: error instanceof Error ? error.message : "unknown error",
+        fieldPath: candidate.fieldPath,
+        hostname: safeHostname(candidate.url),
+        method: attempt.method
+      });
+    }
   }
+
+  return null;
 }
 
 async function resolveTikTokMedia(inputUrl) {
@@ -429,16 +640,49 @@ async function resolveTikTokMedia(inputUrl) {
   const coverImageUrl = firstImageUrl(records);
   const candidates = uniqueCandidates(
     items.flatMap((item, index) =>
-      collectMediaCandidates(item, [`item[${index}]`])
+      collectMediaCandidates(item, [`item[${index}]`]).map((candidate) => ({
+        ...candidate,
+        actorId: item.__titanActorId
+      }))
     )
   );
+  console.log("[Titan worker] TikTok media candidates discovered", {
+    candidates: candidates.map((candidate) => ({
+      actorId: candidate.actorId,
+      fieldPath: candidate.fieldPath,
+      hostname: safeHostname(candidate.url)
+    })),
+    total: candidates.length
+  });
   let resolvedVideoUrl;
+  let selectedProbe;
 
   for (const candidate of candidates) {
-    if (await probeCandidate(candidate)) {
+    const probe = await probeCandidate(candidate);
+
+    if (probe) {
       resolvedVideoUrl = candidate.url;
+      selectedProbe = probe;
       break;
     }
+  }
+
+  if (selectedProbe) {
+    console.log("[Titan worker] TikTok selected downloadable media candidate", {
+      contentType: selectedProbe.contentType,
+      fieldPath: selectedProbe.fieldPath,
+      hostname: selectedProbe.hostname,
+      method: selectedProbe.method,
+      status: selectedProbe.status
+    });
+  } else {
+    console.warn("[Titan worker] TikTok downloader did not expose downloadable media", {
+      candidateCount: candidates.length,
+      fallbackPartialMode: Boolean(coverImageUrl),
+      reason: candidates.length
+        ? "candidate URLs were found, but none returned a video-like response"
+        : "no candidate video URL fields were found"
+    });
   }
 
   return {
@@ -465,14 +709,20 @@ async function downloadVideo(url) {
   });
   if (!response.ok) throw new Error(`Video download failed with status ${response.status}.`);
   const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().startsWith("video/")) {
+  const disposition = response.headers.get("content-disposition") ?? "";
+  if (!looksLikeVideoResponse(response.url || url, contentType, disposition)) {
     throw new Error(`Resolved media returned ${contentType || "unknown content type"} instead of video.`);
   }
   const contentLength = Number(response.headers.get("content-length") ?? 0);
   if (contentLength > MAX_VIDEO_BYTES) throw new Error("Video exceeds worker download limit.");
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.byteLength > MAX_VIDEO_BYTES) throw new Error("Video exceeds worker download limit.");
-  return { buffer, contentType };
+  return {
+    buffer,
+    contentType: contentType.toLowerCase().includes("octet-stream")
+      ? "video/mp4"
+      : contentType
+  };
 }
 
 function extensionForContentType(contentType, sourceUrl) {
@@ -736,6 +986,11 @@ async function processJob(job) {
           throw mediaError;
         }
 
+        console.warn("[Titan worker] TikTok partial fallback triggered after media failure", {
+          coverImageAvailable: Boolean(metadataBase.coverImageUrl),
+          reason: mediaError instanceof Error ? mediaError.message : "unknown media error",
+          selectedMediaHostname: safeHostname(metadataBase.resolvedVideoUrl)
+        });
         await updateJob(job.id, { progress_message: "Partial analysis fallback" });
         frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
         metadata = {
@@ -762,6 +1017,10 @@ async function processJob(job) {
         });
       }
     } else if (metadataBase.coverImageUrl) {
+      console.warn("[Titan worker] TikTok partial fallback triggered", {
+        coverImageAvailable: true,
+        reason: "no downloadable video URL selected from downloader output"
+      });
       await updateJob(job.id, { progress_message: "Partial analysis fallback" });
       frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
       metadata = {

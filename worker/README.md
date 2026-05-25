@@ -7,6 +7,7 @@ Railway-ready worker for heavy Video Intelligence jobs.
 - Polls Supabase `video_analysis_jobs` where `status = queued`
 - Claims one job at a time by moving it to `processing`
 - Resolves TikTok media through Apify
+- Supports an optional secondary Apify downloader chain
 - Downloads video when a real media URL is available
 - Uses `ffmpeg` / `ffprobe` to extract key frames
 - Calls OpenAI vision analysis
@@ -46,6 +47,8 @@ The worker uses `SUPABASE_SERVICE_ROLE_KEY`, so keep it server-side only.
 1. Create a new Railway service from this repository.
 2. Set the service root directory to `worker`.
 3. Add variables from `.env.example`.
+   - `APIFY_TIKTOK_VIDEO_ACTOR_ID` is the primary actor.
+   - `APIFY_TIKTOK_DOWNLOADER_ACTOR_ID` and `APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID` are optional fallback actors. Add a downloader actor here if the primary scraper only returns metadata and cover images.
 4. Ensure the Railway image has `ffmpeg` and `ffprobe`.
    - If using a custom image later, install `ffmpeg`.
    - Or set `FFMPEG_PATH` / `FFPROBE_PATH` to provided binary paths.
@@ -60,4 +63,3 @@ npm start
 The Vercel app should create jobs in Supabase and poll job status. Heavy work should happen here, not inside Vercel request handlers.
 
 For local development without `SUPABASE_SERVICE_ROLE_KEY`, the app still keeps a temporary fallback processor so the UI remains usable.
-
