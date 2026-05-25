@@ -708,7 +708,10 @@ function DashboardWorkspaceContent({
       ) : null}
 
       {activeModule === "video-intelligence" ? (
-        <VideoIntelligence />
+        <VideoIntelligence
+          userId={session.user.id}
+          workspaceId={activeWorkspaceId}
+        />
       ) : null}
 
       {activeModule === "reports" ? (

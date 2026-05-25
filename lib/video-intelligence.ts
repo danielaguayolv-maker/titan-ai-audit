@@ -81,6 +81,56 @@ export type VideoUrlIngestionApiResponse =
       message: string;
     };
 
+export type VideoAnalysisJobStatus =
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "partial";
+
+export type VideoAnalysisJobRecord = {
+  createdAt: string;
+  errorMessage?: string;
+  finalAuditResult?: VideoIntelligenceResult;
+  frameAnalysisResult?: {
+    frames: VideoFrameSignal[];
+    message?: string;
+  };
+  id: string;
+  inputUrl: string;
+  metadataResult?: VideoAuditMetadata;
+  platform: VideoUrlType;
+  progressMessage: string;
+  status: VideoAnalysisJobStatus;
+  transcriptResult?: {
+    message: string;
+    status: "success" | "unavailable" | "failed";
+    transcript?: string;
+  };
+  updatedAt: string;
+  userId?: string;
+  workspaceId?: string;
+};
+
+export type VideoAnalysisJobCreateResponse =
+  | {
+      job: VideoAnalysisJobRecord;
+      job_id: string;
+    }
+  | {
+      error: string;
+      message: string;
+    };
+
+export type VideoAnalysisJobStatusResponse =
+  | {
+      job: VideoAnalysisJobRecord;
+    }
+  | {
+      error: string;
+      message: string;
+    };
+
 const sectionSchema = {
   type: "object",
   additionalProperties: false,

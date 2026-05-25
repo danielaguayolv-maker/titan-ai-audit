@@ -2,6 +2,9 @@
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import type {
+  VideoAnalysisJobCreateResponse,
+  VideoAnalysisJobRecord,
+  VideoAnalysisJobStatusResponse,
   VideoAuditMetadata,
   VideoFrameSignal,
   VideoIntelligenceApiResponse,
@@ -9,7 +12,17 @@ import type {
   VideoUrlIngestionApiResponse
 } from "@/lib/video-intelligence";
 
-type RunStatus = "idle" | "extracting" | "ingesting-url" | "analyzing" | "success" | "error";
+type RunStatus =
+  | "idle"
+  | "queued"
+  | "resolving-media"
+  | "extracting"
+  | "ingesting-url"
+  | "extracting-frames"
+  | "analyzing"
+  | "partial"
+  | "success"
+  | "error";
 
 const fieldClass =
   "mt-2 w-full rounded-lg border border-titan-gold/15 bg-black/30 px-4 py-3 text-sm text-titan-ivory outline-none transition placeholder:text-titan-ivory/30 focus:border-titan-bright focus:ring-2 focus:ring-titan-gold/20";
@@ -165,6 +178,75 @@ async function ingestVideoUrlServerSide(videoUrl: string) {
   };
 }
 
+function isTikTokUrl(value: string) {
+  try {
+    return new URL(value).hostname.toLowerCase().includes("tiktok.com");
+  } catch {
+    return false;
+  }
+}
+
+async function createVideoAnalysisJob({
+  inputUrl,
+  userId,
+  workspaceId
+}: {
+  inputUrl: string;
+  userId?: string;
+  workspaceId?: string;
+}) {
+  const response = await fetch("/api/video-analysis-jobs", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      input_url: inputUrl,
+      platform: "tiktok",
+      user_id: userId,
+      workspace_id: workspaceId
+    })
+  });
+  const payload = await readApiPayload<VideoAnalysisJobCreateResponse>(
+    response,
+    "Video analysis job"
+  );
+
+  if (!response.ok || "error" in payload) {
+    throw new Error(
+      "error" in payload
+        ? payload.message || payload.error
+        : "Titan could not create the video analysis job."
+    );
+  }
+
+  return payload.job;
+}
+
+async function getVideoAnalysisJob(jobId: string) {
+  const response = await fetch(`/api/video-analysis-jobs/${jobId}`, {
+    cache: "no-store"
+  });
+  const payload = await readApiPayload<VideoAnalysisJobStatusResponse>(
+    response,
+    "Video analysis job status"
+  );
+
+  if (!response.ok || "error" in payload) {
+    throw new Error(
+      "error" in payload
+        ? payload.message || payload.error
+        : "Titan could not read the video analysis job."
+    );
+  }
+
+  return payload.job;
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 async function readApiPayload<T>(
   response: Response,
   label: string
@@ -233,12 +315,19 @@ function SectionCard({
   );
 }
 
-export function VideoIntelligence() {
+export function VideoIntelligence({
+  userId,
+  workspaceId
+}: {
+  userId?: string;
+  workspaceId?: string;
+}) {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [frames, setFrames] = useState<VideoFrameSignal[]>([]);
   const [metadata, setMetadata] = useState<VideoAuditMetadata | null>(null);
   const [result, setResult] = useState<VideoIntelligenceResult | null>(null);
+  const [activeJob, setActiveJob] = useState<VideoAnalysisJobRecord | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState<
     "success" | "unavailable" | "failed"
   >("unavailable");
@@ -247,20 +336,76 @@ export function VideoIntelligence() {
   const [error, setError] = useState("");
 
   const statusLabel = useMemo(() => {
+    if (activeJob?.progressMessage) return activeJob.progressMessage;
+    if (status === "queued") return "Queued";
+    if (status === "resolving-media") return "Resolving TikTok media";
     if (status === "extracting") return "Extracting key frames";
     if (status === "ingesting-url") return "Ingesting video URL server-side";
+    if (status === "extracting-frames") return "Extracting frames";
     if (status === "analyzing") return "Running video intelligence";
+    if (status === "partial") return "Partial analysis";
     if (status === "success") return "Video audit complete";
     if (status === "error") return "Video audit needs attention";
     return "Ready for one video";
-  }, [status]);
+  }, [activeJob?.progressMessage, status]);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setVideoFile(event.target.files?.[0] ?? null);
     setFrames([]);
     setMetadata(null);
     setResult(null);
+    setActiveJob(null);
     setError("");
+  }
+
+  async function pollVideoAnalysisJob(jobId: string) {
+    for (let attempt = 0; attempt < 90; attempt += 1) {
+      await wait(attempt === 0 ? 800 : 2000);
+      const job = await getVideoAnalysisJob(jobId);
+      setActiveJob(job);
+
+      if (job.progressMessage === "Resolving TikTok media") {
+        setStatus("resolving-media");
+      } else if (job.progressMessage === "Extracting frames") {
+        setStatus("extracting-frames");
+      } else if (job.progressMessage === "Running vision analysis") {
+        setStatus("analyzing");
+      } else if (job.status === "queued") {
+        setStatus("queued");
+      }
+
+      if (job.frameAnalysisResult?.frames.length) {
+        setFrames(job.frameAnalysisResult.frames);
+      }
+
+      if (job.metadataResult) {
+        setMetadata(job.metadataResult);
+      }
+
+      if (job.status === "completed" || job.status === "partial") {
+        if (job.finalAuditResult) {
+          setResult(job.finalAuditResult);
+        }
+
+        if (job.transcriptResult) {
+          setTranscriptStatus(job.transcriptResult.status);
+          setTranscriptMessage(job.transcriptResult.message);
+        }
+
+        setStatus(job.status === "partial" ? "partial" : "success");
+        return;
+      }
+
+      if (job.status === "failed") {
+        throw new Error(
+          job.errorMessage || "Titan could not complete the video analysis job."
+        );
+      }
+    }
+
+    throw new Error(
+      "Titan is still processing this TikTok video. Check the job again in a moment."
+    );
   }
 
   async function submitVideoAudit(event: FormEvent<HTMLFormElement>) {
@@ -270,13 +415,28 @@ export function VideoIntelligence() {
     setFrames([]);
     setMetadata(null);
     setStatus("extracting");
+    setActiveJob(null);
 
     try {
+      const trimmedVideoUrl = videoUrl.trim();
+
+      if (!videoFile && isTikTokUrl(trimmedVideoUrl)) {
+        setStatus("queued");
+        const job = await createVideoAnalysisJob({
+          inputUrl: trimmedVideoUrl,
+          userId,
+          workspaceId
+        });
+        setActiveJob(job);
+        await pollVideoAnalysisJob(job.id);
+        return;
+      }
+
       const extracted = videoFile
         ? await extractFramesFromFile(videoFile)
         : await (async () => {
             setStatus("ingesting-url");
-            return ingestVideoUrlServerSide(videoUrl.trim());
+            return ingestVideoUrlServerSide(trimmedVideoUrl);
           })();
       setFrames(extracted.frames);
       setMetadata(extracted.metadata);
@@ -397,13 +557,19 @@ export function VideoIntelligence() {
                 className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-titan-gold px-7 text-sm font-black uppercase text-black shadow-gold transition hover:-translate-y-0.5 hover:bg-titan-bright disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={
                   status === "extracting" ||
+                  status === "queued" ||
+                  status === "resolving-media" ||
                   status === "ingesting-url" ||
+                  status === "extracting-frames" ||
                   status === "analyzing"
                 }
                 type="submit"
               >
                 {status === "extracting" ||
+                status === "queued" ||
+                status === "resolving-media" ||
                 status === "ingesting-url" ||
+                status === "extracting-frames" ||
                 status === "analyzing"
                   ? statusLabel
                   : "Run Video Intelligence"}
@@ -416,6 +582,21 @@ export function VideoIntelligence() {
                 <p className="mt-2 text-sm font-black text-titan-bright">
                   {statusLabel}
                 </p>
+                {activeJob ? (
+                  <div className="mt-4 rounded-lg border border-titan-gold/10 bg-black/20 p-3 text-xs leading-5 text-titan-ivory/60">
+                    <p className="font-black uppercase text-titan-muted">
+                      Background job
+                    </p>
+                    <p className="text-anywhere mt-2">Job ID: {activeJob.id}</p>
+                    <p>Status: {activeJob.status}</p>
+                    <p>Progress: {activeJob.progressMessage}</p>
+                    {activeJob.errorMessage ? (
+                      <p className="text-red-100/80">
+                        Error: {activeJob.errorMessage}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {metadata ? (
                   <div className="mt-4 grid gap-2 text-xs text-titan-ivory/60">
                     <p>Duration: {formatDuration(metadata.duration)}</p>
