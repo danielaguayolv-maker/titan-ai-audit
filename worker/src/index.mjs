@@ -92,9 +92,35 @@ const TIKTOK_MEDIA_FIELD_NAMES = [
   "videoUrl",
   "videoURL",
   "video_url",
-  "webVideoUrl",
   "wmplay"
 ].map((field) => field.toLowerCase());
+
+const TIKTOK_PAGE_FIELD_NAMES = [
+  "canonicalUrl",
+  "diggUrl",
+  "itemUrl",
+  "pageUrl",
+  "postUrl",
+  "shareUrl",
+  "submittedVideoUrl",
+  "webVideoUrl"
+].map((field) => field.toLowerCase());
+
+const TIKTOK_PAGE_HOSTNAMES = new Set([
+  "tiktok.com",
+  "vm.tiktok.com",
+  "vt.tiktok.com",
+  "www.tiktok.com"
+]);
+
+const TIKTOK_MEDIA_HOST_HINTS = [
+  "akamaized",
+  "byteoversea",
+  "cloudfront",
+  "musical.ly",
+  "snssdk",
+  "tiktokcdn"
+];
 
 const responseSchema = {
   type: "object",
@@ -487,6 +513,28 @@ function looksLikeVideoUrl(value) {
     lower.includes("download");
 }
 
+function normalizedPathFieldNames(fieldPath) {
+  return fieldPath
+    .split(".")
+    .map((part) => part.replace(/\[\d+\]$/, "").toLowerCase())
+    .filter(Boolean);
+}
+
+function isTikTokPageHostname(value) {
+  return TIKTOK_PAGE_HOSTNAMES.has(safeHostname(value).toLowerCase());
+}
+
+function isLikelyTikTokMediaHost(value) {
+  const hostname = safeHostname(value).toLowerCase();
+  return TIKTOK_MEDIA_HOST_HINTS.some((hint) => hostname.includes(hint));
+}
+
+function isTikTokPageUrlCandidate(candidate) {
+  const fieldNames = normalizedPathFieldNames(candidate.fieldPath);
+  return fieldNames.some((fieldName) => TIKTOK_PAGE_FIELD_NAMES.includes(fieldName)) ||
+    isTikTokPageHostname(candidate.url);
+}
+
 function looksLikeVideoResponse(url, contentType, contentDisposition = "") {
   const lowerContentType = contentType.toLowerCase();
   const lowerDisposition = contentDisposition.toLowerCase();
@@ -572,6 +620,12 @@ function uniqueCandidates(candidates) {
       return true;
     })
     .sort((first, second) => {
+      const firstMediaHostRank = isLikelyTikTokMediaHost(first.url) ? 0 : 1;
+      const secondMediaHostRank = isLikelyTikTokMediaHost(second.url) ? 0 : 1;
+      if (firstMediaHostRank !== secondMediaHostRank) {
+        return firstMediaHostRank - secondMediaHostRank;
+      }
+
       const firstPath = first.fieldPath.toLowerCase();
       const secondPath = second.fieldPath.toLowerCase();
       const firstRank = priorityTerms.findIndex((term) => firstPath.includes(term));
@@ -731,6 +785,15 @@ async function runApifyTikTok(url) {
 }
 
 async function probeCandidate(candidate) {
+  if (isTikTokPageUrlCandidate(candidate)) {
+    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+      fieldPath: candidate.fieldPath,
+      hostname: safeHostname(candidate.url),
+      reason: "page/share URL field or TikTok page hostname"
+    });
+    return null;
+  }
+
   const attempts = [
     {
       headers: TIKTOK_DOWNLOAD_HEADERS,
@@ -799,20 +862,32 @@ async function resolveTikTokMedia(inputUrl) {
   const caption = firstString(records, ["text", "caption", "description", "desc", "title"]);
   const authorHandle = firstString(records, ["uniqueId", "username", "author", "authorName", "nickname", "name", "handle"]);
   const coverImageUrl = firstImageUrl(records);
+  const collectedCandidates = items.flatMap((item, index) =>
+    collectMediaCandidates(item, [`item[${index}]`]).map((candidate) => ({
+      ...candidate,
+      actorId: item.__titanActorId
+    }))
+  );
+  const rejectedPageCandidates = collectedCandidates.filter(isTikTokPageUrlCandidate);
+  for (const candidate of rejectedPageCandidates) {
+    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+      actorId: candidate.actorId,
+      fieldPath: candidate.fieldPath,
+      hostname: safeHostname(candidate.url),
+      reason: "page/share URL field or TikTok page hostname"
+    });
+  }
   const candidates = uniqueCandidates(
-    items.flatMap((item, index) =>
-      collectMediaCandidates(item, [`item[${index}]`]).map((candidate) => ({
-        ...candidate,
-        actorId: item.__titanActorId
-      }))
-    )
+    collectedCandidates.filter((candidate) => !isTikTokPageUrlCandidate(candidate))
   );
   console.log("[Titan worker] TikTok media candidates discovered", {
     candidates: candidates.map((candidate) => ({
       actorId: candidate.actorId,
       fieldPath: candidate.fieldPath,
-      hostname: safeHostname(candidate.url)
+      hostname: safeHostname(candidate.url),
+      likelyMediaHost: isLikelyTikTokMediaHost(candidate.url)
     })),
+    rejectedPageCandidateCount: rejectedPageCandidates.length,
     total: candidates.length
   });
   let resolvedVideoUrl;
@@ -865,6 +940,15 @@ async function resolveTikTokMedia(inputUrl) {
 }
 
 async function downloadVideo(url, candidate = {}) {
+  if (isTikTokPageUrlCandidate({ ...candidate, url })) {
+    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+      fieldPath: candidate.fieldPath,
+      hostname: safeHostname(url),
+      reason: "blocked before download"
+    });
+    throw new Error("Rejected TikTok page URL candidate before download.");
+  }
+
   const response = await fetch(url, {
     headers: TIKTOK_DOWNLOAD_HEADERS,
     redirect: "follow"
