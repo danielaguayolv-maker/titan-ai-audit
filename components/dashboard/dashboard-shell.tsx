@@ -12,6 +12,7 @@ import type {
 export type TitanOsModule =
   | "home"
   | "audit"
+  | "video-intelligence"
   | "titan-studio"
   | "trend-finder"
   | "competitor-intelligence"
@@ -51,6 +52,13 @@ const modules: Array<{
     eyebrow: "Intelligence",
     description:
       "Scan Instagram, TikTok, or business pages and identify the visibility gaps blocking growth."
+  },
+  {
+    id: "video-intelligence",
+    label: "Video Intelligence",
+    eyebrow: "Vision",
+    description:
+      "Upload one video and inspect hook strength, frames, CTA visibility, pacing, and retention risk."
   },
   {
     id: "titan-studio",

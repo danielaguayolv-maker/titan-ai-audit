@@ -47,6 +47,7 @@ import { QuickWins } from "./quick-wins";
 import { ScoreSummary } from "./score-summary";
 import { StrategyCta } from "./strategy-cta";
 import { TitanStudio } from "./titan-studio";
+import { VideoIntelligence } from "./video-intelligence";
 import { VisibilityMemoryPanel } from "./visibility-memory-panel";
 
 export function DashboardContent() {
@@ -706,6 +707,10 @@ function DashboardWorkspaceContent({
         />
       ) : null}
 
+      {activeModule === "video-intelligence" ? (
+        <VideoIntelligence />
+      ) : null}
+
       {activeModule === "reports" ? (
         <div className="pt-8">
           <AuditAssets
@@ -727,6 +732,7 @@ function DashboardWorkspaceContent({
       {activeModule !== "audit" &&
       activeModule !== "home" &&
       activeModule !== "titan-studio" &&
+      activeModule !== "video-intelligence" &&
       activeModule !== "competitor-intelligence" &&
       activeModule !== "reports" ? (
         <ModulePlaceholder
@@ -754,6 +760,7 @@ function ModulePlaceholder({
   const moduleLabels: Record<TitanOsModule, string> = {
     home: "Command Center",
     audit: "Visibility Audit",
+    "video-intelligence": "Video Intelligence",
     "titan-studio": "Titan Studio",
     "trend-finder": "Trend Finder",
     "competitor-intelligence": "Competitor Intelligence",
