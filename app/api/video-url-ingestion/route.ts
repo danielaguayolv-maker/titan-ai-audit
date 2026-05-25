@@ -192,6 +192,54 @@ function safeHostname(value?: string) {
   }
 }
 
+function sanitizeExternalText(value: string) {
+  return value
+    .replace(/token=[^&\s"']+/gi, "token=[redacted]")
+    .replace(/apify_api_[A-Za-z0-9_-]+/g, "apify_api_[redacted]")
+    .slice(0, 280);
+}
+
+async function safeResponseText(response: Response) {
+  try {
+    return sanitizeExternalText(await response.text());
+  } catch {
+    return "";
+  }
+}
+
+async function readJsonResponse(response: Response, sourceLabel: string) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJson = contentType.toLowerCase().includes("application/json");
+
+  if (!response.ok) {
+    const safeText = await safeResponseText(response);
+    throw new Error(
+      `${sourceLabel} failed with status ${response.status}.${
+        safeText ? ` ${safeText}` : ""
+      }`
+    );
+  }
+
+  if (!isJson) {
+    const safeText = await safeResponseText(response);
+    throw new Error(
+      `${sourceLabel} returned non-JSON response (${response.status}, ${
+        contentType || "unknown content type"
+      }).${safeText ? ` ${safeText}` : ""}`
+    );
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(
+      `${sourceLabel} returned invalid JSON (${response.status}, ${
+        contentType || "unknown content type"
+      }).`
+    );
+  }
+}
+
 async function downloadDirectVideo(
   url: string,
   headers: HeadersInit = {
@@ -548,7 +596,10 @@ async function runApifyActor(actorId: string, input: JsonRecord) {
     }
   );
 
-  const runPayload: unknown = await response.json().catch(() => null);
+  const runPayload: unknown = await readJsonResponse(
+    response,
+    "Apify TikTok actor run"
+  );
   const runData = isRecord(runPayload) && isRecord(runPayload.data) ? runPayload.data : null;
   const status = stringValue(runData?.status);
   const defaultDatasetId = stringValue(runData?.defaultDatasetId);
@@ -559,12 +610,6 @@ async function runApifyActor(actorId: string, input: JsonRecord) {
     inputKeys: Object.keys(input),
     status
   });
-
-  if (!response.ok) {
-    throw new Error(
-      `TikTok downloader Apify run failed with status ${response.status}.`
-    );
-  }
 
   if (!defaultDatasetId) {
     throw new Error("TikTok downloader did not return a dataset.");
@@ -577,14 +622,10 @@ async function runApifyActor(actorId: string, input: JsonRecord) {
   const datasetResponse = await fetch(
     `${APIFY_BASE_URL}/datasets/${defaultDatasetId}/items?token=${encodeURIComponent(token)}&clean=true&limit=10`
   );
-
-  if (!datasetResponse.ok) {
-    throw new Error(
-      `TikTok downloader dataset fetch failed with status ${datasetResponse.status}.`
-    );
-  }
-
-  const items: unknown = await datasetResponse.json();
+  const items: unknown = await readJsonResponse(
+    datasetResponse,
+    "Apify TikTok dataset"
+  );
   const datasetItems = Array.isArray(items) ? items.filter(isRecord) : [];
 
   console.info("[Titan Video URL] Apify TikTok dataset", {

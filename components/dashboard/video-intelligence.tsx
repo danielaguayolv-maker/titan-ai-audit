@@ -146,7 +146,10 @@ async function ingestVideoUrlServerSide(videoUrl: string) {
     },
     body: JSON.stringify({ videoUrl })
   });
-  const payload = (await response.json()) as VideoUrlIngestionApiResponse;
+  const payload = await readApiPayload<VideoUrlIngestionApiResponse>(
+    response,
+    "Video URL ingestion"
+  );
 
   if (!response.ok || "error" in payload) {
     throw new Error(
@@ -160,6 +163,31 @@ async function ingestVideoUrlServerSide(videoUrl: string) {
     frames: payload.frames,
     metadata: payload.metadata
   };
+}
+
+async function readApiPayload<T>(
+  response: Response,
+  label: string
+): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return {
+      error: `${label} returned a non-JSON response.`,
+      message:
+        (await response.text()) ||
+        `Titan received an unreadable response from ${label.toLowerCase()}.`
+    } as T;
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return {
+      error: `${label} returned invalid JSON.`,
+      message: `Titan received a malformed response from ${label.toLowerCase()}.`
+    } as T;
+  }
 }
 
 function SectionCard({
@@ -266,7 +294,10 @@ export function VideoIntelligence() {
         method: "POST",
         body: formData
       });
-      const payload = (await response.json()) as VideoIntelligenceApiResponse;
+      const payload = await readApiPayload<VideoIntelligenceApiResponse>(
+        response,
+        "Video intelligence"
+      );
 
       if (!response.ok || "error" in payload) {
         throw new Error(
