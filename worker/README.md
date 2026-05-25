@@ -46,20 +46,29 @@ The worker uses `SUPABASE_SERVICE_ROLE_KEY`, so keep it server-side only.
 
 1. Create a new Railway service from this repository.
 2. Set the service root directory to `worker`.
-3. Add variables from `.env.example`.
+3. Configure Railway to build with the worker Dockerfile:
+   - Root directory: `worker`
+   - Dockerfile path: `worker/Dockerfile` if Railway asks from repo root, or `Dockerfile` if the service root is already `worker`.
+4. Add variables from `.env.example`.
    - `APIFY_TIKTOK_VIDEO_ACTOR_ID` is the primary actor.
    - `APIFY_TIKTOK_DOWNLOADER_ACTOR_ID` and `APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID` are optional fallback actors. Add a downloader actor here if the primary scraper only returns metadata and cover images.
    - `HEARTBEAT_INTERVAL_MS` keeps active jobs fresh in Supabase while Railway is processing.
    - `JOB_STALE_MINUTES` controls how quickly the worker requeues stuck `processing` jobs.
    - `JOB_TIMEOUT_MS` caps MVP processing time before the worker fails or falls back to partial analysis.
-4. Ensure the Railway image has `ffmpeg` and `ffprobe`.
-   - If using a custom image later, install `ffmpeg`.
-   - Or set `FFMPEG_PATH` / `FFPROBE_PATH` to provided binary paths.
-5. Start command:
+5. Keep the start command:
 
 ```bash
 npm start
 ```
+
+The included Dockerfile installs Debian's `ffmpeg` package, which provides both `ffmpeg` and `ffprobe` in PATH. The worker defaults to:
+
+```bash
+FFMPEG_PATH=ffmpeg
+FFPROBE_PATH=ffprobe
+```
+
+If Railway is configured without Dockerfile builds, `spawn ffprobe ENOENT` means the runtime does not include ffmpeg. Switch the worker service to the Dockerfile build or provide custom `FFMPEG_PATH` / `FFPROBE_PATH` values.
 
 ## Vercel App Behavior
 
