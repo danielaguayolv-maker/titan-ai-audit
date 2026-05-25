@@ -1436,9 +1436,23 @@ function DashboardHome({
     auditResult,
     evolutionReport.movementScores
   );
-  const warnings = buildBehaviorWarnings(memoryReport, evolutionReport, weakestCategories);
-  const opportunities = buildOpportunitySignals(memoryReport, evolutionReport);
-  const recommendations = buildCommandRecommendations(memoryReport, evolutionReport);
+  const detectedNiche = detectCommandCenterNiche(auditResult);
+  const warnings = buildBehaviorWarnings(
+    memoryReport,
+    evolutionReport,
+    weakestCategories,
+    detectedNiche
+  );
+  const opportunities = buildOpportunitySignals(
+    memoryReport,
+    evolutionReport,
+    detectedNiche
+  );
+  const recommendations = buildCommandRecommendations(
+    memoryReport,
+    evolutionReport,
+    detectedNiche
+  );
   const primaryBlocker = buildPrimaryBlocker(
     strategicMetrics,
     warnings,
@@ -1468,10 +1482,12 @@ function DashboardHome({
     ...evolutionReport.identityEvolution,
     ...memoryReport.identityAnalysis
   ].slice(0, 5);
-  const emotionalTriggers = [
-    ...memoryReport.emotionalPatterns,
-    ...auditResult.topQuickWins.map((win) => win.title)
-  ].slice(0, 4);
+  const emotionalTriggers = buildCommandEmotionalTriggers(
+    memoryReport,
+    auditResult,
+    detectedNiche,
+    isUsingFallback
+  );
   const drillDownSignals = buildDrillDownSignals(
     strategicMetrics,
     warnings,
@@ -1756,7 +1772,14 @@ function DashboardHome({
             </p>
             <div className="mt-5 grid gap-4">
               <PulseItem label="Visibility score" value={`${Math.round(auditResult.overallScore)}`} />
-              <PulseItem label="Memory points" value={`${memoryReport.auditCount}`} />
+              <PulseItem
+                label="Memory"
+                value={
+                  memoryReport.auditCount > 0
+                    ? `${memoryReport.auditCount} remembered`
+                    : "Baseline mode"
+                }
+              />
               <PulseItem label="Identity stability" value={identitySignals.length > 2 ? "Active" : "Forming"} />
               <PulseItem label="Predictive direction" value={momentum.label} />
             </div>
@@ -1865,6 +1888,13 @@ function DashboardHome({
             <h2 className="text-anywhere mt-2 text-2xl font-black text-titan-ivory">
               Audience behavior clusters.
             </h2>
+            {memoryReport.auditCount === 0 ? (
+              <p className="text-anywhere mt-3 text-sm leading-6 text-titan-ivory/58">
+                {isUsingFallback
+                  ? "Baseline mode: Titan is showing starter trigger examples until a live audit is generated."
+                  : "First-audit mode: Titan has a live read, and memory will become comparative after the next saved audit."}
+              </p>
+            ) : null}
             <div className="mt-6 grid gap-3">
               {emotionalTriggers.map((trigger, index) => (
                 <div key={trigger}>
@@ -5246,47 +5276,154 @@ function StrategicFocusMode({ focus }: { focus: StrategicFocus }) {
   );
 }
 
+type CommandCenterNiche = "restaurant" | "general";
+
+const restaurantEmotionalTriggers = [
+  "craving",
+  "belonging",
+  "local status",
+  "comfort",
+  "fear of missing out"
+];
+
+const restaurantUnsafePatterns = [
+  /missed[-\s]?call/i,
+  /textback/i,
+  /ai intake/i,
+  /intake prompts/i,
+  /review request/i,
+  /completed jobs/i,
+  /lead response/i,
+  /automation/i
+];
+
+function detectCommandCenterNiche(auditResult: AiAuditResult): CommandCenterNiche {
+  const text = [
+    auditResult.businessName,
+    auditResult.personalizedDiagnosis,
+    auditResult.optimizedBio,
+    ...auditResult.contentRecommendations,
+    ...auditResult.topQuickWins.map((win) => `${win.title} ${win.description}`),
+    ...auditResult.categoryScores.map((category) => `${category.name} ${category.insight}`),
+    auditResult.leadReadyAuditReport.headline,
+    auditResult.leadReadyAuditReport.summary,
+    ...auditResult.leadReadyAuditReport.findings,
+    ...auditResult.leadReadyAuditReport.nextSteps
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return /\b(restaurant|dining|food|bbq|brisket|grill|pizza|coffee|cafe|bar|menu|dish|chef|table|reservation|reserve|order online|takeout|comfort food|date night)\b/.test(
+    text
+  )
+    ? "restaurant"
+    : "general";
+}
+
+function isRestaurantSafeInsight(value: string) {
+  return !restaurantUnsafePatterns.some((pattern) => pattern.test(value));
+}
+
+function cleanCommandItems(items: string[], niche: CommandCenterNiche) {
+  const filteredItems =
+    niche === "restaurant" ? items.filter(isRestaurantSafeInsight) : items;
+
+  return [...new Set(filteredItems.map((item) => item.trim()).filter(Boolean))];
+}
+
+function buildCommandEmotionalTriggers(
+  memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
+  auditResult: AiAuditResult,
+  niche: CommandCenterNiche,
+  isUsingFallback: boolean
+) {
+  if (niche === "restaurant") {
+    const memoryTriggers = memoryReport.emotionalPatterns.filter(
+      (trigger) =>
+        restaurantEmotionalTriggers.some((safeTrigger) =>
+          trigger.toLowerCase().includes(safeTrigger)
+        ) && isRestaurantSafeInsight(trigger)
+    );
+
+    return [...new Set([...memoryTriggers, ...restaurantEmotionalTriggers])].slice(0, 5);
+  }
+
+  const safeMemoryTriggers = memoryReport.emotionalPatterns.filter(Boolean);
+
+  if (safeMemoryTriggers.length > 0) {
+    return safeMemoryTriggers.slice(0, 5);
+  }
+
+  if (!isUsingFallback && auditResult.topQuickWins.length > 0) {
+    return ["attention", "trust", "clarity", "identity", "action"].slice(0, 5);
+  }
+
+  return ["attention", "trust", "clarity", "momentum", "conversion"];
+}
+
 function buildBehaviorWarnings(
   memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
   evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
-  weakCategories: AiAuditResult["categoryScores"]
+  weakCategories: AiAuditResult["categoryScores"],
+  niche: CommandCenterNiche
 ) {
-  return [
+  const baseItems = [
     ...memoryReport.persistentWeaknesses,
     ...evolutionReport.regressions,
     ...evolutionReport.unstablePatterns,
     ...weakCategories.map((category) => `${category.name}: ${category.insight}`)
-  ]
-    .filter(Boolean)
-    .slice(0, 4);
+  ];
+  const restaurantFallbacks = [
+    "The account shows the offer before the craving has time to form.",
+    "The room does not feel socially alive enough yet; belonging needs to show up earlier.",
+    "Local status is underused. Make the account feel like the place people want to be seen choosing.",
+    "Comfort and FOMO need clearer visual anchors: packed tables, reactions, repeat guests, and save-worthy dishes."
+  ];
+
+  return cleanCommandItems(
+    niche === "restaurant" ? [...baseItems, ...restaurantFallbacks] : baseItems,
+    niche
+  ).slice(0, 4);
 }
 
 function buildOpportunitySignals(
   memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
-  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
+  niche: CommandCenterNiche
 ) {
-  return [
+  const baseItems = [
     ...memoryReport.repeatedWins,
     ...evolutionReport.strengtheningSignals,
     ...evolutionReport.emergingPatterns,
-    "Room-energy visuals, reaction frames, and identity-led openings are the next places to look for audience pull."
-  ]
-    .filter(Boolean)
-    .slice(0, 4);
+    niche === "restaurant"
+      ? "Craving, belonging, local status, comfort, and fear of missing out are the strongest restaurant levers to test next."
+      : "Room-energy visuals, reaction frames, and identity-led openings are the next places to look for audience pull."
+  ];
+
+  return cleanCommandItems(baseItems, niche).slice(0, 4);
 }
 
 function buildCommandRecommendations(
   memoryReport: ReturnType<typeof createVisibilityMemoryReport>,
-  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>
+  evolutionReport: ReturnType<typeof createVisibilityEvolutionReport>,
+  niche: CommandCenterNiche
 ) {
-  return [
+  const baseItems = [
     ...memoryReport.predictiveSignals,
     ...evolutionReport.momentumAnalysis,
-    "Use more emotionally legible openings this week.",
-    "Avoid informational openings for the next 5 posts unless the first frame already creates tension."
-  ]
-    .filter(Boolean)
-    .slice(0, 5);
+    ...(niche === "restaurant"
+      ? [
+          "Open with craving first: steam, sauce, the pull-apart bite, or the reaction before the explanation.",
+          "Make belonging visible this week through packed tables, group decisions, date-night energy, or regulars coming back.",
+          "Use CTAs that match dining intent: Reserve tonight, order online, save this for dinner, or tag who you are bringing."
+        ]
+      : [
+          "Use more emotionally legible openings this week.",
+          "Avoid informational openings for the next 5 posts unless the first frame already creates tension."
+        ])
+  ];
+
+  return cleanCommandItems(baseItems, niche).slice(0, 5);
 }
 
 function CommandMetricCard({
@@ -5343,6 +5480,33 @@ function PulseItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+function splitCommandItemText(item: string) {
+  const normalized = item
+    .replace(/\s*•\s*/g, "\n")
+    .replace(/\s+-\s+/g, "\n")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  const explicitParts = normalized
+    .split(/\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (explicitParts.length > 1) {
+    return explicitParts;
+  }
+
+  if (normalized.length < 180) {
+    return [normalized];
+  }
+
+  const sentenceParts = normalized
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return sentenceParts.length > 1 ? sentenceParts : [normalized];
+}
+
 function CommandListCard({
   eyebrow,
   items,
@@ -5372,18 +5536,37 @@ function CommandListCard({
         {title}
       </h2>
       <div className="mt-5 grid gap-3">
-        {items.map((item) => (
-          <div
-            className={`rounded-lg border p-4 ${toneClass}`}
-            key={item}
-          >
-            <button
-              className="text-anywhere block w-full text-left text-sm leading-6 text-titan-ivory/68 transition hover:text-titan-bright"
-              onClick={() => onItemSelect?.(item)}
-              type="button"
+        {items.map((item) => {
+          const parts = splitCommandItemText(item);
+
+          return (
+            <div
+              className={`rounded-lg border p-4 ${toneClass}`}
+              key={item}
             >
-              {item}
-            </button>
+              <button
+                className="block w-full text-left transition hover:text-titan-bright"
+                onClick={() => onItemSelect?.(item)}
+                type="button"
+              >
+                {parts.length > 1 ? (
+                  <ul className="grid gap-2">
+                    {parts.map((part) => (
+                      <li
+                        className="text-anywhere flex gap-2 text-sm leading-6 text-titan-ivory/68"
+                        key={part}
+                      >
+                        <span className="mt-2 size-1.5 shrink-0 rounded-full bg-titan-gold" />
+                        <span>{part}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-anywhere block text-sm leading-6 text-titan-ivory/68">
+                    {parts[0]}
+                  </span>
+                )}
+              </button>
             {onStartExperiment ? (
               <button
                 className="mt-3 inline-flex min-h-9 items-center justify-center rounded-full border border-titan-gold/20 bg-black/20 px-4 text-[11px] font-black uppercase text-titan-bright transition hover:border-titan-bright hover:bg-titan-gold hover:text-black"
@@ -5394,7 +5577,8 @@ function CommandListCard({
               </button>
             ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
     </article>
   );
