@@ -26,12 +26,19 @@ const OPENAI_MODEL =
 const FFMPEG_BIN = process.env.FFMPEG_PATH?.trim() || "ffmpeg";
 const FFPROBE_BIN = process.env.FFPROBE_PATH?.trim() || "ffprobe";
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 5000);
-const JOB_STALE_MINUTES = Number(process.env.JOB_STALE_MINUTES ?? 20);
+const HEARTBEAT_INTERVAL_MS = Number(process.env.HEARTBEAT_INTERVAL_MS ?? 20000);
+const JOB_STALE_MINUTES = Number(process.env.JOB_STALE_MINUTES ?? 5);
+const JOB_TIMEOUT_MS = Number(process.env.JOB_TIMEOUT_MS ?? 180000);
 const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
 
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_TRANSCRIPTIONS_URL = "https://api.openai.com/v1/audio/transcriptions";
+
+let currentJobId = null;
+let heartbeatTimer = null;
+let heartbeatProgressMessage = "Processing";
+let shuttingDown = false;
 
 const TIKTOK_DOWNLOAD_HEADERS = {
   Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
@@ -152,6 +159,23 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+class JobTimeoutError extends Error {
+  constructor() {
+    super("Video analysis job exceeded the MVP processing timeout.");
+    this.name = "JobTimeoutError";
+  }
+}
+
+function isJobTimedOut(startedAt) {
+  return Date.now() - startedAt > JOB_TIMEOUT_MS;
+}
+
+function assertJobNotTimedOut(startedAt) {
+  if (isJobTimedOut(startedAt)) {
+    throw new JobTimeoutError();
+  }
+}
+
 function safeHostname(value) {
   try {
     return new URL(value).hostname;
@@ -221,8 +245,11 @@ async function pollQueuedJob() {
   const query = new URLSearchParams({
     limit: "1",
     order: "created_at.asc",
-    or: `(status.eq.queued,and(status.eq.processing,updated_at.lt.${staleCutoff}))`,
+    status: "eq.queued",
     select: "*"
+  });
+  console.log("[Titan worker] Polling for queued video jobs", {
+    staleCutoff
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/video_analysis_jobs?${query}`, {
     headers: supabaseHeaders(),
@@ -230,6 +257,32 @@ async function pollQueuedJob() {
   });
   const rows = await supabaseJson(response, "Poll queued jobs");
   return rows[0] ?? null;
+}
+
+async function recoverStaleJobs() {
+  const staleCutoff = new Date(Date.now() - JOB_STALE_MINUTES * 60_000).toISOString();
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/video_analysis_jobs?status=eq.processing&updated_at=lt.${encodeURIComponent(staleCutoff)}`,
+    {
+      body: JSON.stringify({
+        error_message:
+          "Worker recovered this job after it was stuck in processing.",
+        progress_message: "Recovered stale processing job; queued for retry",
+        status: "queued",
+        updated_at: new Date().toISOString()
+      }),
+      headers: supabaseHeaders("return=representation"),
+      method: "PATCH"
+    }
+  );
+  const rows = await supabaseJson(response, "Recover stale processing jobs");
+
+  if (rows.length > 0) {
+    console.warn("[Titan worker] Recovered stale processing jobs", {
+      count: rows.length,
+      jobIds: rows.map((row) => row.id)
+    });
+  }
 }
 
 async function updateJob(id, patch) {
@@ -263,8 +316,83 @@ async function claimJob(row) {
     }
   );
   const rows = await supabaseJson(response, `Claim job ${row.id}`);
-  return rows[0] ?? null;
+  const claimed = rows[0] ?? null;
+
+  if (claimed) {
+    console.log("[Titan worker] Job claimed", {
+      jobId: claimed.id,
+      platform: claimed.platform
+    });
+  }
+
+  return claimed;
 }
+
+async function updateProgress(jobId, progressMessage, patch = {}) {
+  heartbeatProgressMessage = progressMessage;
+  return updateJob(jobId, {
+    ...patch,
+    progress_message: progressMessage
+  });
+}
+
+function startHeartbeat(jobId) {
+  stopHeartbeat();
+  currentJobId = jobId;
+  heartbeatTimer = setInterval(() => {
+    void updateJob(jobId, {
+      progress_message: heartbeatProgressMessage
+    }).catch((error) => {
+      console.warn("[Titan worker] Heartbeat update failed", {
+        error: error instanceof Error ? error.message : "unknown error",
+        jobId
+      });
+    });
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+  currentJobId = null;
+}
+
+async function handleShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.warn("[Titan worker] Shutdown signal received", {
+    activeJobId: currentJobId,
+    signal
+  });
+
+  if (currentJobId) {
+    try {
+      await updateJob(currentJobId, {
+        error_message: "Worker received shutdown signal during processing",
+        progress_message: "Worker stopped before completing analysis",
+        status: "failed"
+      });
+    } catch (error) {
+      console.error("[Titan worker] Failed to mark active job stopped", {
+        error: error instanceof Error ? error.message : "unknown error",
+        jobId: currentJobId
+      });
+    }
+  }
+
+  stopHeartbeat();
+  process.exit(0);
+}
+
+process.once("SIGTERM", () => {
+  void handleShutdown("SIGTERM");
+});
+
+process.once("SIGINT", () => {
+  void handleShutdown("SIGINT");
+});
 
 function actorPath(actorId) {
   return actorId.replace("/", "~");
@@ -932,14 +1060,25 @@ async function analyzeFrames(frames, metadata, transcriptResult) {
 
 async function processJob(job) {
   let workDirToClean;
+  const startedAt = Date.now();
+
+  startHeartbeat(job.id);
+
   try {
-    await updateJob(job.id, {
+    console.log("[Titan worker] Processing video job", {
+      jobId: job.id,
+      platform: job.platform
+    });
+    await updateProgress(job.id, "Resolving TikTok media", {
       error_message: null,
-      progress_message: "Resolving TikTok media",
       status: "processing"
     });
 
     const urlType = job.platform === "unsupported" ? detectUrlType(job.input_url) : job.platform;
+    console.log("[Titan worker] TikTok resolver started", {
+      jobId: job.id,
+      urlType
+    });
     const metadataBase = urlType === "tiktok"
       ? await resolveTikTokMedia(job.input_url)
       : urlType === "direct-video"
@@ -959,10 +1098,12 @@ async function processJob(job) {
 
     if (metadataBase.resolvedVideoUrl) {
       try {
-        await updateJob(job.id, { progress_message: "Downloading video" });
+        await updateProgress(job.id, "Downloading video");
         const downloaded = await downloadVideo(metadataBase.resolvedVideoUrl);
-        await updateJob(job.id, { progress_message: "Extracting frames" });
+        assertJobNotTimedOut(startedAt);
+        await updateProgress(job.id, "Extracting frames");
         const extracted = await extractFrames(downloaded.buffer, downloaded.contentType, metadataBase.resolvedVideoUrl);
+        assertJobNotTimedOut(startedAt);
         workDirToClean = path.dirname(extracted.inputPath);
         frames = extracted.frames;
         metadata = {
@@ -975,14 +1116,23 @@ async function processJob(job) {
           sourceType: "url",
           urlType
         };
-        await updateJob(job.id, {
+        await updateProgress(job.id, "Transcribing audio", {
           frame_analysis_result: { frames, message: "Frames extracted by Railway worker." },
-          metadata_result: metadata,
-          progress_message: "Transcribing audio"
+          metadata_result: metadata
         });
         transcriptResult = await transcribeVideo(extracted.inputPath);
+        assertJobNotTimedOut(startedAt);
       } catch (mediaError) {
-        if (!metadataBase.coverImageUrl || urlType !== "tiktok") {
+        if (
+          mediaError instanceof JobTimeoutError &&
+          metadataBase.coverImageUrl &&
+          urlType === "tiktok"
+        ) {
+          console.warn("[Titan worker] Job timeout; switching to partial TikTok analysis", {
+            jobId: job.id,
+            timeoutMs: JOB_TIMEOUT_MS
+          });
+        } else if (!metadataBase.coverImageUrl || urlType !== "tiktok") {
           throw mediaError;
         }
 
@@ -991,7 +1141,7 @@ async function processJob(job) {
           reason: mediaError instanceof Error ? mediaError.message : "unknown media error",
           selectedMediaHostname: safeHostname(metadataBase.resolvedVideoUrl)
         });
-        await updateJob(job.id, { progress_message: "Partial analysis fallback" });
+        await updateProgress(job.id, "Partial analysis fallback");
         frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
         metadata = {
           ...metadataBase,
@@ -1010,7 +1160,7 @@ async function processJob(job) {
           status: "unavailable",
           transcript: ""
         };
-        await updateJob(job.id, {
+        await updateProgress(job.id, "Running vision analysis", {
           frame_analysis_result: { frames, message: "Partial cover frame extracted by Railway worker after media download failed." },
           metadata_result: metadata,
           transcript_result: transcriptResult
@@ -1021,7 +1171,7 @@ async function processJob(job) {
         coverImageAvailable: true,
         reason: "no downloadable video URL selected from downloader output"
       });
-      await updateJob(job.id, { progress_message: "Partial analysis fallback" });
+      await updateProgress(job.id, "Partial analysis fallback");
       frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
       metadata = {
         ...metadataBase,
@@ -1039,7 +1189,7 @@ async function processJob(job) {
         status: "unavailable",
         transcript: ""
       };
-      await updateJob(job.id, {
+      await updateProgress(job.id, "Running vision analysis", {
         frame_analysis_result: { frames, message: "Partial cover frame extracted by Railway worker." },
         metadata_result: metadata,
         transcript_result: transcriptResult
@@ -1048,33 +1198,58 @@ async function processJob(job) {
       throw new Error("No downloadable video or cover image was available.");
     }
 
-    await updateJob(job.id, {
-      progress_message: "Running vision analysis",
+    assertJobNotTimedOut(startedAt);
+    await updateProgress(job.id, "Running vision analysis", {
       transcript_result: transcriptResult
     });
     const finalAuditResult = await analyzeFrames(frames, metadata, transcriptResult);
-    await updateJob(job.id, {
+    await updateProgress(job.id, metadata.partial ? "Partial analysis" : "Complete", {
       final_audit_result: finalAuditResult,
-      progress_message: metadata.partial ? "Partial analysis" : "Complete",
+      status: metadata.partial ? "partial" : "completed"
+    });
+    console.log("[Titan worker] Video job finished", {
+      jobId: job.id,
       status: metadata.partial ? "partial" : "completed"
     });
   } catch (error) {
     await updateJob(job.id, {
-      error_message: error instanceof Error ? error.message : "Worker failed to process video job.",
-      progress_message: "Failed",
+      error_message:
+        error instanceof JobTimeoutError
+          ? "Video analysis job exceeded the MVP processing timeout."
+          : error instanceof Error
+            ? error.message
+            : "Worker failed to process video job.",
+      progress_message:
+        error instanceof JobTimeoutError
+          ? "Worker timed out before completing analysis"
+          : "Failed",
       status: "failed"
+    });
+    console.error("[Titan worker] Video job failed", {
+      error: error instanceof Error ? error.message : "unknown error",
+      jobId: job.id
     });
   } finally {
     if (workDirToClean) {
       await rm(workDirToClean, { force: true, recursive: true }).catch(() => undefined);
     }
+    stopHeartbeat();
   }
 }
 
 async function main() {
-  console.log("Titan Video Intelligence worker started.");
+  console.log("Titan Video Intelligence worker started.", {
+    heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
+    jobStaleMinutes: JOB_STALE_MINUTES,
+    jobTimeoutMs: JOB_TIMEOUT_MS,
+    pollIntervalMs: POLL_INTERVAL_MS
+  });
   for (;;) {
     try {
+      if (shuttingDown) {
+        break;
+      }
+      await recoverStaleJobs();
       const queuedJob = await pollQueuedJob();
       if (!queuedJob) {
         await sleep(POLL_INTERVAL_MS);
@@ -1082,7 +1257,6 @@ async function main() {
       }
       const claimedJob = await claimJob(queuedJob);
       if (claimedJob) {
-        console.log(`Processing video job ${claimedJob.id}`);
         await processJob(claimedJob);
       }
     } catch (error) {

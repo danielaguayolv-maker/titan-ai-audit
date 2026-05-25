@@ -49,6 +49,9 @@ The worker uses `SUPABASE_SERVICE_ROLE_KEY`, so keep it server-side only.
 3. Add variables from `.env.example`.
    - `APIFY_TIKTOK_VIDEO_ACTOR_ID` is the primary actor.
    - `APIFY_TIKTOK_DOWNLOADER_ACTOR_ID` and `APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID` are optional fallback actors. Add a downloader actor here if the primary scraper only returns metadata and cover images.
+   - `HEARTBEAT_INTERVAL_MS` keeps active jobs fresh in Supabase while Railway is processing.
+   - `JOB_STALE_MINUTES` controls how quickly the worker requeues stuck `processing` jobs.
+   - `JOB_TIMEOUT_MS` caps MVP processing time before the worker fails or falls back to partial analysis.
 4. Ensure the Railway image has `ffmpeg` and `ffprobe`.
    - If using a custom image later, install `ffmpeg`.
    - Or set `FFMPEG_PATH` / `FFPROBE_PATH` to provided binary paths.
