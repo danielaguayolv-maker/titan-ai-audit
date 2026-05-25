@@ -166,6 +166,14 @@ class JobTimeoutError extends Error {
   }
 }
 
+class AudioOnlyMediaError extends Error {
+  constructor(message, streamInfo = {}) {
+    super(message);
+    this.name = "AudioOnlyMediaError";
+    this.streamInfo = streamInfo;
+  }
+}
+
 function isJobTimedOut(startedAt) {
   return Date.now() - startedAt > JOB_TIMEOUT_MS;
 }
@@ -490,6 +498,22 @@ function looksLikeVideoResponse(url, contentType, contentDisposition = "") {
   );
 }
 
+function isAudioContentType(contentType) {
+  const lowerContentType = contentType.toLowerCase();
+  return lowerContentType.startsWith("audio/") ||
+    lowerContentType.includes("audio/mpeg") ||
+    lowerContentType.includes("audio/mp3");
+}
+
+function isClearlyNonVideoContentType(contentType) {
+  const lowerContentType = contentType.toLowerCase();
+  return lowerContentType.startsWith("image/") ||
+    lowerContentType.startsWith("text/") ||
+    lowerContentType.includes("application/json") ||
+    lowerContentType.includes("application/xml") ||
+    lowerContentType.includes("text/html");
+}
+
 function looksLikeImageUrl(value) {
   if (!isHttpUrl(value)) return false;
   return /\.(jpg|jpeg|png|webp)(\?|#|$)/.test(value.toLowerCase());
@@ -725,16 +749,21 @@ async function probeCandidate(candidate) {
       const disposition = response.headers.get("content-disposition") ?? "";
       await response.body?.cancel?.();
       const okStatus = response.ok || response.status === 206;
-      const okMedia = looksLikeVideoResponse(response.url || candidate.url, contentType, disposition);
+      const audioOnly = isAudioContentType(contentType);
+      const okMedia = !audioOnly && looksLikeVideoResponse(response.url || candidate.url, contentType, disposition);
       const result = {
         contentType,
         fieldPath: candidate.fieldPath,
         finalHostname: safeHostname(response.url || candidate.url),
+        hasAudioStream: audioOnly ? true : undefined,
+        hasVideoStream: undefined,
         hostname: safeHostname(candidate.url),
         method: attempt.method,
         ok: okStatus && okMedia,
         reason: okStatus
-          ? okMedia
+          ? audioOnly
+            ? `audio-only content-type ${contentType}`
+            : okMedia
             ? "video-like response"
             : `non-video content-type ${contentType || "unknown"}`
           : `HTTP ${response.status}`,
@@ -826,11 +855,12 @@ async function resolveTikTokMedia(inputUrl) {
     },
     hashtags: extractHashtags(records, caption),
     resolvedVideoUrl,
+    mediaCandidates: candidates,
     sourceLabel: authorHandle ? `TikTok @${authorHandle}` : "TikTok video"
   };
 }
 
-async function downloadVideo(url) {
+async function downloadVideo(url, candidate = {}) {
   const response = await fetch(url, {
     headers: TIKTOK_DOWNLOAD_HEADERS,
     redirect: "follow"
@@ -838,7 +868,29 @@ async function downloadVideo(url) {
   if (!response.ok) throw new Error(`Video download failed with status ${response.status}.`);
   const contentType = response.headers.get("content-type") ?? "";
   const disposition = response.headers.get("content-disposition") ?? "";
-  if (!looksLikeVideoResponse(response.url || url, contentType, disposition)) {
+  if (isAudioContentType(contentType)) {
+    console.warn("[Titan worker] Media candidate rejected before download", {
+      candidateField: candidate.fieldPath,
+      contentType,
+      hasAudioStream: true,
+      hasVideoStream: false,
+      rejectionReason: "audio content-type",
+      selectedMediaHostname: safeHostname(response.url || url)
+    });
+    throw new AudioOnlyMediaError(
+      "TikTok provider returned audio-only media.",
+      {
+        candidateField: candidate.fieldPath,
+        contentType,
+        hasAudioStream: true,
+        hasVideoStream: false,
+        rejectionReason: "audio content-type",
+        selectedMediaHostname: safeHostname(response.url || url)
+      }
+    );
+  }
+  const canProbeWithFfprobe = !contentType || !isClearlyNonVideoContentType(contentType);
+  if (!looksLikeVideoResponse(response.url || url, contentType, disposition) && !canProbeWithFfprobe) {
     throw new Error(`Resolved media returned ${contentType || "unknown content type"} instead of video.`);
   }
   const contentLength = Number(response.headers.get("content-length") ?? 0);
@@ -849,7 +901,8 @@ async function downloadVideo(url) {
     buffer,
     contentType: contentType.toLowerCase().includes("octet-stream")
       ? "video/mp4"
-      : contentType
+      : contentType,
+    responseUrl: response.url || url
   };
 }
 
@@ -880,6 +933,23 @@ async function videoDuration(filePath) {
   return duration;
 }
 
+async function inspectMediaStreams(filePath) {
+  const { stdout } = await execFileAsync(FFPROBE_BIN, [
+    "-v",
+    "error",
+    "-show_streams",
+    "-of",
+    "json",
+    filePath
+  ]);
+  const payload = JSON.parse(stdout || "{}");
+  const streams = Array.isArray(payload.streams) ? payload.streams : [];
+  return {
+    hasAudioStream: streams.some((stream) => stream.codec_type === "audio"),
+    hasVideoStream: streams.some((stream) => stream.codec_type === "video")
+  };
+}
+
 function frameTimestamps(duration) {
   return [
     { label: "First frame", timestamp: 0 },
@@ -891,12 +961,43 @@ function frameTimestamps(duration) {
   ];
 }
 
-async function extractFrames(buffer, contentType, sourceUrl) {
+async function extractFrames(buffer, contentType, sourceUrl, candidate = {}) {
   const workDir = path.join(tmpdir(), `titan-worker-video-${randomUUID()}`);
   await mkdir(workDir, { recursive: true });
   try {
     const inputPath = path.join(workDir, `input${extensionForContentType(contentType, sourceUrl)}`);
     await writeFile(inputPath, buffer);
+    const streamInfo = await inspectMediaStreams(inputPath);
+    const rejectionReason = streamInfo.hasVideoStream
+      ? null
+      : streamInfo.hasAudioStream
+        ? "audio-only media; no video stream found by ffprobe"
+        : "no video stream found by ffprobe";
+
+    console.log("[Titan worker] Media candidate ffprobe stream diagnostics", {
+      candidateField: candidate.fieldPath,
+      contentType,
+      hasAudioStream: streamInfo.hasAudioStream,
+      hasVideoStream: streamInfo.hasVideoStream,
+      rejectionReason,
+      selectedMediaHostname: safeHostname(sourceUrl)
+    });
+
+    if (!streamInfo.hasVideoStream) {
+      throw new AudioOnlyMediaError(
+        streamInfo.hasAudioStream
+          ? "TikTok provider returned audio-only media."
+          : "Resolved media did not contain a video stream.",
+        {
+          ...streamInfo,
+          candidateField: candidate.fieldPath,
+          contentType,
+          rejectionReason,
+          selectedMediaHostname: safeHostname(sourceUrl)
+        }
+      );
+    }
+
     const duration = await videoDuration(inputPath);
     const frames = [];
     for (const frame of frameTimestamps(duration)) {
@@ -922,7 +1023,7 @@ async function extractFrames(buffer, contentType, sourceUrl) {
         timestamp: frame.timestamp
       });
     }
-    return { duration, frames, inputPath };
+    return { duration, frames, inputPath, streamInfo };
   } catch (error) {
     await rm(workDir, { force: true, recursive: true });
     throw error;
@@ -1096,50 +1197,109 @@ async function processJob(job) {
     let metadata;
     let transcriptResult;
 
-    if (metadataBase.resolvedVideoUrl) {
-      try {
-        await updateProgress(job.id, "Downloading video");
-        const downloaded = await downloadVideo(metadataBase.resolvedVideoUrl);
-        assertJobNotTimedOut(startedAt);
-        await updateProgress(job.id, "Extracting frames");
-        const extracted = await extractFrames(downloaded.buffer, downloaded.contentType, metadataBase.resolvedVideoUrl);
-        assertJobNotTimedOut(startedAt);
-        workDirToClean = path.dirname(extracted.inputPath);
-        frames = extracted.frames;
-        metadata = {
-          ...metadataBase,
-          duration: extracted.duration,
-          fileSize: downloaded.buffer.byteLength,
-          format: downloaded.contentType,
-          partial: false,
-          sourceLabel: metadataBase.sourceLabel,
-          sourceType: "url",
-          urlType
-        };
-        await updateProgress(job.id, "Transcribing audio", {
-          frame_analysis_result: { frames, message: "Frames extracted by Railway worker." },
-          metadata_result: metadata
-        });
-        transcriptResult = await transcribeVideo(extracted.inputPath);
-        assertJobNotTimedOut(startedAt);
-      } catch (mediaError) {
-        if (
-          mediaError instanceof JobTimeoutError &&
-          metadataBase.coverImageUrl &&
-          urlType === "tiktok"
-        ) {
-          console.warn("[Titan worker] Job timeout; switching to partial TikTok analysis", {
-            jobId: job.id,
-            timeoutMs: JOB_TIMEOUT_MS
+    const mediaCandidates = uniqueCandidates([
+      ...(metadataBase.resolvedVideoUrl
+        ? [{
+            actorId: metadataBase.selectedProbe?.actorId,
+            fieldPath: "selectedMediaCandidate",
+            url: metadataBase.resolvedVideoUrl
+          }]
+        : []),
+      ...(Array.isArray(metadataBase.mediaCandidates) ? metadataBase.mediaCandidates : []),
+      ...(urlType === "direct-video" && metadataBase.resolvedVideoUrl
+        ? [{ fieldPath: "input_url", url: metadataBase.resolvedVideoUrl }]
+        : [])
+    ]);
+
+    if (mediaCandidates.length > 0) {
+      let lastMediaError;
+      let audioOnlyCandidateCount = 0;
+
+      for (const candidate of mediaCandidates) {
+        try {
+          await updateProgress(job.id, "Downloading video");
+          const downloaded = await downloadVideo(candidate.url, candidate);
+          assertJobNotTimedOut(startedAt);
+          await updateProgress(job.id, "Extracting frames");
+          const extracted = await extractFrames(downloaded.buffer, downloaded.contentType, downloaded.responseUrl || candidate.url, candidate);
+          assertJobNotTimedOut(startedAt);
+          workDirToClean = path.dirname(extracted.inputPath);
+          frames = extracted.frames;
+          metadata = {
+            ...metadataBase,
+            duration: extracted.duration,
+            fileSize: downloaded.buffer.byteLength,
+            format: downloaded.contentType,
+            partial: false,
+            resolvedVideoUrl: candidate.url,
+            sourceLabel: metadataBase.sourceLabel,
+            sourceType: "url",
+            urlType
+          };
+          await updateProgress(job.id, "Transcribing audio", {
+            frame_analysis_result: { frames, message: "Frames extracted by Railway worker." },
+            metadata_result: metadata
           });
-        } else if (!metadataBase.coverImageUrl || urlType !== "tiktok") {
-          throw mediaError;
+          transcriptResult = await transcribeVideo(extracted.inputPath);
+          assertJobNotTimedOut(startedAt);
+          break;
+        } catch (mediaError) {
+          lastMediaError = mediaError;
+
+          if (mediaError instanceof JobTimeoutError) {
+            if (metadataBase.coverImageUrl && urlType === "tiktok") {
+              console.warn("[Titan worker] Job timeout; switching to partial TikTok analysis", {
+                jobId: job.id,
+                timeoutMs: JOB_TIMEOUT_MS
+              });
+              break;
+            }
+            throw mediaError;
+          }
+
+          if (mediaError instanceof AudioOnlyMediaError) {
+            audioOnlyCandidateCount += 1;
+          }
+
+          console.warn("[Titan worker] Media candidate rejected during download/extraction", {
+            candidateField: candidate.fieldPath,
+            contentType: mediaError instanceof AudioOnlyMediaError
+              ? mediaError.streamInfo.contentType
+              : undefined,
+            hasAudioStream: mediaError instanceof AudioOnlyMediaError
+              ? mediaError.streamInfo.hasAudioStream
+              : undefined,
+            hasVideoStream: mediaError instanceof AudioOnlyMediaError
+              ? mediaError.streamInfo.hasVideoStream
+              : undefined,
+            rejectionReason: mediaError instanceof AudioOnlyMediaError
+              ? mediaError.streamInfo.rejectionReason
+              : mediaError instanceof Error
+                ? mediaError.message
+                : "unknown media error",
+            selectedMediaHostname: safeHostname(candidate.url)
+          });
+
+          if (urlType !== "tiktok") throw mediaError;
+        }
+      }
+
+      if (frames.length === 0) {
+        if (!metadataBase.coverImageUrl || urlType !== "tiktok") {
+          throw lastMediaError ?? new Error("No downloadable video was available.");
         }
 
-        console.warn("[Titan worker] TikTok partial fallback triggered after media failure", {
+        const partialReason = audioOnlyCandidateCount > 0
+          ? "TikTok provider returned audio-only media, so Titan analyzed cover, caption, hashtags, and metadata."
+          : `The worker found TikTok media candidates, but download or frame extraction failed. Titan analyzed cover, caption, hashtags, and metadata only. Worker detail: ${
+              lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
+            }`;
+
+        console.warn("[Titan worker] TikTok partial fallback triggered after media candidate failures", {
+          audioOnlyCandidateCount,
+          candidateCount: mediaCandidates.length,
           coverImageAvailable: Boolean(metadataBase.coverImageUrl),
-          reason: mediaError instanceof Error ? mediaError.message : "unknown media error",
-          selectedMediaHostname: safeHostname(metadataBase.resolvedVideoUrl)
+          reason: lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
         });
         await updateProgress(job.id, "Partial analysis fallback");
         frames = [await fetchCoverFrame(metadataBase.coverImageUrl)];
@@ -1148,9 +1308,7 @@ async function processJob(job) {
           duration: metadataBase.duration ?? 0,
           format: "Cover image + metadata",
           partial: true,
-          partialReason: `The worker found a TikTok media URL, but download or frame extraction failed. Titan analyzed cover, caption, hashtags, and metadata only. Worker detail: ${
-            mediaError instanceof Error ? mediaError.message : "unknown media error"
-          }`,
+          partialReason,
           sourceLabel: metadataBase.sourceLabel,
           sourceType: "url",
           urlType
@@ -1161,7 +1319,7 @@ async function processJob(job) {
           transcript: ""
         };
         await updateProgress(job.id, "Running vision analysis", {
-          frame_analysis_result: { frames, message: "Partial cover frame extracted by Railway worker after media download failed." },
+          frame_analysis_result: { frames, message: "Partial cover frame extracted by Railway worker after media candidates failed." },
           metadata_result: metadata,
           transcript_result: transcriptResult
         });
