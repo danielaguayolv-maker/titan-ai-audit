@@ -12,6 +12,9 @@ export function Navbar() {
         <a className="transition hover:text-titan-bright" href="#features">
           Features
         </a>
+        <a className="transition hover:text-titan-bright" href="#transformations">
+          Proof
+        </a>
         <a className="transition hover:text-titan-bright" href="#process">
           Process
         </a>

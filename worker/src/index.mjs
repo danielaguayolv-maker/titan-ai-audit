@@ -23,6 +23,8 @@ const APIFY_TIKTOK_DOWNLOADER_ACTOR_ID =
   process.env.APIFY_TIKTOK_DOWNLOADER_ACTOR_ID?.trim() ?? "";
 const APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID =
   process.env.APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID?.trim() ?? "";
+const APIFY_INSTAGRAM_REELS_ACTOR_ID =
+  process.env.APIFY_INSTAGRAM_REELS_ACTOR_ID?.trim() ?? "";
 const OPENAI_MODEL =
   process.env.OPENAI_VIDEO_MODEL?.trim() ||
   process.env.OPENAI_MODEL?.trim() ||
@@ -51,6 +53,15 @@ const TIKTOK_DOWNLOAD_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 };
+
+function socialDownloadHeaders(platform) {
+  return {
+    ...TIKTOK_DOWNLOAD_HEADERS,
+    Referer: platform === "instagram-reel"
+      ? "https://www.instagram.com/"
+      : "https://www.tiktok.com/"
+  };
+}
 
 const TIKTOK_MEDIA_FIELD_NAMES = [
   "animatedCover",
@@ -122,6 +133,49 @@ const TIKTOK_MEDIA_HOST_HINTS = [
   "tiktokcdn"
 ];
 
+const INSTAGRAM_MEDIA_FIELD_NAMES = [
+  "displayUrl",
+  "display_url",
+  "downloadUrl",
+  "downloadURL",
+  "download_url",
+  "mediaUrl",
+  "mediaURL",
+  "media_url",
+  "thumbnailUrl",
+  "thumbnail_url",
+  "url",
+  "video",
+  "videoUrl",
+  "videoURL",
+  "video_url",
+  "video_versions"
+].map((field) => field.toLowerCase());
+
+const SOCIAL_PAGE_FIELD_NAMES = [
+  ...TIKTOK_PAGE_FIELD_NAMES,
+  "instagramUrl",
+  "instagram_url",
+  "inputUrl",
+  "permalink",
+  "shortcodeUrl",
+  "shortcode_url"
+].map((field) => field.toLowerCase());
+
+const INSTAGRAM_PAGE_HOSTNAMES = new Set([
+  "instagram.com",
+  "www.instagram.com"
+]);
+
+const INSTAGRAM_MEDIA_HOST_HINTS = [
+  "cdninstagram",
+  "fbcdn",
+  "instagramcdn",
+  "scontent",
+  "akamaized",
+  "cloudfront"
+];
+
 const responseSchema = {
   type: "object",
   additionalProperties: false,
@@ -189,6 +243,22 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isSocialDownloaderPlatform(platform) {
+  return platform === "tiktok" || platform === "instagram-reel";
+}
+
+function platformDisplayName(platform) {
+  if (platform === "instagram-reel") return "Instagram Reel";
+  if (platform === "tiktok") return "TikTok";
+  return "Video";
+}
+
+function audioOnlyPartialMessage(platform) {
+  return platform === "instagram-reel"
+    ? "Instagram provider returned audio-only media, so Titan analyzed cover, caption, hashtags, and metadata."
+    : AUDIO_ONLY_PARTIAL_MESSAGE;
+}
+
 class JobTimeoutError extends Error {
   constructor() {
     super("Video analysis job exceeded the MVP processing timeout.");
@@ -247,6 +317,7 @@ function topLevelKeySummary(items) {
 
 function safeActorConfigSummary() {
   return {
+    instagramReelsActorId: APIFY_INSTAGRAM_REELS_ACTOR_ID || "not-configured",
     downloaderActorId: APIFY_TIKTOK_DOWNLOADER_ACTOR_ID || "not-configured",
     primaryActorId: APIFY_TIKTOK_VIDEO_ACTOR_ID || "not-configured",
     secondaryActorId: APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID || "not-configured"
@@ -345,7 +416,7 @@ async function claimJob(row) {
     {
       body: JSON.stringify({
         error_message: null,
-        progress_message: "Resolving TikTok media",
+        progress_message: `Resolving ${platformDisplayName(row.platform)} media`,
         status: "processing",
         updated_at: new Date().toISOString()
       }),
@@ -498,6 +569,9 @@ function detectUrlType(value) {
       return "direct-video";
     }
     if (hostname.includes("tiktok.com")) return "tiktok";
+    if (hostname.includes("instagram.com") && /\/(reel|reels|p)\//.test(pathname)) {
+      return "instagram-reel";
+    }
     return "unsupported";
   } catch {
     return "unsupported";
@@ -524,15 +598,26 @@ function isTikTokPageHostname(value) {
   return TIKTOK_PAGE_HOSTNAMES.has(safeHostname(value).toLowerCase());
 }
 
-function isLikelyTikTokMediaHost(value) {
-  const hostname = safeHostname(value).toLowerCase();
-  return TIKTOK_MEDIA_HOST_HINTS.some((hint) => hostname.includes(hint));
+function isInstagramPageHostname(value) {
+  return INSTAGRAM_PAGE_HOSTNAMES.has(safeHostname(value).toLowerCase());
 }
 
-function isTikTokPageUrlCandidate(candidate) {
+function isLikelySocialMediaHost(value) {
+  const hostname = safeHostname(value).toLowerCase();
+  return [...TIKTOK_MEDIA_HOST_HINTS, ...INSTAGRAM_MEDIA_HOST_HINTS].some((hint) => hostname.includes(hint));
+}
+
+function isSocialPageUrlCandidate(candidate) {
   const fieldNames = normalizedPathFieldNames(candidate.fieldPath);
-  return fieldNames.some((fieldName) => TIKTOK_PAGE_FIELD_NAMES.includes(fieldName)) ||
-    isTikTokPageHostname(candidate.url);
+  return fieldNames.some((fieldName) => SOCIAL_PAGE_FIELD_NAMES.includes(fieldName)) ||
+    isTikTokPageHostname(candidate.url) ||
+    isInstagramPageHostname(candidate.url);
+}
+
+function mediaFieldNamesForPlatform(platform) {
+  return platform === "instagram-reel"
+    ? INSTAGRAM_MEDIA_FIELD_NAMES
+    : TIKTOK_MEDIA_FIELD_NAMES;
 }
 
 function looksLikeVideoResponse(url, contentType, contentDisposition = "") {
@@ -571,12 +656,13 @@ function looksLikeImageUrl(value) {
   return /\.(jpg|jpeg|png|webp)(\?|#|$)/.test(value.toLowerCase());
 }
 
-function collectMediaCandidates(value, pathParts = [], depth = 0) {
+function collectMediaCandidates(value, pathParts = [], depth = 0, platform = "tiktok") {
   if (depth > 8) return [];
   if (typeof value === "string") {
     const path = pathParts.join(".");
+    const mediaFieldNames = mediaFieldNamesForPlatform(platform);
     const isMediaPath = pathParts.some((part) =>
-      TIKTOK_MEDIA_FIELD_NAMES.includes(part.replace(/\[\d+\]$/, "").toLowerCase())
+      mediaFieldNames.includes(part.replace(/\[\d+\]$/, "").toLowerCase())
     );
     return isMediaPath && looksLikeVideoUrl(value)
       ? [{ fieldPath: path, url: value.trim() }]
@@ -584,12 +670,12 @@ function collectMediaCandidates(value, pathParts = [], depth = 0) {
   }
   if (Array.isArray(value)) {
     return value.flatMap((item, index) =>
-      collectMediaCandidates(item, [...pathParts, `[${index}]`], depth + 1)
+      collectMediaCandidates(item, [...pathParts, `[${index}]`], depth + 1, platform)
     );
   }
   if (!isRecord(value)) return [];
   return Object.entries(value).flatMap(([key, nested]) =>
-    collectMediaCandidates(nested, [...pathParts, key], depth + 1)
+    collectMediaCandidates(nested, [...pathParts, key], depth + 1, platform)
   );
 }
 
@@ -620,8 +706,8 @@ function uniqueCandidates(candidates) {
       return true;
     })
     .sort((first, second) => {
-      const firstMediaHostRank = isLikelyTikTokMediaHost(first.url) ? 0 : 1;
-      const secondMediaHostRank = isLikelyTikTokMediaHost(second.url) ? 0 : 1;
+      const firstMediaHostRank = isLikelySocialMediaHost(first.url) ? 0 : 1;
+      const secondMediaHostRank = isLikelySocialMediaHost(second.url) ? 0 : 1;
       if (firstMediaHostRank !== secondMediaHostRank) {
         return firstMediaHostRank - secondMediaHostRank;
       }
@@ -639,7 +725,11 @@ function firstImageUrl(records) {
     "cover",
     "coverUrl",
     "dynamicCover",
+    "displayUrl",
     "originCover",
+    "preview",
+    "previewUrl",
+    "thumbnailSrc",
     "thumbnail",
     "thumbnailUrl",
     "imageUrl",
@@ -688,8 +778,18 @@ async function apifyJson(response, label) {
   return response.json();
 }
 
-async function runSingleApifyTikTokActor(url, actorId) {
-  const input = {
+function apifyVideoInput(url, platform) {
+  if (platform === "instagram-reel") {
+    return {
+      directUrls: [url],
+      maxItems: 1,
+      resultsLimit: 1,
+      startUrls: [{ url }],
+      urls: [url]
+    };
+  }
+
+  return {
     maxItems: 1,
     postURLs: [url],
     resultsLimit: 1,
@@ -701,7 +801,12 @@ async function runSingleApifyTikTokActor(url, actorId) {
     urls: [url],
     videoUrls: [url]
   };
-  console.log("[Titan worker] Running TikTok downloader actor", {
+}
+
+async function runSingleApifyVideoActor(url, actorId, platform) {
+  const input = apifyVideoInput(url, platform);
+  const platformLabel = platform === "instagram-reel" ? "Instagram Reel" : "TikTok";
+  console.log(`[Titan worker] Running ${platformLabel} downloader actor`, {
     actorId,
     inputKeys: Object.keys(input)
   });
@@ -713,24 +818,25 @@ async function runSingleApifyTikTokActor(url, actorId) {
       method: "POST"
     }
   );
-  const runPayload = await apifyJson(runResponse, `Apify TikTok actor run (${actorId})`);
+  const runPayload = await apifyJson(runResponse, `Apify ${platformLabel} actor run (${actorId})`);
   const datasetId = runPayload?.data?.defaultDatasetId;
   const status = runPayload?.data?.status;
 
   if (!datasetId) throw new Error(`Apify actor ${actorId} did not return a dataset.`);
   if (status && !["SUCCEEDED", "READY"].includes(status)) {
-    throw new Error(`Apify TikTok actor ${actorId} finished with status ${status}.`);
+    throw new Error(`Apify ${platformLabel} actor ${actorId} finished with status ${status}.`);
   }
 
   const datasetResponse = await fetch(
     `${APIFY_BASE_URL}/datasets/${datasetId}/items?token=${encodeURIComponent(APIFY_TOKEN)}&clean=true&limit=10`
   );
-  const items = await apifyJson(datasetResponse, `Apify TikTok dataset (${actorId})`);
+  const items = await apifyJson(datasetResponse, `Apify ${platformLabel} dataset (${actorId})`);
   const datasetItems = Array.isArray(items) ? items.filter(isRecord) : [];
 
-  console.log("[Titan worker] Safe Apify TikTok result shape", {
+  console.log(`[Titan worker] Safe Apify ${platformLabel} result shape`, {
     actorId,
     itemCount: datasetItems.length,
+    topLevelKeys: topLevelKeySummary(datasetItems),
     shape: summarizeShape(datasetItems)
   });
 
@@ -738,6 +844,10 @@ async function runSingleApifyTikTokActor(url, actorId) {
     ...item,
     __titanActorId: actorId
   }));
+}
+
+async function runSingleApifyTikTokActor(url, actorId) {
+  return runSingleApifyVideoActor(url, actorId, "tiktok");
 }
 
 async function runApifyTikTok(url) {
@@ -784,23 +894,36 @@ async function runApifyTikTok(url) {
   return allItems;
 }
 
+async function runApifyInstagramReel(url) {
+  if (!APIFY_TOKEN || !APIFY_INSTAGRAM_REELS_ACTOR_ID) {
+    throw new Error("Instagram Reel downloader is not configured. Add APIFY_TOKEN and APIFY_INSTAGRAM_REELS_ACTOR_ID.");
+  }
+
+  console.log("[Titan worker] Instagram Reels downloader actor configuration", {
+    actorId: APIFY_INSTAGRAM_REELS_ACTOR_ID
+  });
+
+  return runSingleApifyVideoActor(url, APIFY_INSTAGRAM_REELS_ACTOR_ID, "instagram-reel");
+}
+
 async function probeCandidate(candidate) {
-  if (isTikTokPageUrlCandidate(candidate)) {
-    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+  if (isSocialPageUrlCandidate(candidate)) {
+    console.warn("[Titan worker] Rejected social page URL candidate", {
       fieldPath: candidate.fieldPath,
       hostname: safeHostname(candidate.url),
-      reason: "page/share URL field or TikTok page hostname"
+      platform: candidate.platform,
+      reason: "page/share URL field or social page hostname"
     });
     return null;
   }
 
   const attempts = [
     {
-      headers: TIKTOK_DOWNLOAD_HEADERS,
+      headers: socialDownloadHeaders(candidate.platform),
       method: "HEAD"
     },
     {
-      headers: { ...TIKTOK_DOWNLOAD_HEADERS, Range: "bytes=0-0" },
+      headers: { ...socialDownloadHeaders(candidate.platform), Range: "bytes=0-0" },
       method: "GET"
     }
   ];
@@ -836,17 +959,21 @@ async function probeCandidate(candidate) {
           : `HTTP ${response.status}`,
         status: response.status
       };
-      console.log("[Titan worker] TikTok media candidate probe", result);
+      console.log("[Titan worker] Social media candidate probe", {
+        ...result,
+        platform: candidate.platform
+      });
 
       if (result.ok) {
         return result;
       }
     } catch (error) {
-      console.warn("[Titan worker] TikTok media candidate probe failed", {
+      console.warn("[Titan worker] Social media candidate probe failed", {
         error: error instanceof Error ? error.message : "unknown error",
         fieldPath: candidate.fieldPath,
         hostname: safeHostname(candidate.url),
-        method: attempt.method
+        method: attempt.method,
+        platform: candidate.platform
       });
     }
   }
@@ -855,38 +982,59 @@ async function probeCandidate(candidate) {
 }
 
 async function resolveTikTokMedia(inputUrl) {
-  const items = await runApifyTikTok(inputUrl);
-  if (items.length === 0) throw new Error("Apify returned no TikTok media items.");
+  return resolveSocialMedia(inputUrl, "tiktok", runApifyTikTok, {
+    noItemsMessage: "Apify returned no TikTok media items.",
+    noMediaLogLabel: "TikTok downloader did not expose downloadable media",
+    selectedLogLabel: "TikTok selected downloadable media candidate",
+    sourceLabelFallback: "TikTok video"
+  });
+}
+
+async function resolveInstagramReelMedia(inputUrl) {
+  return resolveSocialMedia(inputUrl, "instagram-reel", runApifyInstagramReel, {
+    noItemsMessage: "Apify returned no Instagram Reel media items.",
+    noMediaLogLabel: "Instagram Reel downloader did not expose downloadable media",
+    selectedLogLabel: "Instagram Reel selected downloadable media candidate",
+    sourceLabelFallback: "Instagram Reel"
+  });
+}
+
+async function resolveSocialMedia(inputUrl, platform, runner, labels) {
+  const items = await runner(inputUrl);
+  if (items.length === 0) throw new Error(labels.noItemsMessage);
 
   const records = collectRecords(items);
-  const caption = firstString(records, ["text", "caption", "description", "desc", "title"]);
-  const authorHandle = firstString(records, ["uniqueId", "username", "author", "authorName", "nickname", "name", "handle"]);
+  const caption = firstString(records, ["text", "caption", "description", "desc", "title", "alt"]);
+  const authorHandle = firstString(records, ["uniqueId", "username", "ownerUsername", "ownerFullName", "author", "authorName", "nickname", "name", "handle"]);
   const coverImageUrl = firstImageUrl(records);
   const collectedCandidates = items.flatMap((item, index) =>
-    collectMediaCandidates(item, [`item[${index}]`]).map((candidate) => ({
+    collectMediaCandidates(item, [`item[${index}]`], 0, platform).map((candidate) => ({
       ...candidate,
-      actorId: item.__titanActorId
+      actorId: item.__titanActorId,
+      platform
     }))
   );
-  const rejectedPageCandidates = collectedCandidates.filter(isTikTokPageUrlCandidate);
+  const rejectedPageCandidates = collectedCandidates.filter(isSocialPageUrlCandidate);
   for (const candidate of rejectedPageCandidates) {
-    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+    console.warn("[Titan worker] Rejected social page URL candidate", {
       actorId: candidate.actorId,
       fieldPath: candidate.fieldPath,
       hostname: safeHostname(candidate.url),
-      reason: "page/share URL field or TikTok page hostname"
+      platform,
+      reason: "page/share URL field or social page hostname"
     });
   }
   const candidates = uniqueCandidates(
-    collectedCandidates.filter((candidate) => !isTikTokPageUrlCandidate(candidate))
+    collectedCandidates.filter((candidate) => !isSocialPageUrlCandidate(candidate))
   );
-  console.log("[Titan worker] TikTok media candidates discovered", {
+  console.log(`[Titan worker] ${platform} media candidates discovered`, {
     candidates: candidates.map((candidate) => ({
       actorId: candidate.actorId,
       fieldPath: candidate.fieldPath,
       hostname: safeHostname(candidate.url),
-      likelyMediaHost: isLikelyTikTokMediaHost(candidate.url)
+      likelyMediaHost: isLikelySocialMediaHost(candidate.url)
     })),
+    platform,
     rejectedPageCandidateCount: rejectedPageCandidates.length,
     total: candidates.length
   });
@@ -904,17 +1052,19 @@ async function resolveTikTokMedia(inputUrl) {
   }
 
   if (selectedProbe) {
-    console.log("[Titan worker] TikTok selected downloadable media candidate", {
+    console.log(`[Titan worker] ${labels.selectedLogLabel}`, {
       contentType: selectedProbe.contentType,
       fieldPath: selectedProbe.fieldPath,
       hostname: selectedProbe.hostname,
+      platform,
       method: selectedProbe.method,
       status: selectedProbe.status
     });
   } else {
-    console.warn("[Titan worker] TikTok downloader did not expose downloadable media", {
+    console.warn(`[Titan worker] ${labels.noMediaLogLabel}`, {
       candidateCount: candidates.length,
       fallbackPartialMode: Boolean(coverImageUrl),
+      platform,
       reason: candidates.length
         ? "candidate URLs were found, but none returned a video-like response"
         : "no candidate video URL fields were found"
@@ -925,32 +1075,36 @@ async function resolveTikTokMedia(inputUrl) {
     authorHandle,
     caption,
     coverImageUrl,
-    duration: firstNumber(records, ["duration", "durationSec", "videoDuration"]) ?? 0,
+    duration: firstNumber(records, ["duration", "durationSec", "videoDuration", "videoDurationSeconds"]) ?? 0,
     engagementMetrics: {
-      comments: firstNumber(records, ["commentCount", "comments"]),
-      likes: firstNumber(records, ["diggCount", "likeCount", "likes", "heartCount"]),
-      shares: firstNumber(records, ["shareCount", "shares"]),
-      views: firstNumber(records, ["playCount", "viewCount", "views", "videoViews"])
+      comments: firstNumber(records, ["commentCount", "comments", "commentsCount"]),
+      likes: firstNumber(records, ["diggCount", "likeCount", "likes", "likesCount", "heartCount"]),
+      shares: firstNumber(records, ["shareCount", "shares", "sharesCount"]),
+      views: firstNumber(records, ["playCount", "viewCount", "views", "videoViews", "videoViewCount"])
     },
     hashtags: extractHashtags(records, caption),
+    platform,
     resolvedVideoUrl,
     mediaCandidates: candidates,
-    sourceLabel: authorHandle ? `TikTok @${authorHandle}` : "TikTok video"
+    sourceLabel: authorHandle
+      ? `${platform === "instagram-reel" ? "Instagram" : "TikTok"} @${authorHandle}`
+      : labels.sourceLabelFallback
   };
 }
 
 async function downloadVideo(url, candidate = {}) {
-  if (isTikTokPageUrlCandidate({ ...candidate, url })) {
-    console.warn("[Titan worker] Rejected TikTok page URL candidate", {
+  if (isSocialPageUrlCandidate({ ...candidate, url })) {
+    console.warn("[Titan worker] Rejected social page URL candidate", {
       fieldPath: candidate.fieldPath,
       hostname: safeHostname(url),
+      platform: candidate.platform,
       reason: "blocked before download"
     });
-    throw new Error("Rejected TikTok page URL candidate before download.");
+    throw new Error("Rejected social page URL candidate before download.");
   }
 
   const response = await fetch(url, {
-    headers: TIKTOK_DOWNLOAD_HEADERS,
+    headers: socialDownloadHeaders(candidate.platform),
     redirect: "follow"
   });
   if (!response.ok) throw new Error(`Video download failed with status ${response.status}.`);
@@ -962,11 +1116,12 @@ async function downloadVideo(url, candidate = {}) {
       contentType,
       hasAudioStream: true,
       hasVideoStream: false,
+      platform: candidate.platform,
       rejectionReason: "audio content-type",
       selectedMediaHostname: safeHostname(response.url || url)
     });
     throw new AudioOnlyMediaError(
-      "TikTok provider returned audio-only media.",
+      audioOnlyPartialMessage(candidate.platform),
       {
         candidateField: candidate.fieldPath,
         contentType,
@@ -1050,6 +1205,7 @@ async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, so
   console.log("[Titan worker] ffprobe stream check before frame extraction", {
     candidateField: candidate.fieldPath,
     contentType,
+    platform: candidate.platform,
     selectedMediaHostname: safeHostname(sourceUrl),
     workerVersion: WORKER_VERSION
   });
@@ -1065,6 +1221,7 @@ async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, so
     contentType,
     hasAudioStream: streamInfo.hasAudioStream,
     hasVideoStream: streamInfo.hasVideoStream,
+    platform: candidate.platform,
     rejectionReason,
     selectedMediaHostname: safeHostname(sourceUrl)
   });
@@ -1075,12 +1232,13 @@ async function assertVideoStreamBeforeFrameExtraction(inputPath, contentType, so
       contentType,
       hasAudioStream: streamInfo.hasAudioStream,
       hasVideoStream: streamInfo.hasVideoStream,
+      platform: candidate.platform,
       rejectionReason,
       selectedMediaHostname: safeHostname(sourceUrl)
     });
     throw new AudioOnlyMediaError(
       streamInfo.hasAudioStream
-        ? "TikTok provider returned audio-only media."
+        ? audioOnlyPartialMessage(candidate.platform)
         : "Resolved media did not contain a video stream.",
       {
         ...streamInfo,
@@ -1276,7 +1434,8 @@ async function processJob(job) {
       platform: job.platform,
       workerVersion: WORKER_VERSION
     });
-    await updateProgress(job.id, "Resolving TikTok media", {
+    const urlType = job.platform === "unsupported" ? detectUrlType(job.input_url) : job.platform;
+    await updateProgress(job.id, `Resolving ${platformDisplayName(urlType)} media`, {
       error_message: null,
       metadata_result: {
         debug: {
@@ -1286,23 +1445,24 @@ async function processJob(job) {
       status: "processing"
     });
 
-    const urlType = job.platform === "unsupported" ? detectUrlType(job.input_url) : job.platform;
-    console.log("[Titan worker] TikTok resolver started", {
+    console.log("[Titan worker] Media resolver started", {
       jobId: job.id,
       urlType
     });
     const metadataBase = urlType === "tiktok"
       ? await resolveTikTokMedia(job.input_url)
-      : urlType === "direct-video"
-        ? {
-            duration: 0,
-            resolvedVideoUrl: job.input_url,
-            sourceLabel: job.input_url
-          }
-        : {
-            duration: 0,
-            sourceLabel: job.input_url
-          };
+      : urlType === "instagram-reel"
+        ? await resolveInstagramReelMedia(job.input_url)
+        : urlType === "direct-video"
+          ? {
+              duration: 0,
+              resolvedVideoUrl: job.input_url,
+              sourceLabel: job.input_url
+            }
+          : {
+              duration: 0,
+              sourceLabel: job.input_url
+            };
 
     let frames = [];
     let metadata;
@@ -1313,12 +1473,13 @@ async function processJob(job) {
         ? [{
             actorId: metadataBase.selectedProbe?.actorId,
             fieldPath: "selectedMediaCandidate",
+            platform: urlType,
             url: metadataBase.resolvedVideoUrl
           }]
         : []),
       ...(Array.isArray(metadataBase.mediaCandidates) ? metadataBase.mediaCandidates : []),
       ...(urlType === "direct-video" && metadataBase.resolvedVideoUrl
-        ? [{ fieldPath: "input_url", url: metadataBase.resolvedVideoUrl }]
+        ? [{ fieldPath: "input_url", platform: urlType, url: metadataBase.resolvedVideoUrl }]
         : [])
     ]);
 
@@ -1378,9 +1539,10 @@ async function processJob(job) {
           lastMediaError = mediaError;
 
           if (mediaError instanceof JobTimeoutError) {
-            if (metadataBase.coverImageUrl && urlType === "tiktok") {
-              console.warn("[Titan worker] Job timeout; switching to partial TikTok analysis", {
+            if (metadataBase.coverImageUrl && isSocialDownloaderPlatform(urlType)) {
+              console.warn("[Titan worker] Job timeout; switching to partial social analysis", {
                 jobId: job.id,
+                platform: urlType,
                 timeoutMs: JOB_TIMEOUT_MS
               });
               break;
@@ -1411,25 +1573,26 @@ async function processJob(job) {
             selectedMediaHostname: safeHostname(candidate.url)
           });
 
-          if (urlType !== "tiktok") throw mediaError;
+          if (!isSocialDownloaderPlatform(urlType)) throw mediaError;
         }
       }
 
       if (frames.length === 0) {
-        if ((audioOnlyCandidateCount === 0 && !metadataBase.coverImageUrl) || urlType !== "tiktok") {
+        if ((audioOnlyCandidateCount === 0 && !metadataBase.coverImageUrl) || !isSocialDownloaderPlatform(urlType)) {
           throw lastMediaError ?? new Error("No downloadable video was available.");
         }
 
         const partialReason = audioOnlyCandidateCount > 0
-          ? AUDIO_ONLY_PARTIAL_MESSAGE
-          : `The worker found TikTok media candidates, but download or frame extraction failed. Titan analyzed cover, caption, hashtags, and metadata only. Worker detail: ${
+          ? audioOnlyPartialMessage(urlType)
+          : `The worker found ${platformDisplayName(urlType)} media candidates, but download or frame extraction failed. Titan analyzed cover, caption, hashtags, and metadata only. Worker detail: ${
               lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
             }`;
 
-        console.warn("[Titan worker] TikTok partial fallback triggered after media candidate failures", {
+        console.warn("[Titan worker] Social partial fallback triggered after media candidate failures", {
           audioOnlyCandidateCount,
           candidateCount: mediaCandidates.length,
           coverImageAvailable: Boolean(metadataBase.coverImageUrl),
+          platform: urlType,
           reason: lastMediaError instanceof Error ? lastMediaError.message : "unknown media error"
         });
         await updateProgress(job.id, "Partial analysis fallback");
@@ -1461,15 +1624,16 @@ async function processJob(job) {
             frames,
             message: metadataBase.coverImageUrl
               ? "Partial cover frame extracted by Railway worker after media candidates failed."
-              : "Partial TikTok metadata analysis only; no video stream or cover image was available."
+              : `Partial ${platformDisplayName(urlType)} metadata analysis only; no video stream or cover image was available.`
           },
           metadata_result: metadata,
           transcript_result: transcriptResult
         });
       }
     } else if (metadataBase.coverImageUrl) {
-      console.warn("[Titan worker] TikTok partial fallback triggered", {
+      console.warn("[Titan worker] Social partial fallback triggered", {
         coverImageAvailable: true,
+        platform: urlType,
         reason: "no downloadable video URL selected from downloader output"
       });
       await updateProgress(job.id, "Partial analysis fallback");
@@ -1483,7 +1647,7 @@ async function processJob(job) {
         format: "Cover image + metadata",
         partial: true,
         partialReason:
-          "The worker found TikTok metadata and cover imagery, but no downloadable video URL. Titan analyzed cover, caption, hashtags, and metadata only.",
+          `The worker found ${platformDisplayName(urlType)} metadata and cover imagery, but no downloadable video URL. Titan analyzed cover, caption, hashtags, and metadata only.`,
         sourceLabel: metadataBase.sourceLabel,
         sourceType: "url",
         urlType
@@ -1508,16 +1672,17 @@ async function processJob(job) {
     });
     const finalAuditResult = await analyzeFrames(frames, metadata, transcriptResult);
     if (metadata.partialKind === "audio-only-media") {
-      finalAuditResult.partialAnalysisMessage = AUDIO_ONLY_PARTIAL_MESSAGE;
+      const partialAnalysisMessage = audioOnlyPartialMessage(urlType);
+      finalAuditResult.partialAnalysisMessage = partialAnalysisMessage;
       finalAuditResult.transparencyNotes = [
-        AUDIO_ONLY_PARTIAL_MESSAGE,
+        partialAnalysisMessage,
         ...(Array.isArray(finalAuditResult.transparencyNotes)
           ? finalAuditResult.transparencyNotes.filter((note) => !note.includes("ffmpeg"))
           : [])
       ];
       finalAuditResult.firstThreeSecondsAnalysis = {
         ...finalAuditResult.firstThreeSecondsAnalysis,
-        summary: AUDIO_ONLY_PARTIAL_MESSAGE
+        summary: partialAnalysisMessage
       };
     }
     await updateProgress(job.id, metadata.partial ? "Partial analysis" : "Complete", {

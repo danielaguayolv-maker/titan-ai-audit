@@ -6,7 +6,7 @@ Railway-ready worker for heavy Video Intelligence jobs.
 
 - Polls Supabase `video_analysis_jobs` where `status = queued`
 - Claims one job at a time by moving it to `processing`
-- Resolves TikTok media through Apify
+- Resolves TikTok and Instagram Reel media through Apify
 - Supports an optional secondary Apify downloader chain
 - Downloads video when a real media URL is available
 - Uses `ffmpeg` / `ffprobe` to extract key frames
@@ -52,6 +52,7 @@ The worker uses `SUPABASE_SERVICE_ROLE_KEY`, so keep it server-side only.
 4. Add variables from `.env.example`.
    - `APIFY_TIKTOK_VIDEO_ACTOR_ID` is the primary actor.
    - `APIFY_TIKTOK_DOWNLOADER_ACTOR_ID` and `APIFY_TIKTOK_SECONDARY_VIDEO_ACTOR_ID` are optional fallback actors. Add a downloader actor here if the primary scraper only returns metadata and cover images.
+   - `APIFY_INSTAGRAM_REELS_ACTOR_ID` enables Instagram Reel URL jobs. Use an Apify actor that returns Reel metadata and, when available, downloadable media URLs.
    - `HEARTBEAT_INTERVAL_MS` keeps active jobs fresh in Supabase while Railway is processing.
    - `JOB_STALE_MINUTES` controls how quickly the worker requeues stuck `processing` jobs.
    - `JOB_TIMEOUT_MS` caps MVP processing time before the worker fails or falls back to partial analysis.

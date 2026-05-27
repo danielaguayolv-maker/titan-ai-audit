@@ -5,6 +5,7 @@ import { LeadCapture } from "@/components/landing/lead-capture";
 import { Navbar } from "@/components/landing/navbar";
 import { Process } from "@/components/landing/process";
 import { ProductActivation } from "@/components/landing/product-activation";
+import { VisibilityTransformations } from "@/components/landing/visibility-transformations";
 
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
       <Hero />
       <Features />
       <ProductActivation />
+      <VisibilityTransformations />
       <Process />
       <LeadCapture />
       <Footer />
