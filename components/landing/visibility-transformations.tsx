@@ -2,6 +2,12 @@ import { visibilityTransformations } from "@/lib/landing-data";
 import { CtaButton } from "./cta-button";
 
 const mediaSlots = ["photo", "video", "analytics", "content"];
+const mediaDescriptions = {
+  analytics: "performance proof",
+  content: "post samples",
+  photo: "brand imagery",
+  video: "short-form clips"
+};
 
 export function VisibilityTransformations() {
   return (
@@ -46,12 +52,19 @@ export function VisibilityTransformations() {
                       <div className="grid grid-cols-2 gap-2">
                         {mediaSlots.map((slot) => (
                           <div
-                            className="rounded-lg border border-titan-gold/12 bg-white/[0.035] p-3"
+                            className="rounded-lg border border-titan-gold/18 bg-black/30 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                             key={slot}
                           >
-                            <div className="mb-3 h-16 rounded-md bg-gradient-to-br from-titan-gold/20 via-white/[0.04] to-black" />
-                            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-titan-ivory/45">
+                            <div className="mb-3 flex h-16 items-center justify-center rounded-md border border-dashed border-titan-gold/20 bg-gradient-to-br from-titan-gold/18 via-white/[0.035] to-black">
+                              <span className="text-lg font-black uppercase text-titan-bright/50">
+                                {slot.slice(0, 1)}
+                              </span>
+                            </div>
+                            <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-titan-bright/80">
                               {slot}
+                            </p>
+                            <p className="mt-1 text-[0.65rem] leading-4 text-titan-ivory/42">
+                              {mediaDescriptions[slot as keyof typeof mediaDescriptions]}
                             </p>
                           </div>
                         ))}
@@ -77,7 +90,7 @@ export function VisibilityTransformations() {
                   <div className="mt-5 flex flex-wrap gap-2">
                     {study.services.map((service) => (
                       <span
-                        className="titan-chip bg-white/[0.035] text-[0.68rem] font-bold uppercase tracking-[0.12em] text-titan-ivory/60"
+                        className="inline-flex rounded-full border border-titan-gold/18 bg-titan-gold/[0.08] px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.12em] text-titan-bright/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                         key={service}
                       >
                         {service}
@@ -94,11 +107,14 @@ export function VisibilityTransformations() {
                     </p>
                   </div>
 
-                  <details className="mt-5 rounded-lg border border-titan-gold/12 bg-black/24 p-4 open:bg-black/34">
-                    <summary className="cursor-pointer list-none text-sm font-black uppercase tracking-[0.14em] text-titan-bright">
-                      View Case Study
+                  <details className="group mt-5 rounded-lg border border-titan-gold/16 bg-black/24 p-4 transition open:border-titan-bright/40 open:bg-black/34">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-md text-sm font-black uppercase tracking-[0.14em] text-titan-bright transition hover:text-titan-ivory">
+                      <span>View Case Study</span>
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-titan-gold/25 bg-titan-gold/10 text-lg leading-none transition group-open:rotate-45">
+                        +
+                      </span>
                     </summary>
-                    <div className="mt-5 grid gap-4">
+                    <div className="mt-6 grid gap-5">
                       {[
                         ["The Problem", study.problem],
                         ["The Visibility Gap", study.gap],
@@ -107,7 +123,7 @@ export function VisibilityTransformations() {
                         ["The Momentum Shift", study.momentumShift],
                         ["Titan Insight", study.titanInsight]
                       ].map(([label, value]) => (
-                        <div className="rounded-lg bg-white/[0.035] p-4" key={label}>
+                        <div className="rounded-lg border border-titan-gold/8 bg-white/[0.035] p-5" key={label}>
                           <p className="text-xs font-black uppercase tracking-[0.16em] text-titan-muted">
                             {label}
                           </p>
@@ -116,7 +132,7 @@ export function VisibilityTransformations() {
                           </p>
                         </div>
                       ))}
-                      <div className="rounded-lg bg-titan-gold/10 p-4">
+                      <div className="rounded-lg border border-titan-gold/14 bg-titan-gold/10 p-5">
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-titan-bright">
                           Results / Metrics
                         </p>
@@ -151,10 +167,7 @@ export function VisibilityTransformations() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <CtaButton href="/dashboard">See what Titan can find</CtaButton>
-            <CtaButton href="/dashboard" variant="secondary">
-              Run a Visibility Audit
-            </CtaButton>
+            <CtaButton href="/dashboard">Run Visibility Audit</CtaButton>
             <CtaButton href="#lead-capture" variant="secondary">
               Book a Strategy Call
             </CtaButton>
